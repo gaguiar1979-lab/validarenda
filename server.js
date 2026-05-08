@@ -131,6 +131,10 @@ app.post('/api/analyze', async (req, res) => {
   }
 });
 
+app.get('/logo.jpg', (req, res) => {
+  res.sendFile(path.join(__dirname, 'logo.jpg'));
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
