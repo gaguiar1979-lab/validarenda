@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analisador de Renda Familiar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#F5F3EE;--surface:#FFF;--surface2:#F0EDE8;--border:#E0DDD7;--border2:#C8C4BC;--text:#1A1916;--text2:#6B6860;--text3:#9E9B96;--accent:#1A4A3A;--accent-light:#EAF3EE;--accent-mid:#2D7A5F;--danger:#C0392B;--warning:#B7770D;--warning-light:#FEF6E4;--info:#1A3A5C;--info-light:#E8EFF7;--radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.04)}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.6}
+  .topbar{background:var(--accent);color:#fff;padding:0 2rem;height:56px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+  .topbar-logo{width:28px;height:28px;background:rgba(255,255,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .topbar-title{font-size:15px;font-weight:500}
+  .topbar-sub{font-size:12px;opacity:.6;margin-left:4px}
+  .topbar-spacer{flex:1}
+  .api-status{display:flex;align-items:center;gap:6px;font-size:12px;opacity:.8}
+  .api-dot{width:7px;height:7px;border-radius:50%;background:#F44336}
+  .api-dot.on{background:#4CAF50}
+  .page{max-width:900px;margin:0 auto;padding:2rem 1.5rem 4rem}
+  .api-banner{background:var(--warning-light);border:1px solid #F0C46B;border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:flex-start;gap:12px}
+  .api-banner-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+  .api-banner-content{flex:1}
+  .api-banner-title{font-size:13px;font-weight:600;color:var(--warning);margin-bottom:6px}
+  .api-banner-row{display:flex;gap:8px;align-items:center}
+  .api-banner-row input{flex:1;padding:8px 12px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #F0C46B;border-radius:var(--radius);background:#fff;color:var(--text);outline:none}
+  .api-banner-row input:focus{border-color:var(--accent-mid)}
+  .api-banner-row button{padding:8px 16px;font-size:13px;font-weight:500;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;white-space:nowrap}
+  .api-banner-row button:hover{background:var(--accent-mid)}
+  .api-hint{font-size:11px;color:var(--text3);margin-top:5px}
+  .api-hint a{color:var(--accent-mid)}
+  .section-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+  .upload-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:1.5rem}
+  .upload-card{background:var(--surface);border:1.5px dashed var(--border2);border-radius:var(--radius-lg);padding:1.1rem 1rem;cursor:pointer;position:relative;transition:border-color .15s,background .15s;text-align:center}
+  .upload-card:hover{border-color:var(--accent-mid);background:var(--accent-light)}
+  .upload-card.has-file{border-style:solid;border-color:var(--accent-mid);background:var(--accent-light)}
+  .upload-card input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .uc-icon{font-size:26px;margin-bottom:6px}
+  .uc-label{font-size:13px;font-weight:500;color:var(--text)}
+  .uc-hint{font-size:11px;color:var(--text3);margin-top:2px}
+  .uc-file{font-size:11px;color:var(--accent-mid);margin-top:5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.25rem;box-shadow:var(--shadow)}
+  .card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+  .family-tags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;min-height:28px}
+  .tag{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--text2)}
+  .tag.conjuge{border-color:var(--accent-mid);background:var(--accent-light)}
+  .tag.filho{border-color:#B5D4F4;background:var(--info-light)}
+  .tag span.rel{font-size:10px;color:var(--text3)}
+  .tag button{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;line-height:1;padding:0 0 0 2px}
+  .tag button:hover{color:var(--danger)}
+  .add-row{display:flex;gap:8px;flex-wrap:wrap}
+  .add-row input,.add-row select{padding:8px 12px;font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;font-family:'DM Sans',sans-serif}
+  .add-row input{flex:1;min-width:140px}
+  .add-row input:focus,.add-row select:focus{border-color:var(--accent-mid)}
+  .add-row .btn-add{padding:8px 16px;font-size:13px;font-weight:500;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;color:var(--text);font-family:'DM Sans',sans-serif}
+  .add-row .btn-add:hover{background:var(--surface2)}
+  .info-note{font-size:12px;color:var(--text3);background:var(--surface2);border-radius:var(--radius);padding:8px 12px;margin-top:10px}
+  .btn-analyze{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-lg);font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,transform .1s}
+  .btn-analyze:hover{background:var(--accent-mid)}
+  .btn-analyze:active{transform:scale(.99)}
+  .btn-analyze:disabled{background:var(--text3);cursor:not-allowed;transform:none}
+  .progress-wrap{display:none;margin-bottom:1.5rem}
+  .progress-wrap.active{display:block}
+  .progress-label{font-size:12px;color:var(--text3);margin-bottom:6px}
+  .progress-track{background:var(--surface2);border-radius:999px;height:5px;overflow:hidden}
+  .progress-fill{height:100%;background:var(--accent-mid);border-radius:999px;animation:prog 2.2s ease-in-out infinite}
+  @keyframes prog{0%{width:0%;margin-left:0}50%{width:65%;margin-left:15%}100%{width:0%;margin-left:100%}}
+  .results{display:none}
+  .results.on{display:block}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1.25rem}
+  .metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.1rem;box-shadow:var(--shadow)}
+  .metric-label{font-size:11px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+  .metric-value{font-size:22px;font-weight:600;color:var(--text);letter-spacing:-.02em}
+  .metric-sub{font-size:11px;color:var(--text3);margin-top:2px}
+  .metric.green .metric-value{color:var(--accent-mid)}
+  .metric.blue .metric-value{color:var(--info)}
+  .income-table{width:100%;border-collapse:collapse;font-size:13px}
+  .income-table th{text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding:0 0 8px;border-bottom:1px solid var(--border)}
+  .income-table th:last-child{text-align:right}
+  .income-table td{padding:10px 0;border-bottom:1px solid var(--border);vertical-align:middle}
+  .income-table tr:last-child td{border-bottom:none}
+  .income-table td:last-child{text-align:right;font-weight:600;color:var(--accent-mid);font-family:'DM Mono',monospace}
+  .src-name{font-weight:500;color:var(--text)}
+  .src-type{font-size:11px;color:var(--text3);margin-top:1px}
+  .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:500}
+  .badge-green{background:var(--accent-light);color:var(--accent)}
+  .badge-blue{background:var(--info-light);color:var(--info)}
+  .badge-warn{background:var(--warning-light);color:var(--warning)}
+  .badge-gray{background:var(--surface2);color:var(--text3)}
+  .excl-item{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+  .excl-item:last-child{margin-bottom:0}
+  .excl-header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2)}
+  .excl-header-name{flex:1;font-weight:500;font-size:13px;color:var(--text)}
+  .excl-header-amount{font-family:'DM Mono',monospace;font-size:13px;color:var(--text3);text-decoration:line-through}
+  .excl-body{padding:10px 14px;font-size:13px;color:var(--text2);line-height:1.65;border-top:1px solid var(--border)}
+  .excl-transactions{margin-top:8px}
+  .excl-tx{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px dashed var(--border);color:var(--text3);font-family:'DM Mono',monospace}
+  .excl-tx:last-child{border-bottom:none}
+  .doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+  .doc-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius);font-size:12px}
+  .doc-icon{font-size:18px}
+  .doc-label{flex:1;color:var(--text2)}
+  .doc-ok{color:var(--accent-mid);font-weight:600;font-size:13px}
+  .doc-missing{color:var(--text3);font-size:13px}
+  .report-section{margin-bottom:1.25rem}
+  .report-section h4{font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  .report-text{font-size:13px;color:var(--text2);line-height:1.85;white-space:pre-wrap}
+  .report-stamp{display:flex;align-items:center;gap:10px;margin-top:1.25rem;padding:10px 14px;background:var(--surface2);border-radius:var(--radius);font-size:12px;color:var(--text3)}
+  .report-stamp strong{color:var(--text2)}
+  .alert-box{background:var(--warning-light);border-left:3px solid #F0C46B;border-radius:0 var(--radius) var(--radius) 0;padding:10px 14px;margin-top:12px;font-size:13px;color:var(--warning)}
+  .btn-print{display:inline-flex;align-items:center;gap:6px;margin-top:1rem;padding:9px 18px;font-size:13px;font-weight:500;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface);cursor:pointer;color:var(--text);font-family:'DM Sans',sans-serif}
+  .btn-print:hover{background:var(--surface2)}
+  .divider{height:1px;background:var(--border);margin:1.5rem 0}
+  @media print{.topbar,.api-banner,.upload-grid,.card:not(.result-card),.btn-analyze,.progress-wrap,.btn-print,#conjugeDocsArea{display:none!important}.results{display:block!important}body{background:#fff}.page{padding:1rem}}
+  @media(max-width:600px){.page{padding:1.5rem 1rem 3rem}.topbar{padding:0 1rem}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-logo">📊</div>
+  <span class="topbar-title">Analisador de Renda Familiar</span>
+  <span class="topbar-sub">— Análise de crédito</span>
+  <div class="topbar-spacer"></div>
+
+</div>
+<div class="page">
+
+
+  <div class="section-title">1. Documentos do comprador principal</div>
+  <div class="upload-grid">
+    <div class="upload-card" id="card-extrato"><input type="file" accept=".pdf,.csv,.xlsx,.xls,.ofx,.txt" multiple onchange="handleExtratoFile(this,'extrato')"><div class="uc-icon">📄</div><div class="uc-label">Extrato bancário</div><div class="uc-hint">PDF · CSV · OFX · múltiplos arquivos</div><div class="uc-file" id="fn-extrato"></div></div>
+    <div class="upload-card" id="card-rg"><input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFile(this,'rg')"><div class="uc-icon">🪪</div><div class="uc-label">RG / CPF / CNH</div><div class="uc-hint">Comprador principal</div><div class="uc-file" id="fn-rg"></div></div>
+    <div class="upload-card" id="card-certidao"><input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleCertidao(this)"><div class="uc-icon">📋</div><div class="uc-label">Certidão de estado civil</div><div class="uc-hint">PDF · JPG · PNG</div><div class="uc-file" id="fn-certidao"></div></div>
+  </div>
+
+  <div class="section-title">2. Membros da família</div>
+  <div class="card">
+    <div class="card-title">👨‍👩‍👧 Familiares cadastrados</div>
+    <div class="family-tags" id="familyTags"><span style="font-size:12px;color:var(--text3)">Nenhum familiar adicionado ainda.</span></div>
+    <div class="add-row">
+      <input type="text" id="memberName" placeholder="Nome completo do familiar...">
+      <select id="memberType">
+        <option value="cônjuge">Cônjuge</option>
+        <option value="filho(a)">Filho(a)</option>
+        <option value="pai/mãe">Pai / Mãe</option>
+        <option value="familiar">Outro familiar</option>
+      </select>
+      <button class="btn-add" onclick="addMember()">+ Adicionar</button>
+    </div>
+    <div class="info-note">ℹ️ <strong>Cônjuge:</strong> abre campos de documentos e extrato. <strong>Filho(a):</strong> informe o nome ou anexe a certidão de nascimento para identificação automática.</div>
+  </div>
+
+  <div class="card" id="filhosCard">
+    <div class="card-title">👶 Possui filhos?</div>
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <button class="btn-filho-toggle" id="btnSimFilho" onclick="toggleFilhos(true)" style="flex:1;padding:10px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;">✅ Sim</button>
+      <button class="btn-filho-toggle" id="btnNaoFilho" onclick="toggleFilhos(false)" style="flex:1;padding:10px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;">❌ Não</button>
+    </div>
+    <div id="filhosArea" style="display:none;">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Quantos filhos?</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input type="number" id="qtdFilhos" min="1" max="10" placeholder="Ex: 2" style="width:80px;padding:8px 12px;font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;">
+        <button onclick="gerarCamposFilhos()" style="padding:8px 16px;font-size:13px;font-weight:500;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;">Confirmar</button>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Anexe as certidões de nascimento — o nome será lido automaticamente.</div>
+      <div id="filhosCertidoesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;"></div>
+    </div
+  </div>
+
+  <div id="conjugeDocsArea"></div>
+
+  <div class="section-title">3. Executar análise</div>
+  <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">🔍 Analisar documentos e extrato</button>
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-label" id="progressLabel">Lendo documentos...</div>
+    <div class="progress-track"><div class="progress-fill"></div></div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="divider"></div>
+    <div class="section-title">Resultado da análise · <span id="periodoLabel"></span></div>
+    <div class="metrics" id="metricsGrid"></div>
+    <div class="card result-card">
+      <div class="card-title">💰 Fontes de renda identificadas</div>
+      <table class="income-table"><thead><tr><th>Remetente / Fonte</th><th>Tipo</th><th>Frequência</th><th>Média mensal</th></tr></thead><tbody id="incomeRows"></tbody></table>
+    </div>
+    <div class="card result-card">
+      <div class="card-title">🚫 Transferências desconsideradas — detalhamento</div>
+      <div id="excludedRows"></div>
+    </div>
+    <div class="card result-card">
+      <div class="card-title">📁 Documentos verificados</div>
+      <div class="doc-grid" id="docGrid"></div>
+    </div>
+    <div class="card result-card">
+      <div class="card-title">📄 Relatório de análise</div>
+      <div id="reportContent"></div>
+      <div id="alertBox" style="display:none"></div>
+      <div class="report-stamp" id="reportStamp"></div>
+      <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const files={};
+const members=[];
+
+
+function handleFile(input,type){
+  const f=input.files[0];if(!f)return;
+  files[type]=f;
+  document.getElementById('card-'+type).classList.add('has-file');
+  document.getElementById('fn-'+type).innerHTML='✓ '+f.name;
+}
+
+async function handleCertidao(input){
+  const f=input.files[0];if(!f)return;
+  files['certidao']=f;
+  document.getElementById('card-certidao').classList.add('has-file');
+  document.getElementById('fn-certidao').innerHTML='✓ '+f.name+' — lendo...';
+
+  try{
+    const b64=await toB64(f);
+    const isImage=f.type.startsWith('image/');
+    const msgContent=isImage
+      ?[{type:'image',source:{type:'base64',media_type:f.type,data:b64}},{type:'text',text:'Leia esta certidão de estado civil e retorne SOMENTE um JSON: {"estadoCivil":"casado|solteiro|divorciado|viuvo|outro","nomeConjuge":"Nome completo ou null","nomeTitular":"Nome completo"}'}]
+      :[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:'Leia esta certidão de estado civil e retorne SOMENTE um JSON: {"estadoCivil":"casado|solteiro|divorciado|viuvo|outro","nomeConjuge":"Nome completo ou null","nomeTitular":"Nome completo"}'}];
+
+    const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:200,messages:[{role:'user',content:msgContent}]}})});
+
+    const data=await resp.json();
+    const raw=data.content?.map(b=>b.text||'').join('');
+    const clean=raw.replace(/```json|```/g,'').trim();
+    const result=JSON.parse(clean);
+
+    const ec=(result.estadoCivil||'').toLowerCase(); if((ec.includes('casado')||ec.includes('casada')||ec.includes('uniao')||ec.includes('união'))&&result.nomeConjuge&&result.nomeConjuge!=='null'){
+      // Check if conjuge already added
+      const jaExiste=members.some(m=>m.type==='cônjuge'&&m.name.toLowerCase()===result.nomeConjuge.toLowerCase());
+      if(!jaExiste){
+        members.push({name:result.nomeConjuge,type:'cônjuge'});
+        renderTags();
+        renderConjugeDocs();
+        document.getElementById('fn-certidao').innerHTML='✓ '+f.name+' — cônjuge identificado: '+result.nomeConjuge;
+        showToast('Cônjuge identificado: '+result.nomeConjuge+'. Campos de documentos abertos automaticamente!');
+      } else {
+        document.getElementById('fn-certidao').innerHTML='✓ '+f.name+' — cônjuge já cadastrado';
+      }
+    } else {
+      document.getElementById('fn-certidao').innerHTML='✓ '+f.name+' — estado civil: '+(result.estadoCivil||'não identificado');
+    }
+  }catch(e){
+    console.error(e);
+    console.error('Certidao erro:',e); document.getElementById('fn-certidao').innerHTML='✓ '+f.name+' — estado civil: '+JSON.stringify(result||e.message);
+  }
+}
+
+function showToast(msg){
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:12px 20px;border-radius:var(--radius-lg);font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.2);max-width:90vw;text-align:center';
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),5000);
+}
+
+function handleExtratoFile(input,type){
+  const fs=Array.from(input.files);if(!fs.length)return;
+  files[type]=fs;
+  document.getElementById('card-'+type).classList.add('has-file');
+  document.getElementById('fn-'+type).innerHTML='✓ '+fs.length+' arquivo(s): '+fs.map(f=>f.name).join(', ');
+}
+
+function handleConjugeFile(input,slug,docType){
+  const f=input.files[0];if(!f)return;
+  const key=slug+'_'+docType;files[key]=f;
+  document.getElementById('card-'+key).classList.add('has-file');
+  document.getElementById('fn-'+key).innerHTML='✓ '+f.name;
+}
+
+function handleConjugeExtratoFile(input,slug){
+  const fs=Array.from(input.files);if(!fs.length)return;
+  const key=slug+'_extrato';files[key]=fs;
+  document.getElementById('card-'+key).classList.add('has-file');
+  document.getElementById('fn-'+key).innerHTML='✓ '+fs.length+' arquivo(s): '+fs.map(f=>f.name).join(', ');
+}
+
+function addMember(){
+  const name=document.getElementById('memberName').value.trim();
+  const type=document.getElementById('memberType').value;
+  if(!name)return;
+  members.push({name,type});renderTags();renderConjugeDocs();
+  document.getElementById('memberName').value='';
+}
+
+function removeMember(i){
+  const m=members[i];
+  if(m.type==='cônjuge'){const slug='conjuge_'+i;['rg','extrato','certidao'].forEach(d=>{delete files[slug+'_'+d];});}
+  members.splice(i,1);renderTags();renderConjugeDocs();
+}
+
+function renderTags(){
+  const el=document.getElementById('familyTags');
+  if(!members.length){el.innerHTML='<span style="font-size:12px;color:var(--text3)">Nenhum familiar adicionado ainda.</span>';return;}
+  const icons={'cônjuge':'💑','filho(a)':'👦','pai/mãe':'👴','familiar':'👤'};
+  el.innerHTML=members.map((m,i)=>{
+    const cls=m.type==='cônjuge'?'conjuge':m.type==='filho(a)'?'filho':'';
+    return `<div class="tag ${cls}">${icons[m.type]||'👤'} ${m.name} <span class="rel">(${m.type})</span><button onclick="removeMember(${i})">x</button></div>`;
+  }).join('');
+}
+
+function renderConjugeDocs(){
+  const area=document.getElementById('conjugeDocsArea');
+  const conjuges=members.map((m,i)=>({...m,idx:i})).filter(m=>m.type==='cônjuge');
+  if(!conjuges.length){area.innerHTML='';return;}
+  area.innerHTML=conjuges.map(m=>{
+    const slug='conjuge_'+m.idx;
+    return `<div class="section-title" style="margin-top:1rem;">Documentos - Conjuge: ${m.name}</div>
+    <div class="upload-grid" style="margin-bottom:1.25rem;">
+      <div class="upload-card" id="card-${slug}_extrato"><input type="file" accept=".pdf,.csv,.xlsx,.xls,.ofx,.txt" multiple onchange="handleConjugeExtratoFile(this,'${slug}')"><div class="uc-icon">📄</div><div class="uc-label">Extrato bancário</div><div class="uc-hint">PDF · CSV · OFX · múltiplos</div><div class="uc-file" id="fn-${slug}_extrato"></div></div>
+      <div class="upload-card" id="card-${slug}_rg"><input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleConjugeFile(this,'${slug}','rg')"><div class="uc-icon">🪪</div><div class="uc-label">RG / CPF / CNH</div><div class="uc-hint">${m.name}</div><div class="uc-file" id="fn-${slug}_rg"></div></div>
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--accent-light);border:1px solid var(--accent-mid);border-radius:var(--radius-lg);font-size:12px;color:var(--accent-mid)">📋 Certidão de estado civil compartilhada com o titular</div>
+    </div>`;
+  }).join('');
+}
+
+function fmt(v){return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function toB64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=()=>rej(new Error('Falha ao ler arquivo'));
+    r.readAsDataURL(file);
+  });
+}
+
+const typeLabel={emprego_formal:'Emprego formal',autonomo:'Autônomo / MEI',aluguel:'Aluguel',aposentadoria:'Aposentadoria',pensao:'Pensão',outros:'Outros'};
+const freqLabel={mensal:'Mensal',irregular:'Irregular',quinzenal:'Quinzenal',semanal:'Semanal'};
+const freqBadge={mensal:'badge-green',irregular:'badge-warn',quinzenal:'badge-blue',semanal:'badge-blue'};
+
+let filhosCertidoes=[];
+let filhoCount=0;
+
+function toggleFilhos(sim){
+  document.getElementById('filhosArea').style.display=sim?'block':'none';
+  document.getElementById('btnSimFilho').style.background=sim?'var(--accent-light)':'var(--surface)';
+  document.getElementById('btnSimFilho').style.borderColor=sim?'var(--accent-mid)':'var(--border2)';
+  document.getElementById('btnNaoFilho').style.background=!sim?'var(--surface2)':'var(--surface)';
+  document.getElementById('btnNaoFilho').style.borderColor=!sim?'var(--border2)':'var(--border2)';
+}
+
+function gerarCamposFilhos(){
+  const qtd=parseInt(document.getElementById('qtdFilhos').value)||0;
+  if(qtd<1||qtd>10){alert('Informe entre 1 e 10 filhos.');return;}
+  const grid=document.getElementById('filhosCertidoesGrid');
+  grid.innerHTML='';
+  for(let i=1;i<=qtd;i++){
+    const id='filho_cert_'+i;
+    const div=document.createElement('div');
+    div.id='card_'+id;
+    div.className='upload-card';
+    div.innerHTML=`<input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFilhoCertidao(this,'${id}',${i})"><div class="uc-icon">📜</div><div class="uc-label">Certidão filho ${i}</div><div class="uc-hint">PDF · JPG · PNG</div><div class="uc-file" id="fn_${id}"></div>`;
+    grid.appendChild(div);
+  }
+}
+
+async function handleFilhoCertidao(input, id, num){
+  const f=input.files[0]; if(!f) return;
+  document.getElementById('card_'+id).classList.add('has-file');
+  document.getElementById('fn_'+id).innerHTML='✓ '+f.name+' — lendo...';
+
+  try{
+    const b64=await toB64(f);
+    const isImage=f.type.startsWith('image/');
+    const msgContent=isImage
+      ?[{type:'image',source:{type:'base64',media_type:f.type,data:b64}},{type:'text',text:'Leia esta certidão de nascimento e retorne SOMENTE um JSON: {"nomeCompleto":"Nome completo da criança"}'}]
+      :[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:'Leia esta certidão de nascimento e retorne SOMENTE um JSON: {"nomeCompleto":"Nome completo da criança"}'}];
+
+    const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:3000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
+
+    if(!resp.ok){const err=await resp.json();throw new Error(err.error?.message||`Erro ${resp.status}`);}
+    const data=await resp.json();
+    const raw=data.content?.map(b=>b.text||'').join('');
+    const clean=raw.replace(/```json|```/g,'').trim();
+    renderResults(JSON.parse(clean));
+
+  }catch(e){
+    console.error(e);alert('Erro na análise: '+e.message);
+  }
+
+  clearInterval(interval);
+  document.getElementById('progressWrap').classList.remove('active');
+  btn.disabled=false;
+}
+
+function renderResults(r){
+  document.getElementById('periodoLabel').textContent=r.periodo||'—';
+
+  document.getElementById('metricsGrid').innerHTML=`
+    <div class="metric green"><div class="metric-label">Renda familiar líquida</div><div class="metric-value">${fmt(r.rendaTotal)}</div><div class="metric-sub">excl. transferências internas</div></div>
+    <div class="metric blue"><div class="metric-label">Fontes de renda</div><div class="metric-value">${r.fontes.length}</div><div class="metric-sub">remetentes distintos</div></div>
+    <div class="metric"><div class="metric-label">Excluídos</div><div class="metric-value">${r.excluidos.filter(e=>e.valorTotal>0).length}</div><div class="metric-sub">familiares com transações</div></div>
+    <div class="metric"><div class="metric-label">Período</div><div class="metric-value">${r.meses}</div><div class="metric-sub">meses analisados</div></div>`;
+
+  document.getElementById('incomeRows').innerHTML=r.fontes.map(f=>`
+    <tr>
+      <td><div class="src-name">${f.remetente}</div><div class="src-type">${f.ocorrencias}x detectado</div></td>
+      <td><span class="badge badge-gray">${typeLabel[f.tipo]||f.tipo}</span></td>
+      <td><span class="badge ${freqBadge[f.frequencia]||'badge-gray'}">${freqLabel[f.frequencia]||f.frequencia}</span></td>
+      <td>${fmt(f.valorMedio)}/mês</td>
+    </tr>`).join('');
+
+  const relIcon={'cônjuge':'💑','filho(a)':'👦','pai/mãe':'👴','familiar':'👤'};
+  document.getElementById('excludedRows').innerHTML=r.excluidos.length
+    ?r.excluidos.map(e=>`
+      <div class="excl-item">
+        <div class="excl-header">
+          <span style="font-size:16px">${relIcon[e.relacao]||'👤'}</span>
+          <div class="excl-header-name">${e.nome} <span style="font-size:11px;background:var(--surface);border:1px solid var(--border);padding:2px 8px;border-radius:999px;color:var(--text3);margin-left:6px">${e.relacao}</span></div>
+          <div class="excl-header-amount">${e.valorTotal>0?fmt(e.valorTotal):'—'}</div>
+        </div>
+        <div class="excl-body">
+          <div style="margin-bottom:${e.transacoes&&e.transacoes.length?'10px':'0'}">${e.motivo||'Transferência familiar desconsiderada.'}</div>
+          ${e.transacoes&&e.transacoes.length?`<div class="excl-transactions"><div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Transações identificadas</div>${e.transacoes.map(t=>`<div class="excl-tx"><span>${t.data} — ${t.descricao}</span><span>${fmt(t.valor)}</span></div>`).join('')}</div>`:''}
+        </div>
+      </div>`).join('')
+    :'<p style="font-size:13px;color:var(--text3)">Nenhuma transferência familiar identificada para excluir.</p>';
+
+  const docs=r.documentos;
+  document.getElementById('docGrid').innerHTML=[
+    {key:'rg',label:'RG / CPF / CNH',icon:'🪪'},
+    {key:'certidao',label:'Certidão de estado civil',icon:'📋'},
+    {key:'extratoConjuge',label:'Extrato cônjuge',icon:'📄'}
+  ].map(d=>`<div class="doc-item"><span class="doc-icon">${d.icon}</span><span class="doc-label">${d.label}</span><span class="${docs[d.key]?'doc-ok':'doc-missing'}">${docs[d.key]?'✓':'Pendente'}</span></div>`).join('');
+
+  document.getElementById('reportContent').innerHTML=`
+    <div class="report-section"><h4>Parecer resumido</h4><div class="report-text">${r.parecer||''}</div></div>
+    <div class="report-section"><h4>Relatório completo de análise</h4><div class="report-text">${r.conclusao||''}</div></div>`;
+
+  const now=new Date().toLocaleString('pt-BR');
+  document.getElementById('reportStamp').innerHTML=`<span>📅</span><span>Gerado em <strong>${now}</strong> · Período: <strong>${r.periodo}</strong> · Análise automatizada</span>`;
+
+  const ab=document.getElementById('alertBox');
+  if(r.alertas?.length){ab.style.display='block';ab.className='alert-box';ab.innerHTML='<strong>Atencao:</strong> '+r.alertas.join(' · ');}
+  else{ab.style.display='none';}
+
+  document.getElementById('results').classList.add('on');
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+</script>
+</body>
+</html>
