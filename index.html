@@ -264,6 +264,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div class="upload-card" id="card-extrato"><input type="file" accept=".pdf,.csv,.xlsx,.xls,.ofx,.txt" multiple onchange="handleExtratoFile(this,'extrato')"><div class="uc-icon">📄</div><div class="uc-label">Extrato bancário</div><div class="uc-hint">PDF · CSV · OFX · múltiplos</div><div class="uc-file" id="fn-extrato"></div></div>
   <div class="upload-card" id="card-rg"><input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFile(this,'rg')"><div class="uc-icon">🪪</div><div class="uc-label">RG / CPF / CNH</div><div class="uc-hint">Comprador principal</div><div class="uc-file" id="fn-rg"></div></div>
   <div class="upload-card" id="card-certidao"><input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleCertidao(this)"><div class="uc-icon">📋</div><div class="uc-label">Certidão de estado civil</div><div class="uc-hint">PDF · JPG · PNG</div><div class="uc-file" id="fn-certidao"></div></div>
+  <div class="upload-card" id="card-rendimento"><input type="file" accept=".pdf,.jpg,.jpeg,.png" multiple onchange="handleExtratoFile(this,'rendimento')"><div class="uc-icon">💼</div><div class="uc-label">Comprovante de rendimento</div><div class="uc-hint">Holerite · Pró-labore · múltiplos</div><div class="uc-file" id="fn-rendimento"></div></div>
 </div>
 
 <!-- FAMILIARES -->
@@ -525,7 +526,8 @@ async function buscarReserva(){
     const extratos=docs.filter(d=>d.tipo?.toLowerCase().includes('extrato'));
     const rgs=docs.filter(d=>d.tipo?.toLowerCase().includes('rg')||d.tipo?.toLowerCase().includes('cnh'));
     const certidoes=docs.filter(d=>d.tipo?.toLowerCase().includes('certid')||d.tipo?.toLowerCase().includes('civil')||d.tipo?.toLowerCase().includes('casamento'));
-    const outros=docs.filter(d=>!extratos.includes(d)&&!rgs.includes(d)&&!certidoes.includes(d));
+    const rendimentos=docs.filter(d=>d.tipo?.toLowerCase().includes('rendimento')||d.tipo?.toLowerCase().includes('holerite')||d.tipo?.toLowerCase().includes('prolabore')||d.tipo?.toLowerCase().includes('pró-labore')||d.tipo?.toLowerCase().includes('contracheque')||d.tipo?.toLowerCase().includes('contra cheque')||d.tipo?.toLowerCase().includes('comprovante de rend'));
+    const outros=docs.filter(d=>!extratos.includes(d)&&!rgs.includes(d)&&!certidoes.includes(d)&&!rendimentos.includes(d));
     const docTag=(d,cls)=>`<div class="cv-doc-item ${cls}"><span>📄</span><span style="flex:1">${d.nome_arquivo||d.arquivo||'Documento'}</span><span style="font-size:10px;opacity:.6">${d.tipo||''} · ${d.pessoa||''}</span></div>`;
     document.getElementById('cvDocsList').innerHTML=[
       extratos.length?`<div style="font-size:10px;color:var(--gold2);font-weight:700;margin:4px 0 4px;text-transform:uppercase">Extratos (${extratos.length})</div>${extratos.map(d=>docTag(d,'extrato')).join('')}`:'',
@@ -651,7 +653,16 @@ INSTRUÇÕES:
 
 Retorne SOMENTE este JSON sem markdown:
 {"periodo":"Mes/Ano - Mes/Ano","meses":3,"rendaTotal":0.00,"mediamensal":0.00,"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","totalPeriodo":0.00,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação detalhada.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false},"parecer":"Parecer em 2 frases.","conclusao":"Relatório em 5 parágrafos: 1) metodologia, 2) fontes e classificação, 3) exclusões e critérios, 4) composição final da renda, 5) recomendações para crédito.","alertas":[]}
-Tipos: emprego_formal, autonomo, aluguel, aposentadoria, pensao, outros. Frequencia: mensal, quinzenal, semanal, irregular.`;
+ANÁLISE DE COMPROVANTES DE RENDIMENTO:
+- Se houver holerites/contracheques: identifique salário base, adicionais, descontos e salário líquido por mês
+- Se houver recibos de pró-labore: calcule a média mensal (podem variar)
+- Cruze os comprovantes com o extrato: confirme se os depósitos batem com os documentos
+- Para renda variável: use a média dos meses disponíveis
+- Para renda fixa CLT + extra: some as fontes separadamente
+- Classifique cada fonte corretamente no campo "tipo"
+
+Tipos: emprego_formal (CLT/celetista), prolabore (sócio/empresário), autonomo (freela/MEI), aluguel, aposentadoria, pensao, outros.
+Frequencia: mensal, quinzenal, semanal, irregular.`;
     const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:4000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
     if(!resp.ok){const err=await resp.json();throw new Error(err.error?.message||`Erro ${resp.status}`);}
     const data=await resp.json();
