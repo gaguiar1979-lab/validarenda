@@ -377,7 +377,82 @@ async function handleFilhoCertidao(input, id, num){
       ?[{type:'image',source:{type:'base64',media_type:f.type,data:b64}},{type:'text',text:'Leia esta certidão de nascimento e retorne SOMENTE um JSON: {"nomeCompleto":"Nome completo da criança"}'}]
       :[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:'Leia esta certidão de nascimento e retorne SOMENTE um JSON: {"nomeCompleto":"Nome completo da criança"}'}];
 
-    const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:3000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
+    const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:100,messages:[{role:'user',content:msgContent}]}})});
+
+    const data=await resp.json();
+    const raw=data.content?.map(b=>b.text||'').join('');
+    const clean=raw.replace(/```json|```/g,'').trim();
+    const result=JSON.parse(clean);
+
+    if(result.nomeCompleto){
+      const jaExiste=members.some(m=>m.name.toLowerCase()===result.nomeCompleto.toLowerCase());
+      if(!jaExiste){
+        members.push({name:result.nomeCompleto,type:'filho(a)'});
+        renderTags();
+        document.getElementById('fn_'+id).innerHTML='✓ '+f.name+' — '+result.nomeCompleto;
+        showToast('Filho(a) identificado: '+result.nomeCompleto);
+      } else {
+        document.getElementById('fn_'+id).innerHTML='✓ '+f.name+' — já cadastrado';
+      }
+    }
+  }catch(e){
+    console.error(e);
+    document.getElementById('fn_'+id).innerHTML='✓ '+f.name+' — erro na leitura';
+  }
+}
+
+
+async function analyze(){
+  if(!files.extrato||(Array.isArray(files.extrato)&&!files.extrato.length)){alert('Envie ao menos o extrato bancário para análise.');return;}
+
+  const btn=document.getElementById('analyzeBtn');
+  btn.disabled=true;
+  document.getElementById('progressWrap').classList.add('active');
+  document.getElementById('results').classList.remove('on');
+
+  const steps=['Lendo documentos...','Identificando fontes de renda...','Excluindo transferências familiares...','Gerando relatório detalhado...'];
+  let si=0;
+  const interval=setInterval(()=>{document.getElementById('progressLabel').textContent=steps[Math.min(si++,steps.length-1)];},1800);
+
+  try{
+    const docNames={extrato:'Extrato bancário (titular)',rg:'RG/CPF/CNH (titular)',certidao:'Certidão de estado civil (titular)'};
+    members.filter(m=>m.type==='cônjuge').forEach(m=>{
+      const slug='conjuge_'+members.indexOf(m);
+      docNames[slug+'_extrato']=`Extrato bancário - conjuge: ${m.name}`;
+      docNames[slug+'_rg']=`RG/CPF/CNH - conjuge: ${m.name}`;
+    });
+
+    const contentParts=[];
+    for(const [type,fileOrArr] of Object.entries(files)){
+      const fileList=Array.isArray(fileOrArr)?fileOrArr:[fileOrArr];
+      for(const file of fileList){
+        const isImage=file.type.startsWith('image/');
+        const isPdf=file.type==='application/pdf';
+        if(isImage||isPdf){
+          const b64=await toB64(file);
+          if(isImage){contentParts.push({type:'image',source:{type:'base64',media_type:file.type,data:b64}});}
+          else{contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}});}
+          contentParts.push({type:'text',text:`[Arquivo: ${docNames[type]||type} - ${file.name}]`});
+        }else{
+          contentParts.push({type:'text',text:`[Arquivo: ${docNames[type]||type} - ${file.name}]`});
+        }
+      }
+    }
+
+    const memberList=members.length?members.map(m=>`- ${m.name} (${m.type})`).join('\n'):'(nenhum)';
+    const filhosList=members.filter(m=>m.type!=='cônjuge').map(m=>m.name).join(', ')||'nenhum';
+    const conjugesList=members.filter(m=>m.type==='cônjuge').map(m=>m.name).join(', ')||'nenhum';
+    contentParts.push({type:'text',text:`\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n\nRetorne apenas o JSON.`});
+
+    const systemPrompt=`Você é um analista de crédito. Analise os documentos e retorne SOMENTE este JSON sem markdown:
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"rendaTotal":0.00,"fontes":[{"remetente":"Nome","tipo":"emprego_formal","valorMedio":0.00,"frequencia":"mensal","ocorrencias":3}],"excluidos":[{"nome":"Nome","relacao":"filho(a)","valorTotal":0.00,"motivo":"Explicação detalhada.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false},"parecer":"Parecer em 2 frases.","conclusao":"Relatório em 5 paragrafos.","alertas":[]}
+Tipos: emprego_formal, autonomo, aluguel, aposentadoria, pensao, outros. Frequencia: mensal, quinzenal, semanal, irregular.`;
+
+    const resp=await fetch('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:3000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})
+    });
 
     if(!resp.ok){const err=await resp.json();throw new Error(err.error?.message||`Erro ${resp.status}`);}
     const data=await resp.json();
