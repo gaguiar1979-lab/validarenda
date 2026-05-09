@@ -672,14 +672,22 @@ PASSO 3 — RENDA REAL (extratos - apenas entradas):
 - Todas as entradas, excluindo: familiares listados + apostas (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet e similares) + transferências próprias entre contas
 - Avalie regularidade por fonte: "regular" (±20% todo mês), "irregular" (variável mas presente), "esporadica" (ausente em alguns meses)
 
-PASSO 4 — COMPROMETIMENTOS FIXOS MENSAIS (débitos recorrentes):
-- Analise os DÉBITOS do extrato e identifique pagamentos fixos recorrentes
-- Inclua: financiamentos bancários, parcelas de veículo, cartão de crédito (fatura), consignado, empréstimo pessoal, aluguel pago, plano de saúde, outros débitos que aparecem todo mês
+PASSO 4A — COMPROMETIMENTOS FIXOS (obrigações com TERCEIROS / instituições):
+- São débitos recorrentes para CREDORES identificáveis: banco, financeira, seguradora, operadora de saúde, locador PJ
+- Inclua: financiamentos bancários, parcelas de veículo, fatura de cartão de crédito, consignado, empréstimo pessoal, aluguel pago a PJ, plano de saúde
+- NÃO inclua transferências para pessoas físicas (PIX para CPF) — essas vão em 4B
 - Para cada comprometimento: nome do credor, categoria, valor médio mensal
 - Categorias: "financiamento_imobiliario", "veiculo", "cartao_credito", "consignado", "emprestimo", "aluguel_pago", "saude", "outros_fixos"
 - totalComprometido = soma de todos os comprometimentos mensais médios
 - rendaDisponivelReal = rendaRealTotal - totalComprometido
-- margemProSoluto = rendaDisponivelReal × 0.30 (30% do que sobra após compromissos)
+- margemProSoluto = rendaDisponivelReal × 0.30
+
+PASSO 4B — TRANSFERÊNCIAS QUE PRECISAM DE JUSTIFICATIVA DO CLIENTE:
+- PIX/TED recorrentes para pessoas físicas (CPF) ou destinos não identificados que NÃO são familiares já excluídos
+- Podem ser conta própria, investimento, ajuda a terceiro, pagamento informal — o cliente deve explicar
+- NÃO reduzem a renda real nem compõem comprometimentos — são apenas pontos de atenção
+- Para cada uma: nome/chave do beneficiário, valor médio mensal, frequência observada
+- Ignore transferências únicas ou claramente eventuais
 
 PASSO 5 — VEREDITO:
 - "viavel": rendaDisponivelReal > 0 e margem pró-soluto positiva após parcela CEF
@@ -687,7 +695,7 @@ PASSO 5 — VEREDITO:
 - "inviavel": rendaDisponivelReal negativa ou comprometimento > renda real
 
 Retorne SOMENTE este JSON sem markdown:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"capacidadePagamento":0.00,"margemProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"totalPeriodo":0.00,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00,"recorrente":true}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"2 frases objetivas: renda real, total comprometido, renda disponível e veredito para pró-soluto.","conclusao":"Laudo em 3 parágrafos: 1) renda comprovável para CEF, 2) renda real apurada e comprometimentos fixos identificados no extrato, 3) capacidade líquida de pagamento e recomendação objetiva para a equipe Casas Manager sobre viabilidade do pró-soluto.","alertas":[]}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"capacidadePagamento":0.00,"margemProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"totalPeriodo":0.00,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00,"recorrente":true}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"Transferência recorrente sem identificação de destino — cliente deve justificar"}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"2 frases objetivas: renda real, total comprometido, renda disponível e veredito para pró-soluto.","conclusao":"Laudo em 3 parágrafos: 1) renda comprovável para CEF, 2) renda real apurada e comprometimentos fixos identificados no extrato, 3) capacidade líquida de pagamento e recomendação objetiva para a equipe Casas Manager sobre viabilidade do pró-soluto.","alertas":[]}
 
 ANÁLISE DE COMPROVANTES:
 - Holerites: use salário LÍQUIDO
@@ -751,12 +759,39 @@ function renderResults(r){
   const vd=verMap[r.veredito]||verMap['apertado'];
   const reservaNum=document.getElementById('reservaId').value||'—';
 
+  const margemColor=(r.margemProSoluto||0)>500?'#6ee7a0':(r.margemProSoluto||0)>0?'#fde68a':'#fca5a5';
   document.getElementById('metricsGrid').innerHTML=`
-    <div style="grid-column:1/-1;padding:16px 20px;background:${vd.bg};border:2px solid ${vd.border};border-radius:12px;display:flex;align-items:center;gap:12px">
-      <span style="font-size:28px">${vd.icon}</span>
+    <div style="grid-column:1/-1;background:var(--navy);border-radius:12px;padding:18px 20px;margin-bottom:4px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.45);margin-bottom:12px">📋 Resumo Executivo</div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px;align-items:start">
+        <div>
+          <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">Comprador</div>
+          <div style="font-size:15px;font-weight:700;color:#fff">${r.nomeComprador||'—'}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px">Reserva ${reservaNum} · ${r.periodo||'—'}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">Renda Comprovável CEF</div>
+          <div style="font-size:16px;font-weight:800;color:#C9A84C;font-family:'DM Mono',monospace">${fmt(r.rendaComprovavelCEF||0)}</div>
+          ${r.rendaDeclaradaCEF>0?`<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px">Declarada: ${fmt(r.rendaDeclaradaCEF)}</div>`:''}
+        </div>
+        <div>
+          <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">Renda Real (extratos)</div>
+          <div style="font-size:16px;font-weight:800;color:#C9A84C;font-family:'DM Mono',monospace">${fmt(r.rendaRealTotal||0)}</div>
+          ${r.totalComprometido>0?`<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px">Comprometido: ${fmt(r.totalComprometido)}</div>`:''}
+        </div>
+        <div>
+          <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">Margem Pró-soluto</div>
+          <div style="font-size:16px;font-weight:800;color:${margemColor};font-family:'DM Mono',monospace">${fmt(r.margemProSoluto||0)}/mês</div>
+          <div style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;background:${vd.border};color:#fff">${vd.icon} ${r.veredito?.toUpperCase()||'—'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="grid-column:1/-1;padding:14px 18px;background:${vd.bg};border:2px solid ${vd.border};border-radius:12px;display:flex;align-items:center;gap:12px">
+      <span style="font-size:26px">${vd.icon}</span>
       <div style="flex:1">
-        <div style="font-size:17px;font-weight:800;color:${vd.color}">${vd.label}</div>
-        <div style="font-size:12px;color:${vd.color};opacity:.75;margin-top:2px">Reserva ${reservaNum} · ${r.nomeComprador||'Comprador'} · ${new Date().toLocaleDateString('pt-BR')}</div>
+        <div style="font-size:16px;font-weight:800;color:${vd.color}">${vd.label}</div>
+        <div style="font-size:12px;color:${vd.color};opacity:.75;margin-top:2px">${r.parecer||''}</div>
       </div>
     </div>
 
@@ -780,13 +815,31 @@ function renderResults(r){
     </div>
     ${(r.comprometimentos&&r.comprometimentos.length)?`
     <div style="margin-top:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8b1a1a;margin-bottom:10px">🔴 Comprometimentos Financeiros Identificados</div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8b1a1a;margin-bottom:10px">🔴 Comprometimentos Financeiros com Terceiros</div>
       ${r.comprometimentos.map(c=>{
         const catIcon={'financiamento_imobiliario':'🏠','veiculo':'🚗','cartao_credito':'💳','consignado':'📋','emprestimo':'💰','aluguel_pago':'🏡','saude':'❤️','outros_fixos':'📌'}[c.categoria]||'📌';
         const catLabel={'financiamento_imobiliario':'Financiamento imobiliário','veiculo':'Veículo','cartao_credito':'Cartão de crédito','consignado':'Consignado','emprestimo':'Empréstimo pessoal','aluguel_pago':'Aluguel pago','saude':'Plano de saúde','outros_fixos':'Outros fixos'}[c.categoria]||c.categoria;
         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)"><div><span style="margin-right:6px">${catIcon}</span><span style="font-size:13px;font-weight:600">${c.credor}</span><span style="font-size:11px;color:var(--text3);margin-left:6px">${catLabel}</span></div><strong style="font-family:'DM Mono',monospace;color:#8b1a1a">${fmt(c.valorMedioMensal)}/mês</strong></div>`;
       }).join('')}
       <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding-top:8px;margin-top:4px"><span>Total comprometido</span><strong style="color:#8b1a1a">${fmt(r.totalComprometido||0)}/mês</strong></div>
+    </div>`:''}
+
+    ${(r.transferenciasAtencao&&r.transferenciasAtencao.length)?`
+    <div style="margin-top:12px;background:#fffbf0;border:1.5px solid #B8952A;border-radius:10px;padding:14px 16px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7a5a00;margin-bottom:4px">⚠️ Pontos de Atenção — Transferências que Requerem Justificativa</div>
+      <div style="font-size:11px;color:#7a5a00;margin-bottom:10px;line-height:1.5">Saídas recorrentes para pessoas físicas ou destinos não identificados. <strong>Não reduzem a renda real</strong>, mas o cliente deverá apresentar justificativa (ex: conta própria, investimento, pagamento informal).</div>
+      ${r.transferenciasAtencao.map(t=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #e8d59a">
+          <div>
+            <span style="font-size:13px;font-weight:600;color:var(--navy)">👤 ${t.beneficiario}</span>
+            <span style="font-size:11px;color:var(--text3);margin-left:8px">${t.frequencia||'recorrente'}</span>
+            ${t.observacao?`<div style="font-size:11px;color:#7a5a00;margin-top:2px">${t.observacao}</div>`:''}
+          </div>
+          <strong style="font-family:'DM Mono',monospace;color:#7a5a00;white-space:nowrap;margin-left:12px">~${fmt(t.valorMedioMensal)}/mês</strong>
+        </div>`).join('')}
+      <div style="margin-top:10px;padding:8px 12px;background:#fef3cd;border-radius:6px;font-size:11px;color:#7a5a00;font-weight:600">
+        📎 O cliente deve apresentar declaração ou extrato de conta de destino para cada item acima antes da aprovação.
+      </div>
     </div>`:''}
     `;
 
@@ -838,10 +891,6 @@ function renderResults(r){
 
   // LAUDO
   document.getElementById('reportContent').innerHTML=`
-    <div class="report-section">
-      <h4>Parecer da Equipe Casas Manager</h4>
-      <div class="report-text">${r.parecer||''}</div>
-    </div>
     <div class="report-section">
       <h4>Laudo Completo de Análise de Renda</h4>
       <div class="report-text">${r.conclusao||''}</div>
