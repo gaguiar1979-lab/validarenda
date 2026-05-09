@@ -522,17 +522,19 @@ async function buscarReserva(){
       status.innerHTML=`<span style="color:#ff6b6b">❌ ${data.message||data.error||'Reserva não encontrada.'}</span>`;
       btn.disabled=false;return;
     }
-    const docs=data.data||data||[];
+    // Estrutura real: data.dados.documentos.titular / .conjuge
+    const docsObj=(data.dados&&data.dados.documentos)||{};
+    const docs=Object.entries(docsObj).flatMap(([pessoa,arr])=>arr.map(d=>({...d,pessoa})));
     if(!docs.length){
-      status.innerHTML='<span style="color:var(--gold2)">⚠️ Nenhum documento encontrado.</span>';
+      status.innerHTML='<span style="color:var(--gold2)">⚠️ Nenhum documento encontrado nesta reserva.</span>';
       btn.disabled=false;return;
     }
-    const extratos=docs.filter(d=>d.tipo?.toLowerCase().includes('extrato'));
+    const extratos=docs.filter(d=>d.tipo?.toLowerCase().includes('extrat'));
     const rgs=docs.filter(d=>d.tipo?.toLowerCase().includes('rg')||d.tipo?.toLowerCase().includes('cnh'));
-    const certidoes=docs.filter(d=>d.tipo?.toLowerCase().includes('certid')||d.tipo?.toLowerCase().includes('civil')||d.tipo?.toLowerCase().includes('casamento'));
-    const rendimentos=docs.filter(d=>d.tipo?.toLowerCase().includes('rendimento')||d.tipo?.toLowerCase().includes('holerite')||d.tipo?.toLowerCase().includes('prolabore')||d.tipo?.toLowerCase().includes('pró-labore')||d.tipo?.toLowerCase().includes('contracheque')||d.tipo?.toLowerCase().includes('contra cheque')||d.tipo?.toLowerCase().includes('comprovante de rend'));
+    const certidoes=docs.filter(d=>d.tipo?.toLowerCase().includes('certid')||d.tipo?.toLowerCase().includes('civil')||d.tipo?.toLowerCase().includes('casamento')||d.tipo?.toLowerCase().includes('estado civil'));
+    const rendimentos=docs.filter(d=>d.tipo?.toLowerCase().includes('rendimento')||d.tipo?.toLowerCase().includes('holerite')||d.tipo?.toLowerCase().includes('prolabore')||d.tipo?.toLowerCase().includes('pró-labore')||d.tipo?.toLowerCase().includes('contracheque')||d.tipo?.toLowerCase().includes('contra cheque')||d.tipo?.toLowerCase().includes('comprovante de rend')||d.tipo?.toLowerCase().includes('carteira de trabalho')||d.tipo?.toLowerCase().includes('decore'));
     const outros=docs.filter(d=>!extratos.includes(d)&&!rgs.includes(d)&&!certidoes.includes(d)&&!rendimentos.includes(d));
-    const docTag=(d,cls)=>`<div class="cv-doc-item ${cls}"><span>📄</span><span style="flex:1">${d.nome_arquivo||d.arquivo||'Documento'}</span><span style="font-size:10px;opacity:.6">${d.tipo||''} · ${d.pessoa||''}</span></div>`;
+    const docTag=(d,cls)=>`<div class="cv-doc-item ${cls}"><span>📄</span><span style="flex:1">${d.nome||'Documento'}</span><span style="font-size:10px;opacity:.6">${d.tipo||''} · ${d.pessoa||''}</span></div>`;
     document.getElementById('cvDocsList').innerHTML=[
       extratos.length?`<div style="font-size:10px;color:var(--gold2);font-weight:700;margin:4px 0 4px;text-transform:uppercase">Extratos (${extratos.length})</div>${extratos.map(d=>docTag(d,'extrato')).join('')}`:'',
       rgs.length?`<div style="font-size:10px;color:rgba(255,255,255,.5);font-weight:700;margin:8px 0 4px;text-transform:uppercase">RG/CNH (${rgs.length})</div>${rgs.map(d=>docTag(d,'rg')).join('')}`:'',
@@ -545,13 +547,13 @@ async function buscarReserva(){
     const extratoFiles=[];
     for(const doc of docs){
       try{
-        const urlDoc=doc.url_arquivo||doc.arquivo_url||doc.path;
+        const urlDoc=doc.link||doc.url_arquivo||doc.arquivo_url||doc.path;
         if(!urlDoc)continue;
         const dlResp=await fetch(`/api/cv/documento/arquivo?url=${encodeURIComponent(urlDoc)}`);
         const dlData=await dlResp.json();
         if(!dlData.base64)continue;
         const tipo=doc.tipo?.toLowerCase()||'';
-        const nomeArq=doc.nome_arquivo||doc.arquivo||'documento';
+        const nomeArq=doc.nome||doc.nome_arquivo||'documento';
         const pessoa=doc.pessoa?.toLowerCase()||'titular';
         if(tipo.includes('extrato')){
           extratoFiles.push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,pessoa});
