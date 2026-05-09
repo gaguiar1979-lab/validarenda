@@ -325,7 +325,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div id="reportContent"></div>
     <div id="alertBox" style="display:none"></div>
     <div class="report-stamp" id="reportStamp"></div>
-    <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+    <button class="btn-print" onclick="gerarRelatorio()">🖨️ Imprimir / Salvar PDF</button>
     <button class="btn-save" id="btnSalvarCV" onclick="salvarNoCVCRM()">💾 Salvar no CV CRM</button>
   </div>
 </div>
@@ -762,12 +762,15 @@ Retorne SOMENTE este JSON sem markdown:
 Tipos válidos para fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros
 Frequencia: mensal, quinzenal, semanal, irregular.
 Regularidade: regular, irregular, esporadica.`;
-    const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:4000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
-    if(!resp.ok){const err=await resp.json();throw new Error(err.error?.message||`Erro ${resp.status}`);}
+    const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:8000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
+    if(!resp.ok){const err=await resp.json();throw new Error(err.error?.message||`Erro HTTP ${resp.status}`);}
     const data=await resp.json();
-    const raw=data.content?.map(b=>b.text||'').join('');
-    const clean=raw.replace(/```json|```/g,'').trim();
-    renderResults(JSON.parse(clean));
+    if(data.error){throw new Error(data.error.message||JSON.stringify(data.error));}
+    const raw=data.content?.map(b=>b.text||'').join('')||'';
+    if(!raw){throw new Error('A IA retornou resposta vazia. Tente novamente.');}
+    const jsonMatch=raw.match(/\{[\s\S]*\}/);
+    if(!jsonMatch){throw new Error('Resposta inesperada da IA: '+raw.substring(0,300));}
+    renderResults(JSON.parse(jsonMatch[0]));
   }catch(e){
     console.error('ERRO ANÁLISE:',e);
     clearInterval(interval);
@@ -791,6 +794,164 @@ Regularidade: regular, irregular, esporadica.`;
 }
 
 let lastResult=null;
+
+function gerarRelatorio(){
+  const r=lastResult;
+  if(!r){showToast('⚠️ Gere a análise antes de imprimir.');return;}
+  const reservaNum=document.getElementById('reservaId').value||'—';
+  const agora=new Date().toLocaleString('pt-BR');
+  const fmtR=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const verMap={viavel:{label:'VIÁVEL',cor:'#1a7a3c',bg:'#e8f5ee'},apertado:{label:'ATENÇÃO',cor:'#7a5a00',bg:'#fef6e4'},inviavel:{label:'INVIÁVEL',cor:'#8b1a1a',bg:'#fdecea'}};
+  const vd=verMap[r.veredito]||verMap.apertado;
+  const catLabel={financiamento_imobiliario:'Financiamento imob.',veiculo:'Veículo',cartao_credito:'Cartão de crédito',consignado:'Consignado',emprestimo:'Empréstimo',aluguel_pago:'Aluguel pago',saude:'Plano de saúde',outros_fixos:'Outros fixos'};
+  const tipoLabel={emprego_formal:'CLT',prolabore:'Pró-labore',informal_extrato:'Informal (extrato)',autonomo:'Autônomo',aluguel:'Aluguel',aposentadoria:'Aposentadoria',pensao:'Pensão',outros:'Outros'};
+  const monthOrder={jan:0,fev:1,mar:2,abr:3,mai:4,jun:5,jul:6,ago:7,set:8,out:9,nov:10,dez:11};
+  const allMonths=[...new Set((r.fontes||[]).flatMap(f=>(f.porMes||[]).map(m=>m.mes)))].sort((a,b)=>{const[ma,ya]=a.toLowerCase().split('/');const[mb,yb]=b.toLowerCase().split('/');return(parseInt(ya)-parseInt(yb))||((monthOrder[ma]||0)-(monthOrder[mb]||0));});
+
+  const fontesHTML=(r.fontes||[]).map(f=>{
+    const meses=allMonths.map(mes=>{const e=(f.porMes||[]).find(m=>m.mes===mes);return`<td>${e&&e.valor>0?fmtR(e.valor):'—'}</td>`;}).join('');
+    return`<tr><td><strong>${f.remetente}</strong><br><small>${tipoLabel[f.tipo]||f.tipo} · ${f.regularidade||''}</small></td>${meses}<td><strong>${fmtR(f.mediaMensal)}</strong></td><td style="text-align:center">${f.comprovavel?'✓':''}</td></tr>`;
+  }).join('');
+
+  const comprometimentosHTML=(r.comprometimentos&&r.comprometimentos.length)
+    ?r.comprometimentos.map(c=>`<tr><td>${c.credor}</td><td>${catLabel[c.categoria]||c.categoria}</td><td>${fmtR(c.valorMedioMensal)}/mês</td></tr>`).join(''):'';
+
+  const transHTML=(r.transferenciasAtencao&&r.transferenciasAtencao.length)
+    ?r.transferenciasAtencao.map(t=>`<tr><td>${t.beneficiario}</td><td>~${fmtR(t.valorMedioMensal)}/mês · ${t.frequencia||''}</td><td>${t.observacao||''}</td></tr>`).join(''):'';
+
+  const extratosHTML=(r.extratosFaltantes&&r.extratosFaltantes.length)
+    ?r.extratosFaltantes.map(e=>`<tr><td><strong>${e.banco}</strong></td><td>${e.motivo}</td><td>~${fmtR(e.valorMedioMensal)}/mês</td></tr>`).join(''):'';
+
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Laudo de Renda — Reserva ${reservaNum}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#1a1a2e;background:#fff;padding:24px 32px}
+  h1{font-size:18px;font-weight:800;color:#1C1E35}
+  h2{font-size:13px;font-weight:700;color:#1C1E35;text-transform:uppercase;letter-spacing:.06em;margin:20px 0 8px;padding-bottom:4px;border-bottom:2px solid #B8952A}
+  h3{font-size:12px;font-weight:700;color:#2D3060;margin:12px 0 6px}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #B8952A;padding-bottom:14px;margin-bottom:18px}
+  .header-left{}
+  .header-right{text-align:right;font-size:11px;color:#666}
+  .veredito{padding:12px 16px;border-radius:8px;background:${vd.bg};border-left:5px solid ${vd.cor};margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+  .veredito-label{font-size:16px;font-weight:800;color:${vd.cor}}
+  .veredito-parecer{font-size:11px;color:${vd.cor};margin-top:3px}
+  .resumo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .resumo-box{background:#f5f5f8;border-radius:6px;padding:10px 12px;border-top:3px solid #2D3060}
+  .resumo-box.gold{border-top-color:#B8952A}
+  .resumo-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+  .resumo-valor{font-size:15px;font-weight:800;color:#1C1E35}
+  .resumo-sub{font-size:10px;color:#999;margin-top:2px}
+  table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:11px}
+  th{background:#1C1E35;color:#fff;padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+  td{padding:5px 8px;border-bottom:1px solid #eee}
+  tr:nth-child(even) td{background:#fafafa}
+  .alerta{background:#fff8e8;border-left:4px solid #B8952A;padding:8px 12px;margin-bottom:8px;border-radius:0 4px 4px 0;font-size:11px}
+  .critico{background:#fdecea;border-left:4px solid #C0392B}
+  .parecer-box{background:#f5f5f8;border-radius:6px;padding:14px;font-size:12px;line-height:1.7;margin-bottom:12px}
+  .footer{margin-top:24px;padding-top:12px;border-top:1px solid #ddd;font-size:10px;color:#999;display:flex;justify-content:space-between}
+  .badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600}
+  .badge-verde{background:#e8f5ee;color:#1a7a3c}
+  .badge-cinza{background:#eee;color:#555}
+  @media print{body{padding:16px 20px}button{display:none}}
+</style></head><body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Laudo de Validação de Renda Familiar</h1>
+    <div style="font-size:12px;color:#666;margin-top:4px">Casas Manager Construções · Uso interno</div>
+    <div style="font-size:12px;margin-top:6px"><strong>Comprador:</strong> ${r.nomeComprador||'—'} &nbsp;|&nbsp; <strong>Reserva:</strong> ${reservaNum} &nbsp;|&nbsp; <strong>Período:</strong> ${r.periodo||'—'}</div>
+  </div>
+  <div class="header-right">
+    <div>Gerado em ${agora}</div>
+    ${r.valorImovel>0?`<div style="margin-top:4px">Imóvel: <strong>${fmtR(r.valorImovel)}</strong></div>`:''}
+  </div>
+</div>
+
+<div class="veredito">
+  <div>
+    <div class="veredito-label">${vd.label} — ${r.veredito==='viavel'?'Cliente consegue pagar CEF + pró-soluto':r.veredito==='apertado'?'Margem apertada para pró-soluto':'Renda insuficiente para as duas parcelas'}</div>
+    <div class="veredito-parecer">${r.parecer||''}</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:11px;color:${vd.cor}">Margem pró-soluto</div>
+    <div style="font-size:18px;font-weight:800;color:${vd.cor}">${fmtR(r.margemProSoluto)}/mês</div>
+  </div>
+</div>
+
+<div class="resumo-grid">
+  <div class="resumo-box gold">
+    <div class="resumo-label">Renda Comprovável CEF</div>
+    <div class="resumo-valor">${fmtR(r.rendaComprovavelCEF)}</div>
+    ${r.rendaDeclaradaCEF>0?`<div class="resumo-sub">Declarada: ${fmtR(r.rendaDeclaradaCEF)}</div>`:''}
+  </div>
+  <div class="resumo-box">
+    <div class="resumo-label">Parcela Estimada CEF</div>
+    <div class="resumo-valor">${r.parcelaCEF>0?fmtR(r.parcelaCEF)+'/mês':'—'}</div>
+  </div>
+  <div class="resumo-box gold">
+    <div class="resumo-label">Renda Real (extratos)</div>
+    <div class="resumo-valor">${fmtR(r.rendaRealTotal)}</div>
+    ${r.totalComprometido>0?`<div class="resumo-sub">Comprometido: ${fmtR(r.totalComprometido)}</div>`:''}
+  </div>
+  <div class="resumo-box">
+    <div class="resumo-label">Renda Disponível Líquida</div>
+    <div class="resumo-valor">${fmtR(r.rendaDisponivelReal)}</div>
+    <div class="resumo-sub">Após comprometimentos</div>
+  </div>
+</div>
+
+<h2>Fontes de Renda Identificadas</h2>
+<table>
+  <tr><th>Fonte / Remetente</th>${allMonths.map(m=>`<th>${m}</th>`).join('')}<th>Média/mês</th><th>CEF</th></tr>
+  ${fontesHTML||'<tr><td colspan="99" style="color:#999">Nenhuma fonte identificada</td></tr>'}
+</table>
+
+${comprometimentosHTML?`<h2>Comprometimentos Financeiros com Terceiros</h2>
+<table>
+  <tr><th>Credor</th><th>Categoria</th><th>Valor médio</th></tr>
+  ${comprometimentosHTML}
+  <tr style="background:#fdecea"><td colspan="2"><strong>Total comprometido</strong></td><td><strong>${fmtR(r.totalComprometido)}/mês</strong></td></tr>
+</table>`:''}
+
+${transHTML?`<h2>⚠️ Transferências que Requerem Justificativa do Cliente</h2>
+<div class="alerta">Saídas recorrentes para pessoas físicas ou destinos não identificados. O cliente deve apresentar justificativa antes da aprovação.</div>
+<table>
+  <tr><th>Beneficiário</th><th>Valor / Frequência</th><th>Observação</th></tr>
+  ${transHTML}
+</table>`:''}
+
+${extratosHTML?`<h2 style="color:#8b1a1a">🔴 Extratos Solicitados — Análise Incompleta</h2>
+<div class="alerta critico">Contas de possível mesma titularidade sem extrato anexado. Solicitar ao cliente antes de qualquer decisão comercial.</div>
+<table>
+  <tr><th>Instituição</th><th>Motivo</th><th>Valor médio</th></tr>
+  ${extratosHTML}
+</table>`:''}
+
+${(r.ressalvas&&r.ressalvas.length)?`<h2>Ressalvas da Análise</h2>
+${r.ressalvas.map(rs=>`<div class="alerta">• ${rs}</div>`).join('')}`:''}
+
+<h2>Laudo Analítico</h2>
+<div class="parecer-box">${(r.conclusao||'').replace(/\n/g,'<br>')}</div>
+
+${(r.excluidos&&r.excluidos.length)?`<h2>Transferências Excluídas da Renda (Familiares)</h2>
+<table>
+  <tr><th>Nome</th><th>Relação</th><th>Total excluído</th><th>Motivo</th></tr>
+  ${r.excluidos.map(e=>`<tr><td>${e.nome}</td><td>${e.relacao}</td><td>${fmtR(e.valorTotal)}</td><td>${e.motivo}</td></tr>`).join('')}
+</table>`:''}
+
+<div class="footer">
+  <span>Casas Manager Construções · www.casasmanager.com.br · @casasmanager</span>
+  <span>Laudo gerado em ${agora} · Reserva ${reservaNum} · Sistema Validador de Renda</span>
+</div>
+
+<script>window.onload=()=>window.print();</script>
+</body></html>`;
+
+  const w=window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+}
 
 async function salvarNoCVCRM(){
   const reservaId=document.getElementById('reservaId').value.trim();
