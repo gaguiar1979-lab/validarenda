@@ -709,8 +709,17 @@ CENÁRIO MISTO: se o comprador tem MAIS DE UM perfil (ex: CLT + renda extra info
 Aposentadoria/pensão = integral. Aluguel com contrato = integral.
 
 PASSO 3 — RENDA REAL (extratos - apenas entradas):
-- Todas as entradas, excluindo: familiares listados + apostas (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet e similares) + transferências próprias entre contas
+- Todas as entradas, excluindo: familiares listados + apostas (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet e similares) + transferências entre contas do próprio titular JÁ presentes na análise
 - Avalie regularidade por fonte: "regular" (±20% todo mês), "irregular" (variável mas presente), "esporadica" (ausente em alguns meses)
+
+PASSO 3B — CONTAS DE MESMA TITULARIDADE SEM EXTRATO (obrigatório verificar):
+- Identifique transferências de SAÍDA recorrentes que indicam conta do próprio titular em outro banco
+  (ex: TED/PIX com nome igual ao titular, ou descrição como "transf própria", "Nubank", "Inter", "C6", "XP", etc.)
+- Para cada conta suspeita: verifique se o extrato dessa instituição está entre os documentos analisados
+- Se NÃO estiver: registre em "extratosFaltantes" — o extrato dessa conta DEVE ser solicitado ao cliente
+  pois pode conter renda adicional não declarada E/OU comprometimentos não visíveis
+- Se JÁ estiver na análise: não registre (já foi considerado)
+- Inclua: nome do banco/instituição identificada, valor médio transferido por mês, motivo
 
 PASSO 4A — COMPROMETIMENTOS FIXOS (obrigações com TERCEIROS / instituições):
 - São débitos recorrentes para CREDORES identificáveis: banco, financeira, seguradora, operadora de saúde, locador PJ
@@ -735,7 +744,7 @@ PASSO 5 — VEREDITO:
 - "inviavel": rendaDisponivelReal negativa ou comprometimento > renda real
 
 Retorne SOMENTE este JSON sem markdown:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"valorImovel":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"Transferência recorrente sem identificação de destino — cliente deve justificar"}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"1 frase objetiva: veredito e margem pró-soluto disponível.","conclusao":"Laudo em 3 parágrafos: 1) renda comprovável para CEF vs declarada; 2) renda real apurada e comprometimentos fixos identificados; 3) capacidade líquida e recomendação objetiva sobre viabilidade do pró-soluto."}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"valorImovel":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"Transferência recorrente sem identificação de destino — cliente deve justificar"}],"extratosFaltantes":[{"banco":"Nome do banco/instituição","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular nesta instituição","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"1 frase objetiva: veredito e margem pró-soluto disponível.","conclusao":"Laudo em 3 parágrafos: 1) renda comprovável para CEF vs declarada; 2) renda real apurada e comprometimentos fixos identificados; 3) capacidade líquida e recomendação objetiva sobre viabilidade do pró-soluto."}
 
 Tipos válidos para fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros
 Frequencia: mensal, quinzenal, semanal, irregular.
@@ -904,12 +913,29 @@ function renderResults(r){
           <div>
             <span style="font-size:13px;font-weight:600;color:var(--navy)">👤 ${t.beneficiario}</span>
             <span style="font-size:11px;color:var(--text3);margin-left:8px">${t.frequencia||'recorrente'}</span>
-            ${t.observacao?`<div style="font-size:11px;color:#7a5a00;margin-top:2px">${t.observacao}</div>`:''}
+            ${t.observacao?'<div style="font-size:11px;color:#7a5a00;margin-top:2px">'+t.observacao+'</div>':''}
           </div>
-          <strong style="font-family:'DM Mono',monospace;color:#7a5a00;white-space:nowrap;margin-left:12px">~${fmt(t.valorMedioMensal)}/mês</strong>
+          <strong style="font-family:\'DM Mono\',monospace;color:#7a5a00;white-space:nowrap;margin-left:12px">~${fmt(t.valorMedioMensal)}/mês</strong>
         </div>`).join('')}
       <div style="margin-top:10px;padding:8px 12px;background:#fef3cd;border-radius:6px;font-size:11px;color:#7a5a00;font-weight:600">
         📎 O cliente deve apresentar declaração ou extrato de conta de destino para cada item acima antes da aprovação.
+      </div>
+    </div>`:''}
+
+    ${(r.extratosFaltantes&&r.extratosFaltantes.length)?`
+    <div style="margin-top:12px;background:#fdecea;border:2px solid #C0392B;border-radius:10px;padding:14px 16px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8b1a1a;margin-bottom:4px">🔴 Extratos Solicitados — Análise Incompleta</div>
+      <div style="font-size:11px;color:#8b1a1a;margin-bottom:10px;line-height:1.5">Foram identificadas transferências recorrentes de saída sugerindo conta de <strong>mesma titularidade</strong> em outra instituição. O extrato dessas contas <strong>não está anexado</strong> — pode conter renda não declarada e/ou comprometimentos ocultos. Solicitar ao cliente antes de prosseguir.</div>
+      ${r.extratosFaltantes.map(e=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f5c6cb">
+          <div>
+            <span style="font-size:13px;font-weight:700;color:#8b1a1a">🏦 ${e.banco}</span>
+            <div style="font-size:11px;color:#8b1a1a;margin-top:2px;opacity:.8">${e.motivo}</div>
+          </div>
+          <strong style="font-family:'DM Mono',monospace;color:#8b1a1a;white-space:nowrap;margin-left:12px">~${fmt(e.valorMedioMensal)}/mês</strong>
+        </div>`).join('')}
+      <div style="margin-top:10px;padding:8px 12px;background:#fff0f0;border-radius:6px;font-size:11px;color:#8b1a1a;font-weight:700">
+        ❗ Solicitar extrato(s) acima ao cliente e re-analisar antes de qualquer decisão comercial.
       </div>
     </div>`:''}
     `;
