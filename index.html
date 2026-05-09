@@ -648,27 +648,33 @@ async function analyze(){
     const filhosList=members.filter(m=>m.type!=='cônjuge').map(m=>m.name).join(', ')||'nenhum';
     const conjugesList=members.filter(m=>m.type==='cônjuge').map(m=>m.name).join(', ')||'nenhum';
     contentParts.push({type:'text',text:`\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n\nRetorne apenas o JSON.`});
-    const systemPrompt=`Você é um analista de crédito da Casas Manager Construções. Analise os extratos bancários identificando TODOS os lançamentos de entrada (créditos, PIX, TED, depósitos).
+    const systemPrompt=`Você é um analista de crédito especializado em financiamento habitacional (SFH/CEF). Analise os extratos bancários e comprovantes de renda para gerar um laudo técnico completo.
 
-INSTRUÇÕES:
-1. Identifique cada entrada com data, valor e remetente
-2. Agrupe por mês/ano e por fonte (remetente)
-3. Exclua transferências de familiares listados
-4. Calcule total e média mensal por fonte
-5. Gere relatório detalhado
+INSTRUÇÕES DE ANÁLISE:
+1. Identifique TODOS os lançamentos de entrada (créditos, PIX, TED, depósitos, salários)
+2. Agrupe por mês/ano e por fonte (remetente/empresa)
+3. Exclua transferências entre familiares listados pelo usuário
+4. Para cada fonte, avalie a REGULARIDADE: "regular" (mesmos valores ±20% todo mês), "irregular" (valores variáveis mas presença constante), "esporadica" (não aparece todo mês)
+5. Calcule a RENDA COMPROVÁVEL por tipo: CLT=média líquida, autônomo=70% da média, pró-labore=média, aluguel=valor contratual, aposentadoria=valor integral
+6. Some todas as rendas comprováveis para obter rendaComprovavelTotal
+7. Calcidade de pagamento = rendaComprovavelTotal × 0.30 (regra 30% CEF)
+8. Defina o STATUS geral: "apto" (renda suficiente, docs ok, renda regular), "apto_com_ressalvas" (renda ok mas com irregularidades ou docs faltando), "requer_documentacao" (docs essenciais ausentes ou renda insuficiente/esporádica)
+9. Liste RESSALVAS específicas para o analista (ex: "Renda autônoma sem comprovante formal", "Extrato de apenas 3 meses")
+10. Extraia o nome do comprador dos documentos se possível
 
 Retorne SOMENTE este JSON sem markdown:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"rendaTotal":0.00,"mediamensal":0.00,"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","totalPeriodo":0.00,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação detalhada.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false},"parecer":"Parecer em 2 frases.","conclusao":"Relatório em 5 parágrafos: 1) metodologia, 2) fontes e classificação, 3) exclusões e critérios, 4) composição final da renda, 5) recomendações para crédito.","alertas":[]}
-ANÁLISE DE COMPROVANTES DE RENDIMENTO:
-- Se houver holerites/contracheques: identifique salário base, adicionais, descontos e salário líquido por mês
-- Se houver recibos de pró-labore: calcule a média mensal (podem variar)
-- Cruze os comprovantes com o extrato: confirme se os depósitos batem com os documentos
-- Para renda variável: use a média dos meses disponíveis
-- Para renda fixa CLT + extra: some as fontes separadamente
-- Classifique cada fonte corretamente no campo "tipo"
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome Completo ou null","rendaTotal":0.00,"mediamensal":0.00,"rendaComprovavelTotal":0.00,"capacidadePagamento":0.00,"status":"apto","fontes":[{"remetente":"Nome/Empresa","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","totalPeriodo":0.00,"mediaMensal":0.00,"rendaComprovavel":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação detalhada.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"comprovanteProlabore":false},"ressalvas":["Ressalva 1"],"parecer":"Parecer técnico em 2 frases focado em comprovabilidade da renda para fins de financiamento habitacional.","conclusao":"Laudo em 4 parágrafos: 1) identificação do proponente e metodologia, 2) composição e classificação da renda por tipo com análise de regularidade, 3) renda comprovável e capacidade de pagamento conforme critérios CEF, 4) recomendação técnica com condicionantes se houver.","alertas":[]}
 
-Tipos: emprego_formal (CLT/celetista), prolabore (sócio/empresário), autonomo (freela/MEI), aluguel, aposentadoria, pensao, outros.
-Frequencia: mensal, quinzenal, semanal, irregular.`;
+ANÁLISE DE COMPROVANTES:
+- Holerites/contracheques: use o salário LÍQUIDO (após descontos)
+- Pró-labore: use a média dos meses disponíveis
+- Cruze comprovantes com extrato: confirme se depósitos batem
+- Renda variável: use média conservadora (descarte outliers)
+- CLT + renda extra: some separadamente, cada uma com sua comprovabilidade
+
+Tipos: emprego_formal (CLT), prolabore (sócio/empresário), autonomo (freela/MEI sem nota), aluguel, aposentadoria, pensao, outros.
+Frequencia: mensal, quinzenal, semanal, irregular.
+Regularidade: regular, irregular, esporadica.`;
     const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:4000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
     if(!resp.ok){const err=await resp.json();throw new Error(err.error?.message||`Erro ${resp.status}`);}
     const data=await resp.json();
@@ -714,41 +720,99 @@ function renderResults(r){
   lastResult=r;
   document.getElementById('periodoLabel').textContent=r.periodo||'—';
   document.getElementById('printDate').textContent='Gerado em: '+new Date().toLocaleString('pt-BR');
-  document.getElementById('metricsGrid').innerHTML=`
-    <div class="metric gold"><div class="metric-label">Renda total do período</div><div class="metric-value">${fmt(r.rendaTotal)}</div><div class="metric-sub">excl. transferências internas</div></div>
-    <div class="metric gold"><div class="metric-label">Média mensal</div><div class="metric-value">${fmt(r.mediamensal||r.rendaTotal/r.meses)}</div><div class="metric-sub">renda média por mês</div></div>
-    <div class="metric navy"><div class="metric-label">Fontes de renda</div><div class="metric-value">${r.fontes.length}</div><div class="metric-sub">remetentes distintos</div></div>
-    <div class="metric"><div class="metric-label">Período</div><div class="metric-value">${r.meses} meses</div><div class="metric-sub">${r.periodo}</div></div>`;
 
+  // STATUS BANNER
+  const statusMap={
+    apto:{label:'APTO PARA FINANCIAMENTO',color:'#1a7a3c',bg:'#e8f5ee',border:'#1a7a3c',icon:'✅'},
+    apto_com_ressalvas:{label:'APTO COM RESSALVAS',color:'#7a5a00',bg:'#fef6e4',border:'#B8952A',icon:'⚠️'},
+    requer_documentacao:{label:'REQUER DOCUMENTAÇÃO ADICIONAL',color:'#8b1a1a',bg:'#fdecea',border:'#C0392B',icon:'❌'}
+  };
+  const st=statusMap[r.status]||statusMap['apto_com_ressalvas'];
+  const mediaMensal=r.mediamensal||r.rendaTotal/r.meses||0;
+  const rendaComp=r.rendaComprovavelTotal||mediaMensal;
+  const capPag=r.capacidadePagamento||rendaComp*0.30;
+
+  document.getElementById('metricsGrid').innerHTML=`
+    <div style="grid-column:1/-1;padding:16px 20px;background:${st.bg};border:2px solid ${st.border};border-radius:12px;display:flex;align-items:center;gap:12px;margin-bottom:4px">
+      <span style="font-size:24px">${st.icon}</span>
+      <div>
+        <div style="font-size:18px;font-weight:800;color:${st.color};letter-spacing:.02em">${st.label}</div>
+        <div style="font-size:12px;color:${st.color};opacity:.8;margin-top:2px">Reserva ${document.getElementById('reservaId').value||'—'} · ${r.nomeComprador||'Comprador'} · ${new Date().toLocaleDateString('pt-BR')}</div>
+      </div>
+    </div>
+    <div class="metric gold"><div class="metric-label">Renda comprovável</div><div class="metric-value">${fmt(rendaComp)}</div><div class="metric-sub">base para análise CEF</div></div>
+    <div class="metric gold"><div class="metric-label">Capacidade de pagamento</div><div class="metric-value">${fmt(capPag)}</div><div class="metric-sub">limite de parcela (30%)</div></div>
+    <div class="metric navy"><div class="metric-label">Renda bruta média</div><div class="metric-value">${fmt(mediaMensal)}</div><div class="metric-sub">média mensal do período</div></div>
+    <div class="metric"><div class="metric-label">Período analisado</div><div class="metric-value">${r.meses} meses</div><div class="metric-sub">${r.periodo}</div></div>`;
+
+  // RESSALVAS
+  if(r.ressalvas&&r.ressalvas.length){
+    const rv=document.createElement('div');
+    rv.style.cssText='margin-bottom:1rem;padding:12px 16px;background:#fff8e8;border-left:4px solid var(--gold);border-radius:8px;';
+    rv.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">⚠️ Ressalvas para o Analista</div>'+
+      r.ressalvas.map(rv=>`<div style="font-size:13px;color:var(--navy);padding:2px 0">• ${rv}</div>`).join('');
+    const mg=document.getElementById('metricsGrid');
+    mg.parentNode.insertBefore(rv,mg.nextSibling);
+  }
+
+  // TABELA DE FONTES COM REGULARIDADE
+  const regIcon={regular:'<span style="color:#1a7a3c;font-weight:700">● Regular</span>',irregular:'<span style="color:#7a5a00;font-weight:700">◐ Irregular</span>',esporadica:'<span style="color:#8b1a1a;font-weight:700">○ Esporádica</span>'};
   const allMonths=[...new Set(r.fontes.flatMap(f=>(f.porMes||[]).map(m=>m.mes)))].sort();
   const monthHeaders=allMonths.map(m=>`<th style="text-align:right;font-size:11px">${m}</th>`).join('');
-  document.querySelector('.income-table thead tr').innerHTML=`<th>Fonte / Remetente</th>${monthHeaders}<th style="text-align:right">Total período</th><th style="text-align:right">Média mensal</th>`;
+  document.querySelector('.income-table thead tr').innerHTML=`<th>Fonte / Remetente</th>${monthHeaders}<th style="text-align:right">Média/mês</th><th style="text-align:right">Comprovável</th><th style="text-align:right">Regularidade</th>`;
   document.getElementById('incomeRows').innerHTML=r.fontes.map(f=>{
     const monthCols=allMonths.map(mes=>{
       const entry=(f.porMes||[]).find(m=>m.mes===mes);
       return `<td style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)">${entry&&entry.valor>0?fmt(entry.valor):'—'}</td>`;
     }).join('');
-    return `<tr><td><div class="src-name">${f.remetente}</div><div style="display:flex;gap:4px;margin-top:3px;"><span class="badge badge-gray">${typeLabel[f.tipo]||f.tipo}</span><span class="badge ${freqBadge[f.frequencia]||'badge-gray'}">${freqLabel[f.frequencia]||f.frequencia}</span></div></td>${monthCols}<td style="text-align:right;font-weight:600;color:var(--text2);font-family:'DM Mono',monospace;font-size:12px">${fmt(f.totalPeriodo||0)}</td><td style="text-align:right;font-weight:700;color:var(--gold);font-family:'DM Mono',monospace">${fmt(f.mediaMensal||f.valorMedio||0)}/mês</td></tr>`;
+    const comp=f.rendaComprovavel||f.mediaMensal||0;
+    return `<tr>
+      <td><div class="src-name">${f.remetente}</div><div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap"><span class="badge badge-gray">${typeLabel[f.tipo]||f.tipo}</span><span class="badge ${freqBadge[f.frequencia]||'badge-gray'}">${freqLabel[f.frequencia]||f.frequencia}</span></div></td>
+      ${monthCols}
+      <td style="text-align:right;font-weight:600;color:var(--text2);font-family:'DM Mono',monospace;font-size:12px">${fmt(f.mediaMensal||0)}</td>
+      <td style="text-align:right;font-weight:700;color:var(--gold);font-family:'DM Mono',monospace">${fmt(comp)}</td>
+      <td style="text-align:right;font-size:12px">${regIcon[f.regularidade]||regIcon['irregular']}</td>
+    </tr>`;
   }).join('');
 
+  // EXCLUÍDOS (keep existing)
   const relIcon={'cônjuge':'💑','filho(a)':'👦','pai/mãe':'👴','familiar':'👤'};
   document.getElementById('excludedRows').innerHTML=r.excluidos.length
     ?r.excluidos.map(e=>`<div class="excl-item"><div class="excl-header"><span style="font-size:16px">${relIcon[e.relacao]||'👤'}</span><div class="excl-header-name">${e.nome} <span style="font-size:11px;background:var(--gold-light);border:1px solid var(--gold2);padding:2px 8px;border-radius:999px;color:var(--gold);margin-left:6px">${e.relacao}</span></div><div class="excl-header-amount">${e.valorTotal>0?fmt(e.valorTotal):'—'}</div></div><div class="excl-body"><div style="margin-bottom:${e.transacoes&&e.transacoes.length?'10px':'0'}">${e.motivo||'Transferência familiar desconsiderada.'}</div>${e.transacoes&&e.transacoes.length?`<div class="excl-transactions"><div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Transações identificadas</div>${e.transacoes.map(t=>`<div class="excl-tx"><span>${t.data} — ${t.descricao}</span><span>${fmt(t.valor)}</span></div>`).join('')}</div>`:''}</div></div>`).join('')
     :'<p style="font-size:13px;color:var(--text3)">Nenhuma transferência familiar identificada.</p>';
 
+  // CHECKLIST DE DOCUMENTOS
   const docs=r.documentos;
   document.getElementById('docGrid').innerHTML=[
     {key:'rg',label:'RG / CPF / CNH',icon:'🪪'},
     {key:'certidao',label:'Certidão de estado civil',icon:'📋'},
-    {key:'extratoConjuge',label:'Extrato cônjuge',icon:'📄'}
-  ].map(d=>`<div class="doc-item"><span class="doc-icon">${d.icon}</span><span class="doc-label">${d.label}</span><span class="${docs[d.key]?'doc-ok':'doc-missing'}">${docs[d.key]?'✓':'Pendente'}</span></div>`).join('');
+    {key:'extratoConjuge',label:'Extrato cônjuge',icon:'📄'},
+    {key:'comprovanteCLT',label:'Holerite / Contracheque',icon:'💼'},
+    {key:'comprovanteProlabore',label:'Pró-labore / Recibo',icon:'🧾'}
+  ].map(d=>`<div class="doc-item"><span class="doc-icon">${d.icon}</span><span class="doc-label">${d.label}</span><span class="${docs[d.key]?'doc-ok':'doc-missing'}">${docs[d.key]?'✓ Verificado':'Pendente'}</span></div>`).join('');
 
+  // LAUDO FINAL
   document.getElementById('reportContent').innerHTML=`
-    <div class="report-section"><h4>Parecer resumido</h4><div class="report-text">${r.parecer||''}</div></div>
-    <div class="report-section"><h4>Relatório completo de análise</h4><div class="report-text">${r.conclusao||''}</div></div>`;
+    <div class="report-section">
+      <h4>Parecer Técnico</h4>
+      <div class="report-text">${r.parecer||''}</div>
+    </div>
+    <div class="report-section">
+      <h4>Laudo de Análise de Renda — Uso CEF/SFH</h4>
+      <div class="report-text">${r.conclusao||''}</div>
+    </div>
+    <div style="margin-top:16px;padding:14px 18px;background:var(--navy);border-radius:10px;color:#fff">
+      <div style="font-size:11px;opacity:.6;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Resumo para Análise de Crédito</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+        <div>Renda bruta média: <strong>${fmt(mediaMensal)}/mês</strong></div>
+        <div>Renda comprovável: <strong style="color:var(--gold2)">${fmt(rendaComp)}/mês</strong></div>
+        <div>Capacidade de pagamento: <strong style="color:var(--gold2)">${fmt(capPag)}/mês</strong></div>
+        <div>Período: <strong>${r.periodo}</strong></div>
+      </div>
+    </div>`;
 
   const now=new Date().toLocaleString('pt-BR');
-  document.getElementById('reportStamp').innerHTML=`<img src="/logo.jpg" style="height:24px;object-fit:contain;filter:brightness(0) invert(1);opacity:.6"><span>Gerado em <strong>${now}</strong> · Período: <strong>${r.periodo}</strong> · Casas Manager Construções</span>`;
+  document.getElementById('reportStamp').innerHTML=`<img src="/logo.jpg" style="height:24px;object-fit:contain;opacity:.7"><span>Laudo gerado em <strong>${now}</strong> · Reserva <strong>${document.getElementById('reservaId').value||'—'}</strong> · Casas Manager Construções</span>`;
 
   const ab=document.getElementById('alertBox');
   if(r.alertas?.length){ab.style.display='block';ab.className='alert-box';ab.innerHTML='<strong>⚠️ Atenção:</strong> '+r.alertas.join(' · ');}
