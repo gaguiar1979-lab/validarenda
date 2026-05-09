@@ -131,6 +131,48 @@ app.post('/api/analyze', async (req, res) => {
   }
 });
 
+// Gera PDF simples com o conteúdo do relatório
+function gerarPDF(conteudo) {
+  // Substitui caracteres especiais por equivalentes ASCII para compatibilidade PDF
+  const texto = conteudo
+    .replace(/[áàãâä]/g, 'a').replace(/[ÁÀÃÂÄ]/g, 'A')
+    .replace(/[éèêë]/g, 'e').replace(/[ÉÈÊË]/g, 'E')
+    .replace(/[íìîï]/g, 'i').replace(/[ÍÌÎÏ]/g, 'I')
+    .replace(/[óòõôö]/g, 'o').replace(/[ÓÒÕÔÖ]/g, 'O')
+    .replace(/[úùûü]/g, 'u').replace(/[ÚÙÛÜ]/g, 'U')
+    .replace(/ç/g, 'c').replace(/Ç/g, 'C')
+    .replace(/[^\x20-\x7E\n]/g, '?');
+
+  const linhas = texto.split('\n');
+  let streamContent = 'BT\n/F1 10 Tf\n';
+  let y = 750;
+  for (const linha of linhas) {
+    const safe = linha.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+    streamContent += `100 ${y} Td (${safe}) Tj 0 0 Td\n`;
+    y -= 14;
+    if (y < 50) { streamContent += 'ET\nBT\n/F1 10 Tf\n'; y = 750; }
+  }
+  streamContent += 'ET';
+
+  const stream = Buffer.from(streamContent);
+  const pdf = `%PDF-1.4
+1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
+3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 842]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj
+4 0 obj<</Length ${stream.length}>>
+stream
+${streamContent}
+endstream
+endobj
+5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Courier>>endobj
+xref
+trailer<</Size 6/Root 1 0 R>>
+startxref
+0
+%%EOF`;
+  return Buffer.from(pdf);
+}
+
 // CV API: salva relatório na reserva
 app.post('/api/cv/reserva/:id/salvar-relatorio', async (req, res) => {
   try {
@@ -138,55 +180,44 @@ app.post('/api/cv/reserva/:id/salvar-relatorio', async (req, res) => {
     const { texto, mediaMensal, rendaTotal, periodo } = req.body;
     const agora = new Date().toLocaleString('pt-BR');
 
-    const conteudo = `RELATÓRIO DE VALIDAÇÃO DE RENDA
-Casas Manager Construções — ${agora}
+    const conteudo = `RELATORIO DE VALIDACAO DE RENDA
+Casas Manager Construcoes - ${agora}
 
 Reserva: ${reservaId}
-Período analisado: ${periodo || '—'}
-Renda total do período: R$ ${rendaTotal || '—'}
-Média mensal: R$ ${mediaMensal || '—'}
+Periodo analisado: ${periodo || '-'}
+Renda total do periodo: R$ ${rendaTotal || '-'}
+Media mensal: R$ ${mediaMensal || '-'}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+-------------------------------------------
 
 ${texto || ''}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+-------------------------------------------
 Gerado pelo Sistema Validador de Renda
 www.casasmanager.com.br | @casasmanager`;
 
-    const fileContent = Buffer.from(conteudo, 'utf-8');
-    const fileName = `relatorio_renda_reserva_${reservaId}.txt`;
-    const boundary = '----Boundary' + Date.now();
+    const pdfBuffer = gerarPDF(conteudo);
+    const pdfBase64 = pdfBuffer.toString('base64');
+    const fileName = `relatorio_renda_reserva_${reservaId}_${Date.now()}.pdf`;
 
-    const part1 = Buffer.from(
-      `--${boundary}\r\nContent-Disposition: form-data; name="idreserva"\r\n\r\n${reservaId}\r\n` +
-      `--${boundary}\r\nContent-Disposition: form-data; name="descricao"\r\n\r\nRelatório de Validação de Renda — ${agora}\r\n` +
-      `--${boundary}\r\nContent-Disposition: form-data; name="arquivo"; filename="${fileName}"\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n`,
-      'utf-8'
-    );
-    const part2 = Buffer.from(`\r\n--${boundary}--\r\n`, 'utf-8');
-    const bodyBuf = Buffer.concat([part1, fileContent, part2]);
-
-    const result = await new Promise((resolve, reject) => {
-      const req2 = https.request({
-        hostname: CV_BASE,
-        path: '/api/v1/comercial/reservas/documentos',
-        method: 'POST',
-        headers: {
-          'email': CV_EMAIL,
-          'token': CV_TOKEN,
-          'Content-Type': `multipart/form-data; boundary=${boundary}`,
-          'Content-Length': bodyBuf.length
-        }
-      }, (resp) => {
-        let data = '';
-        resp.on('data', chunk => { data += chunk; });
-        resp.on('end', () => resolve({ status: resp.statusCode, body: data }));
-      });
-      req2.on('error', reject);
-      req2.write(bodyBuf);
-      req2.end();
+    const payload = JSON.stringify({
+      idreserva: parseInt(reservaId),
+      idtipo: 3,
+      nome: fileName,
+      documento_base64: pdfBase64
     });
+
+    const result = await httpsRequest({
+      hostname: CV_BASE,
+      path: '/api/v1/comercial/reservas/documentos',
+      method: 'POST',
+      headers: {
+        'email': CV_EMAIL,
+        'token': CV_TOKEN,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    }, payload);
 
     res.status(result.status).json({ ok: result.status < 300, raw: result.body });
   } catch (e) {
