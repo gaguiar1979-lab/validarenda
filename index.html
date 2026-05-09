@@ -162,6 +162,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 .btn-print{display:inline-flex;align-items:center;gap:6px;margin-top:1rem;padding:9px 18px;font-size:13px;font-weight:600;border:2px solid var(--navy);border-radius:var(--radius);background:var(--surface);cursor:pointer;color:var(--navy);font-family:'DM Sans',sans-serif}
 .btn-print:hover{background:var(--navy);color:#fff}
+.btn-save{display:inline-flex;align-items:center;gap:6px;margin-top:1rem;margin-left:8px;padding:9px 18px;font-size:13px;font-weight:600;border:2px solid var(--gold);border-radius:var(--radius);background:var(--gold);cursor:pointer;color:#fff;font-family:'DM Sans',sans-serif}
+.btn-save:hover{background:var(--gold2);border-color:var(--gold2)}
+.btn-save:disabled{opacity:.5;cursor:not-allowed}
 .divider{height:1px;background:var(--border);margin:1.5rem 0}
 
 /* FOOTER */
@@ -338,6 +341,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div id="alertBox" style="display:none"></div>
     <div class="report-stamp" id="reportStamp"></div>
     <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+    <button class="btn-save" id="btnSalvarCV" onclick="salvarNoCVCRM()">💾 Salvar no CV CRM</button>
   </div>
 </div>
 
@@ -677,7 +681,35 @@ Frequencia: mensal, quinzenal, semanal, irregular.`;
   btn.disabled=false;
 }
 
+let lastResult=null;
+
+async function salvarNoCVCRM(){
+  const reservaId=document.getElementById('reservaId').value.trim();
+  if(!reservaId){showToast('⚠️ Digite o número da reserva para salvar.');return;}
+  if(!lastResult){showToast('⚠️ Gere a análise antes de salvar.');return;}
+  const btn=document.getElementById('btnSalvarCV');
+  btn.disabled=true;btn.textContent='⏳ Salvando...';
+  try{
+    const texto=(lastResult.parecer||'')+'\n\n'+(lastResult.conclusao||'');
+    const resp=await fetch('/api/cv/reserva/'+reservaId+'/salvar-relatorio',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        texto,
+        mediaMensal:(lastResult.mediamensal||lastResult.rendaTotal/lastResult.meses||0).toFixed(2),
+        rendaTotal:(lastResult.rendaTotal||0).toFixed(2),
+        periodo:lastResult.periodo||''
+      })
+    });
+    const data=await resp.json();
+    if(data.ok){showToast('✅ Relatório salvo no CV CRM com sucesso!');}
+    else{showToast('❌ Erro ao salvar: '+JSON.stringify(data.raw));}
+  }catch(e){showToast('❌ Erro: '+e.message);}
+  btn.disabled=false;btn.textContent='💾 Salvar no CV CRM';
+}
+
 function renderResults(r){
+  lastResult=r;
   document.getElementById('periodoLabel').textContent=r.periodo||'—';
   document.getElementById('printDate').textContent='Gerado em: '+new Date().toLocaleString('pt-BR');
   document.getElementById('metricsGrid').innerHTML=`

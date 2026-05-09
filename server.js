@@ -131,6 +131,69 @@ app.post('/api/analyze', async (req, res) => {
   }
 });
 
+// CV API: salva relatório na reserva
+app.post('/api/cv/reserva/:id/salvar-relatorio', async (req, res) => {
+  try {
+    const reservaId = req.params.id;
+    const { texto, mediaMensal, rendaTotal, periodo } = req.body;
+    const agora = new Date().toLocaleString('pt-BR');
+
+    const conteudo = `RELATÓRIO DE VALIDAÇÃO DE RENDA
+Casas Manager Construções — ${agora}
+
+Reserva: ${reservaId}
+Período analisado: ${periodo || '—'}
+Renda total do período: R$ ${rendaTotal || '—'}
+Média mensal: R$ ${mediaMensal || '—'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${texto || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Gerado pelo Sistema Validador de Renda
+www.casasmanager.com.br | @casasmanager`;
+
+    const fileContent = Buffer.from(conteudo, 'utf-8');
+    const fileName = `relatorio_renda_reserva_${reservaId}.txt`;
+    const boundary = '----Boundary' + Date.now();
+
+    const part1 = Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="idreserva"\r\n\r\n${reservaId}\r\n` +
+      `--${boundary}\r\nContent-Disposition: form-data; name="descricao"\r\n\r\nRelatório de Validação de Renda — ${agora}\r\n` +
+      `--${boundary}\r\nContent-Disposition: form-data; name="arquivo"; filename="${fileName}"\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n`,
+      'utf-8'
+    );
+    const part2 = Buffer.from(`\r\n--${boundary}--\r\n`, 'utf-8');
+    const bodyBuf = Buffer.concat([part1, fileContent, part2]);
+
+    const result = await new Promise((resolve, reject) => {
+      const req2 = https.request({
+        hostname: CV_BASE,
+        path: '/api/v1/comercial/reservas/documentos',
+        method: 'POST',
+        headers: {
+          'email': CV_EMAIL,
+          'token': CV_TOKEN,
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          'Content-Length': bodyBuf.length
+        }
+      }, (resp) => {
+        let data = '';
+        resp.on('data', chunk => { data += chunk; });
+        resp.on('end', () => resolve({ status: resp.statusCode, body: data }));
+      });
+      req2.on('error', reject);
+      req2.write(bodyBuf);
+      req2.end();
+    });
+
+    res.status(result.status).json({ ok: result.status < 300, raw: result.body });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/logo.jpg', (req, res) => {
   res.sendFile(path.join(__dirname, 'logo.jpg'));
 });
