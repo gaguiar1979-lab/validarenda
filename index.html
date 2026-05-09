@@ -622,7 +622,7 @@ function showToast(msg){
   setTimeout(()=>t.remove(),4000);
 }
 
-const typeLabel={emprego_formal:'Emprego formal',autonomo:'Autônomo / MEI',aluguel:'Aluguel',aposentadoria:'Aposentadoria',pensao:'Pensão',outros:'Outros'};
+const typeLabel={emprego_formal:'CLT / Emprego formal',prolabore:'Pró-labore',autonomo:'Autônomo / MEI',informal_extrato:'Informal (extrato)',aluguel:'Aluguel',aposentadoria:'Aposentadoria',pensao:'Pensão',outros:'Outros'};
 const freqLabel={mensal:'Mensal',irregular:'Irregular',quinzenal:'Quinzenal',semanal:'Semanal'};
 const freqBadge={mensal:'badge-gold',irregular:'badge-warn',quinzenal:'badge-navy',semanal:'badge-navy'};
 let filhoCount=0;
@@ -678,9 +678,28 @@ PASSO 1 — SIMULAÇÃO CEF (se houver):
 - Extraia renda declarada, parcela mensal CEF, valor do imóvel e valor financiado
 
 PASSO 2 — RENDA COMPROVÁVEL (para CEF):
-- Apenas fontes com doc formal: holerite, pró-labore, aposentadoria, aluguel com contrato
-- CLT=salário líquido, autônomo=70% da média, pró-labore=média, aposentadoria=integral
-- Sem documento formal = NÃO compõe renda CEF
+Identifique o perfil do comprador pelos documentos presentes e aplique:
+
+CENÁRIO A — EMPREGADO CLT (há contracheque / holerite):
+- rendaComprovavelCEF = salário LÍQUIDO do contracheque
+- tipo da fonte: "emprego_formal"
+- Use o extrato para confirmar o crédito e identificar renda complementar informal regular
+
+CENÁRIO B — EMPRESÁRIO / SÓCIO (há recibo de pró-labore):
+- rendaComprovavelCEF = média dos recibos de pró-labore
+- tipo da fonte: "prolabore"
+- Use o extrato para confirmar e identificar renda complementar
+
+CENÁRIO C — TRABALHADOR INFORMAL (apenas extrato, sem contracheque nem pró-labore):
+- rendaComprovavelCEF = 70% da média mensal das entradas regulares identificadas no extrato
+- tipo da fonte: "informal_extrato"
+- Declare no parecer: "Renda 100% informal — comprovação via extrato bancário"
+
+CENÁRIO MISTO: se o comprador tem MAIS DE UM perfil (ex: CLT + renda extra informal):
+- Some a renda formal comprovada + 70% da renda informal regular identificada no extrato
+- Classifique cada fonte com seu tipo correto
+
+Aposentadoria/pensão = integral. Aluguel com contrato = integral.
 
 PASSO 3 — RENDA REAL (extratos - apenas entradas):
 - Todas as entradas, excluindo: familiares listados + apostas (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet e similares) + transferências próprias entre contas
@@ -711,11 +730,7 @@ PASSO 5 — VEREDITO:
 Retorne SOMENTE este JSON sem markdown:
 {"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"valorImovel":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"Transferência recorrente sem identificação de destino — cliente deve justificar"}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"1 frase objetiva: veredito e margem pró-soluto disponível.","conclusao":"Laudo em 3 parágrafos: 1) renda comprovável para CEF vs declarada; 2) renda real apurada e comprometimentos fixos identificados; 3) capacidade líquida e recomendação objetiva sobre viabilidade do pró-soluto."}
 
-ANÁLISE DE COMPROVANTES:
-- Holerites: use salário LÍQUIDO
-- Pró-labore: média dos recibos
-- Cruze comprovantes com extrato
-- Tipos: emprego_formal, prolabore, autonomo, aluguel, aposentadoria, pensao, outros
+Tipos válidos para fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros
 Frequencia: mensal, quinzenal, semanal, irregular.
 Regularidade: regular, irregular, esporadica.`;
     const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:4000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
@@ -725,7 +740,21 @@ Regularidade: regular, irregular, esporadica.`;
     const clean=raw.replace(/```json|```/g,'').trim();
     renderResults(JSON.parse(clean));
   }catch(e){
-    console.error(e);alert('Erro na análise: '+e.message);
+    console.error('ERRO ANÁLISE:',e);
+    clearInterval(interval);
+    document.getElementById('progressWrap').classList.remove('active');
+    btn.disabled=false;
+    document.getElementById('progressLabel').textContent='';
+    // Mostra o erro diretamente na tela
+    document.getElementById('results').classList.add('on');
+    document.getElementById('metricsGrid').innerHTML=
+      '<div style="grid-column:1/-1;padding:20px;background:#fdecea;border:2px solid #C0392B;border-radius:12px;color:#8b1a1a">'
+      +'<div style="font-size:16px;font-weight:800;margin-bottom:8px">❌ Erro ao gerar relatório</div>'
+      +'<div style="font-size:13px">'+e.message+'</div>'
+      +'<div style="font-size:12px;margin-top:10px;opacity:.7">Tente novamente. Se o erro persistir, verifique se há extratos disponíveis na reserva.</div>'
+      +'</div>';
+    document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+    return;
   }
   clearInterval(interval);
   document.getElementById('progressWrap').classList.remove('active');
@@ -774,6 +803,25 @@ function renderResults(r){
   const reservaNum=document.getElementById('reservaId').value||'—';
 
   const margemColor=(r.margemProSoluto||0)>500?'#6ee7a0':(r.margemProSoluto||0)>0?'#fde68a':'#fca5a5';
+
+  // Pré-computa bloco de documentos faltantes (evita IIFE aninhado em template literal)
+  const docsFaltando=[];
+  if(r.documentos){
+    if(!r.documentos.simulacaoCEF) docsFaltando.push({label:'Simulação CEF',impacto:'Parcela mensal e renda declarada não apuradas'});
+    if(!r.documentos.comprovanteCLT) docsFaltando.push({label:'Comprovante de renda formal (contracheque / pró-labore)',impacto:'Renda comprovável para a CEF pode estar incompleta'});
+    if(!r.documentos.extratoConjuge&&members.some(m=>m.type==='cônjuge')) docsFaltando.push({label:'Extrato do cônjuge',impacto:'Renda e comprometimentos do cônjuge não foram analisados'});
+    if(!r.documentos.certidao) docsFaltando.push({label:'Certidão de estado civil',impacto:'Estado civil não confirmado — familiares podem não ter sido identificados'});
+  }
+  const docsFaltandoHtml=docsFaltando.length
+    ? '<div style="grid-column:1/-1;background:#fff8e8;border:2px solid #B8952A;border-radius:10px;padding:14px 18px">'
+      +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#7a5a00;margin-bottom:8px">📋 Documentos Ausentes — Análise Parcial</div>'
+      +'<div style="font-size:12px;color:#7a5a00;margin-bottom:8px">Os itens abaixo não foram localizados na reserva. O cliente ou o corretor deve providenciá-los para completar a análise.</div>'
+      +docsFaltando.map(d=>'<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid #e8d59a">'
+        +'<span style="font-size:13px;font-weight:700;color:#7a5a00;white-space:nowrap">⚠️ '+d.label+'</span>'
+        +'<span style="font-size:12px;color:#9a7a30"> — '+d.impacto+'</span></div>').join('')
+      +'</div>'
+    : '';
+
   document.getElementById('metricsGrid').innerHTML=`
     <div style="grid-column:1/-1;background:var(--navy);border-radius:12px;padding:18px 20px;margin-bottom:4px">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.45);margin-bottom:12px">📋 Resumo Executivo</div>
@@ -786,39 +834,22 @@ function renderResults(r){
         <div>
           <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">Renda Comprovável CEF</div>
           <div style="font-size:16px;font-weight:800;color:#C9A84C;font-family:'DM Mono',monospace">${fmt(r.rendaComprovavelCEF||0)}</div>
-          ${r.rendaDeclaradaCEF>0?`<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px">Declarada: ${fmt(r.rendaDeclaradaCEF)}</div>`:''}
+          ${r.rendaDeclaradaCEF>0?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px">Declarada: '+fmt(r.rendaDeclaradaCEF)+'</div>':''}
         </div>
         <div>
           <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">Renda Real (extratos)</div>
           <div style="font-size:16px;font-weight:800;color:#C9A84C;font-family:'DM Mono',monospace">${fmt(r.rendaRealTotal||0)}</div>
-          ${r.totalComprometido>0?`<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px">Comprometido: ${fmt(r.totalComprometido)}</div>`:''}
+          ${r.totalComprometido>0?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px">Comprometido: '+fmt(r.totalComprometido)+'</div>':''}
         </div>
         <div>
           <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">Margem Pró-soluto</div>
           <div style="font-size:16px;font-weight:800;color:${margemColor};font-family:'DM Mono',monospace">${fmt(r.margemProSoluto||0)}/mês</div>
-          <div style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;background:${vd.border};color:#fff">${vd.icon} ${r.veredito?.toUpperCase()||'—'}</div>
+          <div style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;background:${vd.border};color:#fff">${vd.icon} ${(r.veredito||'apertado').toUpperCase()}</div>
         </div>
       </div>
     </div>
 
-    ${(()=>{
-      const docsFaltando=[];
-      if(r.documentos){
-        if(!r.documentos.simulacaoCEF) docsFaltando.push({label:'Simulação CEF',impacto:'Parcela mensal e renda declarada não apuradas'});
-        if(!r.documentos.comprovanteCLT) docsFaltando.push({label:'Comprovante de renda formal',impacto:'Renda comprovável para a CEF pode estar incompleta'});
-        if(!r.documentos.extratoConjuge&&members.some(m=>m.type==='cônjuge')) docsFaltando.push({label:'Extrato do cônjuge',impacto:'Renda e comprometimentos do cônjuge não foram analisados'});
-        if(!r.documentos.certidao) docsFaltando.push({label:'Certidão de estado civil',impacto:'Estado civil não confirmado — familiares podem não ter sido identificados'});
-      }
-      if(!docsFaltando.length) return '';
-      return `<div style="grid-column:1/-1;background:#fff8e8;border:2px solid #B8952A;border-radius:10px;padding:14px 18px">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#7a5a00;margin-bottom:8px">📋 Documentos Ausentes — Análise Parcial</div>
-        <div style="font-size:12px;color:#7a5a00;margin-bottom:8px">Os itens abaixo não foram localizados na reserva. O cliente ou o corretor deve providenciá-los para completar a análise.</div>
-        ${docsFaltando.map(d=>`<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid #e8d59a">
-          <span style="font-size:13px;font-weight:700;color:#7a5a00;white-space:nowrap">⚠️ ${d.label}</span>
-          <span style="font-size:12px;color:#9a7a30">— ${d.impacto}</span>
-        </div>`).join('')}
-      </div>`;
-    })()}
+    ${docsFaltandoHtml}
 
     <div style="grid-column:1/-1;padding:14px 18px;background:${vd.bg};border:2px solid ${vd.border};border-radius:12px;display:flex;align-items:center;gap:12px">
       <span style="font-size:26px">${vd.icon}</span>
