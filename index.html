@@ -569,11 +569,15 @@ async function buscarReserva(){
           files['certidao']={_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq};
           document.getElementById('fn-certidao').innerHTML='✓ '+nomeArq+' (CV)';
           document.getElementById('card-certidao').classList.add('has-file');
-        }else if(tipo.includes('rendimento')||tipo.includes('holerite')||tipo.includes('carteira de trabalho')||tipo.includes('prolabore')||tipo.includes('pró-labore')||tipo.includes('contracheque')||tipo.includes('imposto de renda')){
+        }else if(tipo.includes('rendimento')||tipo.includes('holerite')||tipo.includes('carteira de trabalho')||tipo.includes('prolabore')||tipo.includes('pró-labore')||tipo.includes('contracheque')||tipo.includes('contra cheque')||tipo.includes('imposto de renda')||tipo.includes('decore')||tipo.includes('declaracao')||tipo.includes('declaração')){
           if(!files['rendimento'])files['rendimento']=[];
-          files['rendimento'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq});
+          files['rendimento'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,tipoCV:doc.tipo,pessoa});
           document.getElementById('fn-rendimento').innerHTML=`✓ ${(files['rendimento']||[]).length} comprovante(s) do CV`;
           document.getElementById('card-rendimento').classList.add('has-file');
+        }else{
+          // Qualquer outro doc do CV também é enviado para análise — Claude identifica o que é
+          if(!files['docs_cv'])files['docs_cv']=[];
+          files['docs_cv'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,tipoCV:doc.tipo||nomeArq,pessoa});
         }
         baixados++;
       }catch(e){console.error(e);}
@@ -637,11 +641,11 @@ async function analyze(){
   let si=0;
   const interval=setInterval(()=>{document.getElementById('progressLabel').textContent=steps[Math.min(si++,steps.length-1)];},1800);
   try{
-    const docNames={extrato:'Extrato bancário (titular)',rg:'RG/CPF/CNH (titular)',certidao:'Certidão de estado civil (titular)'};
+    const docNames={extrato:'Extrato bancário',rg:'RG/CPF/CNH',certidao:'Certidão de estado civil',rendimento:'Comprovante de rendimento',simulacao:'Simulação CEF'};
     members.filter(m=>m.type==='cônjuge').forEach(m=>{
       const slug='conjuge_'+members.indexOf(m);
-      docNames[slug+'_extrato']=`Extrato bancário - cônjuge: ${m.name}`;
-      docNames[slug+'_rg']=`RG/CPF/CNH - cônjuge: ${m.name}`;
+      docNames[slug+'_extrato']=`Extrato bancário - cônjuge ${m.name}`;
+      docNames[slug+'_rg']=`RG/CPF/CNH - cônjuge ${m.name}`;
     });
     const contentParts=[];
     for(const [type,fileOrArr] of Object.entries(files)){
@@ -653,7 +657,10 @@ async function analyze(){
           if(isPdf){contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}});}
           else if(isImage){contentParts.push({type:'image',source:{type:'base64',media_type:file.contentType,data:file.base64}});}
           else{contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}});}
-          contentParts.push({type:'text',text:`[Arquivo CV: ${docNames[type]||type} - ${file.name}]`});
+          // Para docs genéricos do CV, usa o tipo original cadastrado no CV CRM como label
+          const label=type==='docs_cv'?(file.tipoCV||file.name):(docNames[type]||type);
+          const pessoaLabel=file.pessoa&&file.pessoa!=='titular'?` (${file.pessoa})`:'';
+          contentParts.push({type:'text',text:`[CV: ${label}${pessoaLabel} — ${file.name}]`});
         }else{
           const isImage=file.type?.startsWith('image/');
           const isPdf=file.type==='application/pdf';
