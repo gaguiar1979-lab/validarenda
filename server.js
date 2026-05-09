@@ -7,7 +7,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, '.')));
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
-const CV_TOKEN = process.env.CV_TOKEN || 'c4adb0352d98c5f83959d9b06cf5c18b1acc4151';
+const CV_TOKEN = process.env.CV_TOKEN;
 const CV_EMAIL = process.env.CV_EMAIL || 'gustavo@casasmanager.com.br';
 const CV_BASE = 'manager.cvcrm.com.br';
 
