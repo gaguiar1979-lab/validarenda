@@ -447,7 +447,7 @@ function renderTags(){
 
 function renderConjugeDocs(){
   const area=document.getElementById('conjugeDocsArea');
-  const conjuges=members.map((m,i)=>{...m,idx:i}).filter(m=>m.type==='cônjuge');
+  const conjuges=members.map((m,i)=>({...m,idx:i})).filter(m=>m.type==='cônjuge');
   if(!conjuges.length){area.innerHTML='';return;}
   area.innerHTML=conjuges.map(m=>{
     const slug='conjuge_'+m.idx;
