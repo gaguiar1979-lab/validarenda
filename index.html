@@ -270,42 +270,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div class="upload-card" id="card-rendimento"><input type="file" accept=".pdf,.jpg,.jpeg,.png" multiple onchange="handleExtratoFile(this,'rendimento')"><div class="uc-icon">💼</div><div class="uc-label">Comprovante de rendimento</div><div class="uc-hint">Holerite · Pró-labore · múltiplos</div><div class="uc-file" id="fn-rendimento"></div></div>
 </div>
 
-<!-- FAMILIARES -->
-<div class="section-title">Membros da família</div>
-<div class="card">
-  <div class="card-title">👨‍👩‍👧 Familiares cadastrados</div>
-  <div class="family-tags" id="familyTags"><span style="font-size:12px;color:var(--text3)">Nenhum familiar adicionado ainda.</span></div>
-  <div class="add-row">
-    <input type="text" id="memberName" placeholder="Nome completo do familiar...">
-    <select id="memberType">
-      <option value="cônjuge">Cônjuge</option>
-      <option value="filho(a)">Filho(a)</option>
-      <option value="pai/mãe">Pai / Mãe</option>
-      <option value="familiar">Outro familiar</option>
-    </select>
-    <button class="btn-add" onclick="addMember()">+ Adicionar</button>
+<!-- FAMILIARES (colapsado — só exibe se necessário) -->
+<div id="familiaresCard" style="margin-bottom:12px">
+  <button onclick="toggleFamiliares()" style="width:100%;text-align:left;padding:10px 16px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;justify-content:space-between;align-items:center">
+    <span>👨‍👩‍👧 Familiares detectados automaticamente <span id="familyCount" style="color:var(--gold);margin-left:6px"></span></span>
+    <span id="familiaresChevron" style="font-size:10px">▼ Expandir / editar manualmente</span>
+  </button>
+  <div id="familiaresBody" style="display:none;background:var(--surface);border:1px solid var(--border2);border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg);padding:14px 16px">
+    <div class="family-tags" id="familyTags" style="margin-bottom:10px"><span style="font-size:12px;color:var(--text3)">Nenhum familiar detectado.</span></div>
+    <div class="add-row">
+      <input type="text" id="memberName" placeholder="Adicionar familiar manualmente...">
+      <select id="memberType">
+        <option value="cônjuge">Cônjuge</option>
+        <option value="filho(a)">Filho(a)</option>
+        <option value="pai/mãe">Pai / Mãe</option>
+        <option value="familiar">Outro familiar</option>
+      </select>
+      <button class="btn-add" onclick="addMember()">+ Adicionar</button>
+    </div>
+    <div class="info-note" style="margin-top:8px">ℹ️ O cônjuge é detectado automaticamente pela certidão. Adicione manualmente apenas se necessário.</div>
   </div>
-  <div class="info-note">ℹ️ <strong>Cônjuge:</strong> abre campos de documentos e extrato. <strong>Filho(a) e demais:</strong> o nome é usado para localizar e excluir transferências no extrato.</div>
 </div>
 <div id="conjugeDocsArea"></div>
-
-<!-- FILHOS -->
-<div class="card" id="filhosCard">
-  <div class="card-title">👶 Possui filhos?</div>
-  <div style="display:flex;gap:10px;margin-bottom:12px;">
-    <button id="btnSimFilho" onclick="toggleFilhos(true)" style="flex:1;padding:10px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;">✅ Sim</button>
-    <button id="btnNaoFilho" onclick="toggleFilhos(false)" style="flex:1;padding:10px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;">❌ Não</button>
-  </div>
-  <div id="filhosArea" style="display:none;">
-    <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Quantos filhos?</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <input type="number" id="qtdFilhos" min="1" max="10" placeholder="Ex: 2" style="width:80px;padding:8px 12px;font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;">
-      <button onclick="gerarCamposFilhos()" style="padding:8px 16px;font-size:13px;font-weight:600;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;">Confirmar</button>
-    </div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Anexe as certidões de nascimento — o nome será identificado automaticamente.</div>
-    <div id="filhosCertidoesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;"></div>
-  </div>
-</div>
 
 <!-- ANALISAR -->
 <button class="btn-analyze" id="analyzeBtn" onclick="analyze()" style="margin-top:8px">🔄 Re-analisar</button>
@@ -397,6 +383,9 @@ async function handleCertidao(input){
         renderTags();renderConjugeDocs();
         document.getElementById('fn-certidao').innerHTML='✓ '+f.name+' — cônjuge: '+result.nomeConjuge;
         showToast('Cônjuge identificado: '+result.nomeConjuge);
+        // Abre painel de familiares para mostrar o cônjuge detectado
+        document.getElementById('familiaresBody').style.display='block';
+        document.getElementById('familiaresChevron').textContent='▲ Fechar';
       }
     }else{
       document.getElementById('fn-certidao').innerHTML='✓ '+f.name+' — '+(result.estadoCivil||'lido');
@@ -426,6 +415,9 @@ function addMember(){
   if(!name)return;
   members.push({name,type});renderTags();renderConjugeDocs();
   document.getElementById('memberName').value='';
+  // Abre o painel se estava fechado
+  document.getElementById('familiaresBody').style.display='block';
+  document.getElementById('familiaresChevron').textContent='▲ Fechar';
 }
 
 function removeMember(i){
@@ -436,12 +428,28 @@ function removeMember(i){
 
 function renderTags(){
   const el=document.getElementById('familyTags');
-  if(!members.length){el.innerHTML='<span style="font-size:12px;color:var(--text3)">Nenhum familiar adicionado ainda.</span>';return;}
+  const countEl=document.getElementById('familyCount');
+  if(!members.length){
+    el.innerHTML='<span style="font-size:12px;color:var(--text3)">Nenhum familiar detectado.</span>';
+    if(countEl) countEl.textContent='';
+    return;
+  }
+  if(countEl) countEl.textContent='('+members.length+' detectado'+(members.length>1?'s':'')+')';
   const icons={'cônjuge':'💑','filho(a)':'👦','pai/mãe':'👴','familiar':'👤'};
   el.innerHTML=members.map((m,i)=>{
     const cls=m.type==='cônjuge'?'conjuge':m.type==='filho(a)'?'filho':'';
     return `<div class="tag ${cls}">${icons[m.type]||'👤'} ${m.name} <span class="rel">(${m.type})</span><button onclick="removeMember(${i})">×</button></div>`;
   }).join('');
+}
+
+function toggleFamiliares(){
+  const body=document.getElementById('familiaresBody');
+  const chev=document.getElementById('familiaresChevron');
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  chev.textContent=open?'▲ Fechar':'▼ Expandir / editar manualmente';
+  // Abre automaticamente se há familiares detectados
+  if(members.length&&open) renderTags();
 }
 
 function renderConjugeDocs(){
@@ -652,14 +660,19 @@ async function analyze(){
       const fileList=Array.isArray(fileOrArr)?fileOrArr:[fileOrArr];
       for(const file of fileList){
         if(file._cvFile){
-          const isPdf=file.contentType==='application/pdf';
-          const isImage=file.contentType?.startsWith('image/');
-          if(isPdf){contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}});}
-          else if(isImage){contentParts.push({type:'image',source:{type:'base64',media_type:file.contentType,data:file.base64}});}
-          else{contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}});}
-          // Para docs genéricos do CV, usa o tipo original cadastrado no CV CRM como label
+          const ext=(file.name||'').split('.').pop().toLowerCase();
+          const isPdf=file.contentType==='application/pdf'||ext==='pdf';
+          const isImage=file.contentType?.startsWith('image/')||['jpg','jpeg','png','gif','webp','bmp'].includes(ext);
           const label=type==='docs_cv'?(file.tipoCV||file.name):(docNames[type]||type);
           const pessoaLabel=file.pessoa&&file.pessoa!=='titular'?` (${file.pessoa})`:'';
+          // Só envia o binário se souber exatamente o tipo — evita erro de PDF inválido
+          if(isPdf){
+            contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}});
+          }else if(isImage){
+            const imgMime=file.contentType?.startsWith('image/')?file.contentType:`image/${ext==='jpg'?'jpeg':ext}`;
+            contentParts.push({type:'image',source:{type:'base64',media_type:imgMime,data:file.base64}});
+          }
+          // else: tipo desconhecido → só envia o label de texto, não o binário
           contentParts.push({type:'text',text:`[CV: ${label}${pessoaLabel} — ${file.name}]`});
         }else{
           const isImage=file.type?.startsWith('image/');
