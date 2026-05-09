@@ -658,56 +658,42 @@ async function analyze(){
     const filhosList=members.filter(m=>m.type!=='cônjuge').map(m=>m.name).join(', ')||'nenhum';
     const conjugesList=members.filter(m=>m.type==='cônjuge').map(m=>m.name).join(', ')||'nenhum';
     contentParts.push({type:'text',text:`\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.\n\nRetorne apenas o JSON.`});
-    const systemPrompt=`Você é um analista de crédito imobiliário da Casas Manager Construções. Seu objetivo é gerar um laudo interno que responde duas perguntas: (1) qual renda o cliente pode comprovar para a CEF liberar o financiamento? (2) qual é a renda real do cliente e ele consegue pagar a parcela da CEF mais a parcela do pró-soluto com a Casas Manager?
+    const systemPrompt=`Você é um analista de crédito imobiliário da Casas Manager Construções. Gere um laudo interno respondendo: (1) qual renda o cliente comprova para a CEF? (2) qual a renda real e ele consegue pagar parcela CEF + pró-soluto Casas Manager?
 
-INSTRUÇÕES DE ANÁLISE:
-
-PASSO 1 — SE HOUVER SIMULAÇÃO CEF:
-- Extraia a RENDA DECLARADA que o cliente informou na simulação
-- Extraia o VALOR DA PARCELA MENSAL CEF da simulação
-- Extraia o valor do imóvel e valor financiado se disponível
+PASSO 1 — SIMULAÇÃO CEF (se houver):
+- Extraia renda declarada, parcela mensal CEF, valor do imóvel e valor financiado
 
 PASSO 2 — RENDA COMPROVÁVEL (para CEF):
-- Analise APENAS fontes com documento formal: holerite, contracheque, pró-labore, aposentadoria, aluguel com contrato
-- CLT: use salário líquido médio
-- Autônomo/MEI com nota: 70% da média
-- Pró-labore: média dos recibos
-- Aposentadoria/pensão: valor integral
-- Sem documento formal = NÃO compõe renda comprovável CEF
+- Apenas fontes com doc formal: holerite, pró-labore, aposentadoria, aluguel com contrato
+- CLT=salário líquido, autônomo=70% da média, pró-labore=média, aposentadoria=integral
+- Sem documento formal = NÃO compõe renda CEF
 
-PASSO 3 — RENDA REAL (dos extratos):
-- Identifique TODAS as entradas no extrato
-- Agrupe por fonte/remetente
-- EXCLUA OBRIGATORIAMENTE da renda real: transferências de cônjuge, filhos, pais e qualquer familiar listado pelo usuário + entradas de casas de aposta (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet e similares). A renda real deve refletir APENAS a renda própria do titular.
-- Calcule total e média mensal por fonte
-- Avalie REGULARIDADE por fonte: "regular" (±20% todo mês), "irregular" (variável mas presente), "esporadica" (ausente em alguns meses)
-- Some tudo = rendaRealTotal (média mensal)
+PASSO 3 — RENDA REAL (extratos - apenas entradas):
+- Todas as entradas, excluindo: familiares listados + apostas (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet e similares) + transferências próprias entre contas
+- Avalie regularidade por fonte: "regular" (±20% todo mês), "irregular" (variável mas presente), "esporadica" (ausente em alguns meses)
 
-PASSO 4 — ANÁLISE DE CAPACIDADE:
-- capacidadePagamento = rendaRealTotal × 0.30
-- margemProSoluto = capacidadePagamento - parcelaCEF (se houver simulação)
-- Compare rendaDeclaradaCEF com rendaRealTotal: diferença > 20% = alertar divergência
-- Se entradasBet > 0: alertar que renda aparente estava inflada por apostas
+PASSO 4 — COMPROMETIMENTOS FIXOS MENSAIS (débitos recorrentes):
+- Analise os DÉBITOS do extrato e identifique pagamentos fixos recorrentes
+- Inclua: financiamentos bancários, parcelas de veículo, cartão de crédito (fatura), consignado, empréstimo pessoal, aluguel pago, plano de saúde, outros débitos que aparecem todo mês
+- Para cada comprometimento: nome do credor, categoria, valor médio mensal
+- Categorias: "financiamento_imobiliario", "veiculo", "cartao_credito", "consignado", "emprestimo", "aluguel_pago", "saude", "outros_fixos"
+- totalComprometido = soma de todos os comprometimentos mensais médios
+- rendaDisponivelReal = rendaRealTotal - totalComprometido
+- margemProSoluto = rendaDisponivelReal × 0.30 (30% do que sobra após compromissos)
 
-PASSO 5 — VEREDITO INTERNO CASAS MANAGER:
-- "viavel": cliente consegue pagar parcela CEF + tem margem positiva pro pró-soluto
-- "apertado": margem pro pró-soluto existe mas é pequena (< R$500)
-- "inviavel": margem negativa ou renda real muito abaixo do declarado
+PASSO 5 — VEREDITO:
+- "viavel": rendaDisponivelReal > 0 e margem pró-soluto positiva após parcela CEF
+- "apertado": margem existe mas < R$500 ou comprometimento > 60% da renda real
+- "inviavel": rendaDisponivelReal negativa ou comprometimento > renda real
 
 Retorne SOMENTE este JSON sem markdown:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"capacidadePagamento":0.00,"margemProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"totalPeriodo":0.00,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"2 frases com os fatos principais: renda comprovável, renda real, capacidade de pagamento e veredito.","conclusao":"Laudo em 3 parágrafos: 1) renda comprovável para CEF e o que pode ser apresentado ao banco, 2) renda real apurada nos extratos com destaque para regularidade e exclusões (bet etc), 3) análise de capacidade de pagamento dual (parcela CEF + pró-soluto) com recomendação objetiva para a equipe Casas Manager.","alertas":[]}`;
-
-Retorne SOMENTE este JSON sem markdown:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome Completo ou null","rendaTotal":0.00,"mediamensal":0.00,"rendaComprovavelTotal":0.00,"capacidadePagamento":0.00,"status":"apto","fontes":[{"remetente":"Nome/Empresa","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","totalPeriodo":0.00,"mediaMensal":0.00,"rendaComprovavel":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação detalhada.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"comprovanteProlabore":false},"ressalvas":["Ressalva 1"],"parecer":"Parecer técnico em 2 frases focado em comprovabilidade da renda para fins de financiamento habitacional.","conclusao":"Laudo em 4 parágrafos: 1) identificação do proponente e metodologia, 2) composição e classificação da renda por tipo com análise de regularidade, 3) renda comprovável e capacidade de pagamento conforme critérios CEF, 4) recomendação técnica com condicionantes se houver.","alertas":[]}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"capacidadePagamento":0.00,"margemProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"totalPeriodo":0.00,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00,"recorrente":true}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"2 frases objetivas: renda real, total comprometido, renda disponível e veredito para pró-soluto.","conclusao":"Laudo em 3 parágrafos: 1) renda comprovável para CEF, 2) renda real apurada e comprometimentos fixos identificados no extrato, 3) capacidade líquida de pagamento e recomendação objetiva para a equipe Casas Manager sobre viabilidade do pró-soluto.","alertas":[]}
 
 ANÁLISE DE COMPROVANTES:
-- Holerites/contracheques: use o salário LÍQUIDO (após descontos)
-- Pró-labore: use a média dos meses disponíveis
-- Cruze comprovantes com extrato: confirme se depósitos batem
-- Renda variável: use média conservadora (descarte outliers)
-- CLT + renda extra: some separadamente, cada uma com sua comprovabilidade
-
-Tipos: emprego_formal (CLT), prolabore (sócio/empresário), autonomo (freela/MEI sem nota), aluguel, aposentadoria, pensao, outros.
+- Holerites: use salário LÍQUIDO
+- Pró-labore: média dos recibos
+- Cruze comprovantes com extrato
+- Tipos: emprego_formal, prolabore, autonomo, aluguel, aposentadoria, pensao, outros
 Frequencia: mensal, quinzenal, semanal, irregular.
 Regularidade: regular, irregular, esporadica.`;
     const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:4000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
@@ -785,12 +771,24 @@ function renderResults(r){
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--navy2);margin-bottom:10px">💰 Capacidade Real de Pagamento</div>
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Renda real (extratos)</span><strong>${fmt(r.rendaRealTotal||0)}</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Capacidade (30%)</span><strong style="color:var(--gold)">${fmt(r.capacidadePagamento||0)}</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Comprometimentos fixos</span><span style="color:#8b1a1a">− ${fmt(r.totalComprometido||0)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)"><span style="color:var(--text2)">Renda disponível</span><strong>${fmt(r.rendaDisponivelReal||0)}</strong></div>
         ${r.parcelaCEF>0?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Parcela CEF</span><span style="color:#8b1a1a">− ${fmt(r.parcelaCEF)}</span></div>`:''}
-        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding-top:8px;border-top:2px solid var(--border);margin-top:4px"><span>Margem pró-soluto</span><strong style="color:${(r.margemProSoluto||0)>0?'#1a7a3c':'#8b1a1a'}">${fmt(r.margemProSoluto||0)}/mês</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding-top:8px;border-top:2px solid var(--border);margin-top:4px"><span>Margem pró-soluto</span><strong style="color:${(r.margemProSoluto||0)>500?'#1a7a3c':(r.margemProSoluto||0)>0?'#7a5a00':'#8b1a1a'}">${fmt(r.margemProSoluto||0)}/mês</strong></div>
         ${r.entradasBet>0?`<div style="margin-top:8px;padding:6px 10px;background:#fdecea;border-radius:6px;font-size:11px;color:#8b1a1a">🎰 ${fmt(r.entradasBet)} em apostas excluídos da renda</div>`:''}
       </div>
-    </div>`;
+    </div>
+    ${(r.comprometimentos&&r.comprometimentos.length)?`
+    <div style="margin-top:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8b1a1a;margin-bottom:10px">🔴 Comprometimentos Financeiros Identificados</div>
+      ${r.comprometimentos.map(c=>{
+        const catIcon={'financiamento_imobiliario':'🏠','veiculo':'🚗','cartao_credito':'💳','consignado':'📋','emprestimo':'💰','aluguel_pago':'🏡','saude':'❤️','outros_fixos':'📌'}[c.categoria]||'📌';
+        const catLabel={'financiamento_imobiliario':'Financiamento imobiliário','veiculo':'Veículo','cartao_credito':'Cartão de crédito','consignado':'Consignado','emprestimo':'Empréstimo pessoal','aluguel_pago':'Aluguel pago','saude':'Plano de saúde','outros_fixos':'Outros fixos'}[c.categoria]||c.categoria;
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)"><div><span style="margin-right:6px">${catIcon}</span><span style="font-size:13px;font-weight:600">${c.credor}</span><span style="font-size:11px;color:var(--text3);margin-left:6px">${catLabel}</span></div><strong style="font-family:'DM Mono',monospace;color:#8b1a1a">${fmt(c.valorMedioMensal)}/mês</strong></div>`;
+      }).join('')}
+      <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding-top:8px;margin-top:4px"><span>Total comprometido</span><strong style="color:#8b1a1a">${fmt(r.totalComprometido||0)}/mês</strong></div>
+    </div>`:''}
+    `;
 
   // RESSALVAS
   if(r.ressalvas&&r.ressalvas.length){
