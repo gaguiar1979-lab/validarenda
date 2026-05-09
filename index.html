@@ -326,6 +326,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div id="alertBox" style="display:none"></div>
     <div class="report-stamp" id="reportStamp"></div>
     <button class="btn-print" onclick="gerarRelatorio()">🖨️ Imprimir / Salvar PDF</button>
+    <div id="printFrame" style="display:none"></div>
     <button class="btn-save" id="btnSalvarCV" onclick="salvarNoCVCRM()">💾 Salvar no CV CRM</button>
   </div>
 </div>
@@ -655,6 +656,12 @@ async function analyze(){
       docNames[slug+'_extrato']=`Extrato bancário - cônjuge ${m.name}`;
       docNames[slug+'_rg']=`RG/CPF/CNH - cônjuge ${m.name}`;
     });
+    // Tipos que enviam binário (PDF/imagem) — prioridade para não estourar 100 páginas
+    const tiposBinario=new Set(['extrato','rendimento','simulacao','certidao','rg']);
+    // Tipos de cônjuge que também enviam binário
+    const tiposBinarioExtra=t=>t.endsWith('_extrato')||t.endsWith('_rg');
+    let pdfCount=0; // controle aproximado de documentos binários enviados
+    const MAX_PDF=18; // limite conservador (cada extrato pode ter ~3-5 páginas)
     const contentParts=[];
     for(const [type,fileOrArr] of Object.entries(files)){
       const fileList=Array.isArray(fileOrArr)?fileOrArr:[fileOrArr];
@@ -665,14 +672,17 @@ async function analyze(){
           const isImage=file.contentType?.startsWith('image/')||['jpg','jpeg','png','gif','webp','bmp'].includes(ext);
           const label=type==='docs_cv'?(file.tipoCV||file.name):(docNames[type]||type);
           const pessoaLabel=file.pessoa&&file.pessoa!=='titular'?` (${file.pessoa})`:'';
-          // Só envia o binário se souber exatamente o tipo — evita erro de PDF inválido
-          if(isPdf){
+          // Só envia binário para tipos prioritários e dentro do limite de páginas
+          const podeEnviarBinario=(tiposBinario.has(type)||tiposBinarioExtra(type))&&pdfCount<MAX_PDF;
+          if(podeEnviarBinario&&isPdf){
             contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}});
-          }else if(isImage){
+            pdfCount++;
+          }else if(podeEnviarBinario&&isImage){
             const imgMime=file.contentType?.startsWith('image/')?file.contentType:`image/${ext==='jpg'?'jpeg':ext}`;
             contentParts.push({type:'image',source:{type:'base64',media_type:imgMime,data:file.base64}});
+            pdfCount++;
           }
-          // else: tipo desconhecido → só envia o label de texto, não o binário
+          // Sempre envia o label de texto (mesmo sem binário)
           contentParts.push({type:'text',text:`[CV: ${label}${pessoaLabel} — ${file.name}]`});
         }else{
           const isImage=file.type?.startsWith('image/');
@@ -798,6 +808,12 @@ let lastResult=null;
 function gerarRelatorio(){
   const r=lastResult;
   if(!r){showToast('⚠️ Gere a análise antes de imprimir.');return;}
+  // Tenta abrir popup; se bloqueado, renderiza na mesma página
+  let w=null;
+  try{w=window.open('','_blank');}catch(e){}
+  _gerarHTML(r,w);
+}
+function _gerarHTML(r,w){
   const reservaNum=document.getElementById('reservaId').value||'—';
   const agora=new Date().toLocaleString('pt-BR');
   const fmtR=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -947,10 +963,34 @@ ${(r.excluidos&&r.excluidos.length)?`<h2>Transferências Excluídas da Renda (Fa
 
 </body></html>`;
 
-  const w=window.open('','_blank','width=900,height=700');
-  w.document.write(html);
-  w.document.close();
-  setTimeout(()=>{ try{w.print();}catch(e){} },600);
+  if(w&&!w.closed){
+    // Popup disponível
+    w.document.write(html);
+    w.document.close();
+    setTimeout(()=>{ try{w.print();}catch(e){} },600);
+  } else {
+    // Popup bloqueado → renderiza na mesma página com overlay
+    const frame=document.getElementById('printFrame');
+    frame.innerHTML='<div style="position:fixed;inset:0;z-index:9999;background:#fff;overflow:auto;padding:32px">'
+      +'<div style="max-width:860px;margin:0 auto">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
+      +'<strong style="font-size:15px">Relatório gerado — clique em Imprimir para salvar como PDF</strong>'
+      +'<div style="display:flex;gap:10px">'
+      +'<button onclick="window.print()" style="padding:8px 18px;background:#1C1E35;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:sans-serif">🖨️ Imprimir / PDF</button>'
+      +'<button onclick="document.getElementById(\'printFrame\').innerHTML=\'\'" style="padding:8px 18px;background:#eee;color:#333;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:sans-serif">✕ Fechar</button>'
+      +'</div></div>'
+      +'<div id="printContent">'+html+'</div>'
+      +'</div></div>';
+    frame.style.display='block';
+    // CSS de impressão: mostra só o conteúdo do relatório
+    const styleId='printOverrideStyle';
+    if(!document.getElementById(styleId)){
+      const s=document.createElement('style');
+      s.id=styleId;
+      s.textContent='@media print{body>*:not(#printFrame){display:none!important}#printFrame{display:block!important;position:static!important;padding:0!important}}';
+      document.head.appendChild(s);
+    }
+  }
 }
 
 async function salvarNoCVCRM(){
