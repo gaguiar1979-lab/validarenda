@@ -652,12 +652,14 @@ async function analyze(){
       docNames[slug+'_extrato']=`Extrato bancário - cônjuge ${m.name}`;
       docNames[slug+'_rg']=`RG/CPF/CNH - cônjuge ${m.name}`;
     });
-    // Tipos que enviam binário (PDF/imagem) — prioridade para não estourar 100 páginas
+    // Limite por tipo: extratos têm muitas páginas (10-20/arquivo), então enviamos poucos como binário
+    // e completamos com label de texto. Anthropic aceita no máximo 100 páginas por chamada.
+    const MAX_POR_TIPO={extrato:3,rendimento:2,simulacao:1,certidao:1,rg:1};
     const tiposBinario=new Set(['extrato','rendimento','simulacao','certidao','rg']);
-    // Tipos de cônjuge que também enviam binário
     const tiposBinarioExtra=t=>t.endsWith('_extrato')||t.endsWith('_rg');
-    let pdfCount=0; // controle aproximado de documentos binários enviados
-    const MAX_PDF=18; // limite conservador (cada extrato pode ter ~3-5 páginas)
+    let pdfCount=0;
+    const MAX_PDF_TOTAL=7; // segurança global: 3 extratos×20pág + 2 comprovantes×5pág ≈ 70pág
+    const pdfCountByType={};
     const contentParts=[];
     for(const [type,fileOrArr] of Object.entries(files)){
       const fileList=Array.isArray(fileOrArr)?fileOrArr:[fileOrArr];
@@ -668,15 +670,16 @@ async function analyze(){
           const isImage=file.contentType?.startsWith('image/')||['jpg','jpeg','png','gif','webp','bmp'].includes(ext);
           const label=type==='docs_cv'?(file.tipoCV||file.name):(docNames[type]||type);
           const pessoaLabel=file.pessoa&&file.pessoa!=='titular'?` (${file.pessoa})`:'';
-          // Só envia binário para tipos prioritários e dentro do limite de páginas
-          const podeEnviarBinario=(tiposBinario.has(type)||tiposBinarioExtra(type))&&pdfCount<MAX_PDF;
+          const tipoBase=type.endsWith('_extrato')?'extrato':type.endsWith('_rg')?'rg':type;
+          const limiteAtingido=(pdfCountByType[tipoBase]||0)>=(MAX_POR_TIPO[tipoBase]||1);
+          const podeEnviarBinario=(tiposBinario.has(type)||tiposBinarioExtra(type))&&pdfCount<MAX_PDF_TOTAL&&!limiteAtingido;
           if(podeEnviarBinario&&isPdf){
             contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}});
-            pdfCount++;
+            pdfCount++;pdfCountByType[tipoBase]=(pdfCountByType[tipoBase]||0)+1;
           }else if(podeEnviarBinario&&isImage){
             const imgMime=file.contentType?.startsWith('image/')?file.contentType:`image/${ext==='jpg'?'jpeg':ext}`;
             contentParts.push({type:'image',source:{type:'base64',media_type:imgMime,data:file.base64}});
-            pdfCount++;
+            pdfCount++;pdfCountByType[tipoBase]=(pdfCountByType[tipoBase]||0)+1;
           }
           // Sempre envia o label de texto (mesmo sem binário)
           contentParts.push({type:'text',text:`[CV: ${label}${pessoaLabel} — ${file.name}]`});
