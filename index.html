@@ -697,11 +697,11 @@ async function analyze(){
     });
     // Limite por tipo: extratos têm muitas páginas (10-20/arquivo), então enviamos poucos como binário
     // e completamos com label de texto. Anthropic aceita no máximo 100 páginas por chamada.
-    const MAX_POR_TIPO={extrato:3,rendimento:2,simulacao:1,certidao:1,rg:1};
+    const MAX_POR_TIPO={extrato:2,rendimento:1,simulacao:1,certidao:1,rg:1};
     const tiposBinario=new Set(['extrato','rendimento','simulacao','certidao','rg']);
     const tiposBinarioExtra=t=>t.endsWith('_extrato')||t.endsWith('_rg');
     let pdfCount=0;
-    const MAX_PDF_TOTAL=7; // segurança global: 3 extratos×20pág + 2 comprovantes×5pág ≈ 70pág
+    const MAX_PDF_TOTAL=5; // segurança global: 2 extratos×20pág + 1 comprovante×5pág ≈ 45pág + margem
     const pdfCountByType={};
     const contentParts=[];
     for(const [type,fileOrArr] of Object.entries(files)){
