@@ -223,7 +223,7 @@ app.post('/api/cv/reserva/:id/salvar-relatorio', async (req, res) => {
     const { texto, mediaMensal, rendaTotal, periodo } = req.body;
     const agora = new Date().toLocaleString('pt-BR');
 
-    const conteudo = `RELATORIO DE VALIDACAO DE RENDA
+    const conteudo = `ANALISE DE CAPACIDADE DE PAGAMENTO
 Casas Manager Construcoes - ${agora}
 
 Reserva: ${reservaId}
@@ -241,7 +241,8 @@ www.casasmanager.com.br | @casasmanager`;
 
     const pdfBuffer = gerarPDF(conteudo);
     const pdfBase64 = pdfBuffer.toString('base64');
-    const fileName = `relatorio_renda_reserva_${reservaId}_${Date.now()}.pdf`;
+    const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+    const fileName = `Analise_Capacidade_Pagamento_Reserva_${reservaId}_${dataHoje}.pdf`;
 
     const payload = JSON.stringify({
       idreserva: parseInt(reservaId),
