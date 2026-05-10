@@ -312,7 +312,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div id="printDate" style="font-size:11px;color:var(--text3);margin-bottom:12px"></div>
 
   <!-- Relatório inline — gerado automaticamente após análise -->
-  <div id="relatorioInline" style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden"></div>
+  <div id="relatorioInline" style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;display:none">
+    <iframe id="reportFrame" style="width:100%;border:none;min-height:400px" frameborder="0"></iframe>
+  </div>
 
   <!-- Dados auxiliares (hidden, mantidos para compatibilidade) -->
   <div id="metricsGrid" style="display:none"></div>
@@ -782,13 +784,18 @@ Regularidade: regular, irregular, esporadica.`;
     btn.disabled=false;
     document.getElementById('progressLabel').textContent='';
     // Mostra o erro diretamente na tela
-    document.getElementById('results').classList.add('on');
-    document.getElementById('metricsGrid').innerHTML=
-      '<div style="grid-column:1/-1;padding:20px;background:#fdecea;border:2px solid #C0392B;border-radius:12px;color:#8b1a1a">'
+    // Exibe erro no iframe inline (mesmo container do relatório)
+    const errHtml='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:\'Segoe UI\',Arial,sans-serif;padding:24px;background:#fff}</style></head><body>'
+      +'<div style="padding:20px;background:#fdecea;border:2px solid #C0392B;border-radius:12px;color:#8b1a1a">'
       +'<div style="font-size:16px;font-weight:800;margin-bottom:8px">❌ Erro ao gerar relatório</div>'
       +'<div style="font-size:13px">'+e.message+'</div>'
       +'<div style="font-size:12px;margin-top:10px;opacity:.7">Tente novamente. Se o erro persistir, verifique se há extratos disponíveis na reserva.</div>'
-      +'</div>';
+      +'</div></body></html>';
+    const errFrame=document.getElementById('reportFrame');
+    const errInline=document.getElementById('relatorioInline');
+    if(errFrame){const ed=errFrame.contentDocument||errFrame.contentWindow.document;ed.open();ed.write(errHtml);ed.close();setTimeout(()=>{try{errFrame.style.height=Math.max(200,ed.body.scrollHeight+40)+'px';}catch(e2){}},300);}
+    if(errInline) errInline.style.display='block';
+    document.getElementById('results').classList.add('on');
     document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
     return;
   }
@@ -802,14 +809,12 @@ let lastResult=null;
 function gerarRelatorio(){
   const r=lastResult;
   if(!r){showToast('⚠️ Gere a análise antes de imprimir.');return;}
-  // Abre popup para impressão — se bloqueado, usa a versão já renderizada na página
-  let w=null;
-  try{w=window.open('','_blank');}catch(e){}
-  if(w&&!w.closed){
-    _gerarHTML(r,w);
+  const frame=document.getElementById('reportFrame');
+  if(frame&&frame.contentWindow&&frame.contentDocument&&frame.contentDocument.body&&frame.contentDocument.body.childNodes.length){
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
   } else {
-    // Popup bloqueado: aciona print direto da página com CSS específico
-    window.print();
+    showToast('⚠️ Aguarde a análise carregar antes de imprimir.');
   }
 }
 function _gerarHTML(r,w){
@@ -962,17 +967,16 @@ ${(r.excluidos&&r.excluidos.length)?`<h2>Transferências Excluídas da Renda (Fa
 
 </body></html>`;
 
-  // Sempre renderiza inline na página
+  // Renderiza no iframe inline da página (iframe suporta documento HTML completo com CSS)
   const inline=document.getElementById('relatorioInline');
-  if(inline){
-    inline.innerHTML='<div style="padding:28px 32px;font-family:\'Segoe UI\',Arial,sans-serif;font-size:13px;color:#1a1a2e">'+html+'</div>';
+  const frame=document.getElementById('reportFrame');
+  if(frame){
+    const doc=frame.contentDocument||frame.contentWindow.document;
+    doc.open();doc.write(html);doc.close();
+    // Ajusta altura do iframe ao conteúdo renderizado
+    setTimeout(()=>{try{frame.style.height=Math.max(400,doc.body.scrollHeight+20)+'px';}catch(e){}},400);
   }
-  // Abre popup para impressão se solicitado via botão
-  if(w&&!w.closed&&w!==window){
-    w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:\'Segoe UI\',Arial,sans-serif;padding:24px}</style></head><body>'+html+'</body></html>');
-    w.document.close();
-    setTimeout(()=>{ try{w.print();}catch(e){} },600);
-  }
+  if(inline) inline.style.display='block';
 }
 
 async function salvarNoCVCRM(){
