@@ -605,14 +605,16 @@ async function buscarReserva(){
 
     // Checklist de documentos obrigatórios e recomendados
     const temExtrato=(files['extrato']||[]).length>0;
+    const temDocsCv=(files['docs_cv']||[]).length>0;
+    const temExtratoPossivel=temExtrato||temDocsCv; // extrato pode estar em doc combinado
     const temRendimento=(files['rendimento']||[]).length>0;
     const temSim=(files['simulacao']||[]).length>0;
     const temRG=!!(files['rg']||files['rg_conjuge']);
     const temCertidao=!!files['certidao'];
 
     const checklist=[
-      {icon:'📄',label:'Extrato(s) bancário(s)',detalhe:temExtrato?`${(files['extrato']||[]).length} arquivo(s)`:'Nenhum encontrado',ok:temExtrato,obrigatorio:true},
-      {icon:'💼',label:'Comprovante de rendimento',detalhe:temRendimento?`${(files['rendimento']||[]).length} arquivo(s)`:'Não encontrado',ok:temRendimento,obrigatorio:true},
+      {icon:'📄',label:'Extrato(s) bancário(s)',detalhe:temExtrato?`${(files['extrato']||[]).length} arquivo(s)`:temDocsCv?`Possível em documento combinado (${(files['docs_cv']||[]).length} arq.)`:'Nenhum encontrado',ok:temExtratoPossivel,obrigatorio:true},
+      {icon:'💼',label:'Comprovante de rendimento',detalhe:temRendimento?`${(files['rendimento']||[]).length} arquivo(s)`:temDocsCv?'Possível em documento combinado':'Não encontrado',ok:temRendimento||temDocsCv,obrigatorio:true},
       {icon:'🏦',label:'Simulação de financiamento',detalhe:temSim?'Encontrada':'Não encontrada',ok:temSim,obrigatorio:true},
       {icon:'🪪',label:'RG / CNH',detalhe:temRG?'Encontrado':'Não encontrado',ok:temRG,obrigatorio:false},
       {icon:'📋',label:'Certidão de estado civil',detalhe:temCertidao?'Encontrada':'Não encontrada',ok:temCertidao,obrigatorio:false},
@@ -705,8 +707,8 @@ async function analyze(){
     });
     // Limite por tipo: extratos têm muitas páginas (10-20/arquivo), então enviamos poucos como binário
     // e completamos com label de texto. Anthropic aceita no máximo 100 páginas por chamada.
-    const MAX_POR_TIPO={extrato:2,rendimento:1,simulacao:1,certidao:1,rg:1};
-    const tiposBinario=new Set(['extrato','rendimento','simulacao','certidao','rg']);
+    const MAX_POR_TIPO={extrato:2,rendimento:1,simulacao:1,certidao:1,rg:1,docs_cv:2};
+    const tiposBinario=new Set(['extrato','rendimento','simulacao','certidao','rg','docs_cv']);
     const tiposBinarioExtra=t=>t.endsWith('_extrato')||t.endsWith('_rg');
     let pdfCount=0;
     const MAX_PDF_TOTAL=5;
@@ -764,6 +766,8 @@ async function analyze(){
       :'\nPARCELA PRÓ-SOLUTO: não informada pelo operador. Use margemProSoluto para indicar quanto sobra disponível.';
     contentParts.push({type:'text',text:`\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.${proSolutoInfo}\n\nRetorne apenas o JSON.`});
     const systemPrompt=`Você é um analista de crédito imobiliário da Casas Manager Construções. Gere um laudo interno de capacidade financeira do cliente, respondendo: (1) qual a renda que o cliente consegue comprovar com documentos? (2) qual a renda real apurada nos extratos? (3) ele consegue arcar com a parcela do financiamento bancário + pró-soluto com a Casas Manager?
+
+ATENÇÃO: Os documentos podem estar organizados de formas diferentes — arquivos separados por tipo OU um único arquivo "kit" ou "pacote" contendo vários documentos juntos (extrato, holerite, simulação, etc.). Analise o CONTEÚDO de cada documento independente do nome ou categoria — se um arquivo chamado "Kit documentação" contém páginas de extrato bancário, leia e analise como extrato.
 
 PASSO 1 — SIMULAÇÃO DE FINANCIAMENTO (se houver):
 - Extraia renda declarada na simulação, parcela mensal do financiamento bancário, valor do imóvel e valor financiado
