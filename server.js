@@ -268,7 +268,7 @@ app.post('/api/cv/precadastro/:id/salvar-relatorio', async (req, res) => {
 
     const payload = JSON.stringify({
       idprecadastro: parseInt(precadastroId),
-      idtipo: 3,
+      idtipo: 28, // OUTROS DOCUMENTOS
       nome,
       documento_base64: pdfBase64
     });
