@@ -605,7 +605,7 @@ async function buscarReserva(){
     const checklist=[
       {icon:'📄',label:'Extrato(s) bancário(s)',detalhe:temExtrato?`${(files['extrato']||[]).length} arquivo(s)`:'Nenhum encontrado',ok:temExtrato,obrigatorio:true},
       {icon:'💼',label:'Comprovante de rendimento',detalhe:temRendimento?`${(files['rendimento']||[]).length} arquivo(s)`:'Não encontrado',ok:temRendimento,obrigatorio:true},
-      {icon:'🏦',label:'Simulação CEF',detalhe:temSim?'Encontrada':'Não encontrada',ok:temSim,obrigatorio:true},
+      {icon:'🏦',label:'Simulação de financiamento',detalhe:temSim?'Encontrada':'Não encontrada',ok:temSim,obrigatorio:true},
       {icon:'🪪',label:'RG / CNH',detalhe:temRG?'Encontrado':'Não encontrado',ok:temRG,obrigatorio:false},
       {icon:'📋',label:'Certidão de estado civil',detalhe:temCertidao?'Encontrada':'Não encontrada',ok:temCertidao,obrigatorio:false},
     ];
@@ -689,7 +689,7 @@ async function analyze(){
   let si=0;
   const interval=setInterval(()=>{document.getElementById('progressLabel').textContent=steps[Math.min(si++,steps.length-1)];},1800);
   try{
-    const docNames={extrato:'Extrato bancário',rg:'RG/CPF/CNH',certidao:'Certidão de estado civil',rendimento:'Comprovante de rendimento',simulacao:'Simulação CEF'};
+    const docNames={extrato:'Extrato bancário',rg:'RG/CPF/CNH',certidao:'Certidão de estado civil',rendimento:'Comprovante de rendimento',simulacao:'Simulação de financiamento'};
     members.filter(m=>m.type==='cônjuge').forEach(m=>{
       const slug='conjuge_'+members.indexOf(m);
       docNames[slug+'_extrato']=`Extrato bancário - cônjuge ${m.name}`;
@@ -748,26 +748,27 @@ async function analyze(){
       ?`\nPARCELA PRÓ-SOLUTO (financiamento direto com a Casas Manager): R$ ${proSoluto.toFixed(2)}/mês\nEste é o valor real que o cliente se comprometeu a pagar à construtora após receber as chaves. Use este valor no campo "parcelaProSoluto" e analise a viabilidade.`
       :'\nPARCELA PRÓ-SOLUTO: não informada pelo operador. Use margemProSoluto para indicar quanto sobra disponível.';
     contentParts.push({type:'text',text:`\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.${proSolutoInfo}\n\nRetorne apenas o JSON.`});
-    const systemPrompt=`Você é um analista de crédito imobiliário da Casas Manager Construções. Gere um laudo interno respondendo: (1) qual renda o cliente comprova para a CEF? (2) qual a renda real e ele consegue pagar parcela CEF + pró-soluto Casas Manager?
+    const systemPrompt=`Você é um analista de crédito imobiliário da Casas Manager Construções. Gere um laudo interno de capacidade financeira do cliente, respondendo: (1) qual a renda que o cliente consegue comprovar com documentos? (2) qual a renda real apurada nos extratos? (3) ele consegue arcar com a parcela do financiamento bancário + pró-soluto com a Casas Manager?
 
-PASSO 1 — SIMULAÇÃO CEF (se houver):
-- Extraia renda declarada, parcela mensal CEF, valor do imóvel e valor financiado
+PASSO 1 — SIMULAÇÃO DE FINANCIAMENTO (se houver):
+- Extraia renda declarada na simulação, parcela mensal do financiamento bancário, valor do imóvel e valor financiado
+- Não mencione o banco/financeira específico — trate como "financiamento bancário" ou "financiamento imobiliário"
 
-PASSO 2 — RENDA COMPROVÁVEL (para CEF):
+PASSO 2 — RENDA COMPROVÁVEL (com documentos):
 Identifique o perfil do comprador pelos documentos presentes e aplique:
 
 CENÁRIO A — EMPREGADO CLT (há contracheque / holerite):
-- rendaComprovavelCEF = salário LÍQUIDO do contracheque
+- rendaComprovavel = salário LÍQUIDO do contracheque
 - tipo da fonte: "emprego_formal"
 - Use o extrato para confirmar o crédito e identificar renda complementar informal regular
 
 CENÁRIO B — EMPRESÁRIO / SÓCIO (há recibo de pró-labore):
-- rendaComprovavelCEF = média dos recibos de pró-labore
+- rendaComprovavel = média dos recibos de pró-labore
 - tipo da fonte: "prolabore"
 - Use o extrato para confirmar e identificar renda complementar
 
 CENÁRIO C — TRABALHADOR INFORMAL (apenas extrato, sem contracheque nem pró-labore):
-- rendaComprovavelCEF = 70% da média mensal das entradas regulares identificadas no extrato
+- rendaComprovavel = 70% da média mensal das entradas regulares identificadas no extrato
 - tipo da fonte: "informal_extrato"
 - Declare no parecer: "Renda 100% informal — comprovação via extrato bancário"
 
@@ -822,12 +823,12 @@ Renda:
 - Renda 100% informal (sem comprovação formal): -20
 - Renda irregular (variação > 30% entre meses): -15
 - Divergência > 20% entre renda declarada e apurada: -10
-- Renda comprovável < 3x a parcela CEF: -10
+- Renda comprovável < 3x a parcela do financiamento: -10
 
 Comprometimento:
 - Comprometimento atual > 60% da renda real: -20
 - Comprometimento atual entre 40% e 60%: -10
-- Tem financiamento imobiliário ativo além da CEF: -10
+- Tem financiamento imobiliário ativo além do atual: -10
 
 Comportamento financeiro:
 - Apostas identificadas nos extratos: -15
@@ -884,7 +885,7 @@ Escreva 2-3 parágrafos diretos ao time de vendas explicando:
 3. Considerando o perfil de motivação de regularização, o que fazer: aprovar, aprovar com ressalvas, pedir garantia ou não recomendar
 
 Retorne SOMENTE este JSON sem markdown:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição do fator identificado","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"Descrição objetiva do padrão de gastos do cliente","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["Saldo médio positivo ao longo dos meses","Renda regular e crescente"],"indicadoresNegativos":["Gastos com apostas recorrentes","Saldo zerado antes do fim do mês"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"1 parágrafo: o que nos extratos indica que a negativação motivaria ou não a regularização."},"orientacaoComercial":"2-3 parágrafos diretos para a equipe de vendas: quem é esse cliente, probabilidade de honrar o pró-soluto, motivação de regularização e recomendação clara de ação."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":""}],"extratosFaltantes":[{"banco":"Nome","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"1 frase: veredito + score de risco + probabilidade de inadimplência.","conclusao":"Laudo em 3 parágrafos técnicos: 1) renda comprovável CEF; 2) capacidade real de pagar o pró-soluto; 3) perfil de risco e recomendação."}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição do fator identificado","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"Descrição objetiva do padrão de gastos do cliente","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["Saldo médio positivo ao longo dos meses","Renda regular e crescente"],"indicadoresNegativos":["Gastos com apostas recorrentes","Saldo zerado antes do fim do mês"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"1 parágrafo: o que nos extratos indica que a negativação motivaria ou não a regularização."},"orientacaoComercial":"2-3 parágrafos diretos para a equipe de vendas: quem é esse cliente, probabilidade de honrar o pró-soluto, motivação de regularização e recomendação clara de ação."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":""}],"extratosFaltantes":[{"banco":"Nome","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":[],"parecer":"1 frase: veredito + score de risco + probabilidade de inadimplência.","conclusao":"Laudo em 3 parágrafos técnicos: 1) renda comprovável com documentos e renda real apurada; 2) capacidade real de pagar a parcela do financiamento + pró-soluto; 3) perfil de risco e recomendação."}
 
 Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
     // Usa streaming para evitar timeout no Railway — resposta flui em tempo real
@@ -1046,7 +1047,7 @@ function _gerarHTML(r,w){
 
 <div class="veredito">
   <div>
-    <div class="veredito-label">${vd.label} — ${r.veredito==='viavel'?'Cliente consegue pagar CEF + pró-soluto':r.veredito==='apertado'?'Margem apertada para pró-soluto':'Renda insuficiente para as duas parcelas'}</div>
+    <div class="veredito-label">${vd.label} — ${r.veredito==='viavel'?'Cliente tem capacidade para financiamento + pró-soluto':r.veredito==='apertado'?'Margem apertada para pró-soluto':'Renda insuficiente para as duas parcelas'}</div>
     <div class="veredito-parecer">${r.parecer||''}</div>
   </div>
   <div style="text-align:right">
@@ -1057,13 +1058,13 @@ function _gerarHTML(r,w){
 
 <div class="resumo-grid">
   <div class="resumo-box gold">
-    <div class="resumo-label">Renda Comprovável CEF</div>
-    <div class="resumo-valor">${fmtR(r.rendaComprovavelCEF)}</div>
-    ${r.rendaDeclaradaCEF>0?`<div class="resumo-sub">Declarada: ${fmtR(r.rendaDeclaradaCEF)}</div>`:''}
+    <div class="resumo-label">Renda Comprovável</div>
+    <div class="resumo-valor">${fmtR(r.rendaComprovavel)}</div>
+    ${r.rendaDeclarada>0?`<div class="resumo-sub">Declarada: ${fmtR(r.rendaDeclarada)}</div>`:''}
   </div>
   <div class="resumo-box">
-    <div class="resumo-label">Parcela Estimada CEF</div>
-    <div class="resumo-valor">${r.parcelaCEF>0?fmtR(r.parcelaCEF)+'/mês':'—'}</div>
+    <div class="resumo-label">Parcela Financiamento</div>
+    <div class="resumo-valor">${r.parcelaFinanciamento>0?fmtR(r.parcelaFinanciamento)+'/mês':'—'}</div>
   </div>
   <div class="resumo-box gold">
     <div class="resumo-label">Renda Real (extratos)</div>
@@ -1186,7 +1187,7 @@ ${(()=>{
 
 <h2>Fontes de Renda Identificadas</h2>
 <table>
-  <tr><th>Fonte / Remetente</th>${allMonths.map(m=>`<th>${m}</th>`).join('')}<th>Média/mês</th><th>CEF</th></tr>
+  <tr><th>Fonte / Remetente</th>${allMonths.map(m=>`<th>${m}</th>`).join('')}<th>Média/mês</th><th>Comprovável</th></tr>
   ${fontesHTML||'<tr><td colspan="99" style="color:#999">Nenhuma fonte identificada</td></tr>'}
 </table>
 
@@ -1274,7 +1275,7 @@ function renderResults(r){
 
   // VEREDITO
   const verMap={
-    viavel:{label:'VIÁVEL — Cliente consegue pagar CEF + pró-soluto',color:'#1a7a3c',bg:'#e8f5ee',border:'#1a7a3c',icon:'✅'},
+    viavel:{label:'VIÁVEL — Cliente tem capacidade para financiamento + pró-soluto',color:'#1a7a3c',bg:'#e8f5ee',border:'#1a7a3c',icon:'✅'},
     apertado:{label:'ATENÇÃO — Margem apertada para pró-soluto',color:'#7a5a00',bg:'#fef6e4',border:'#B8952A',icon:'⚠️'},
     inviavel:{label:'INVIÁVEL — Renda insuficiente para as duas parcelas',color:'#8b1a1a',bg:'#fdecea',border:'#C0392B',icon:'❌'}
   };
@@ -1286,8 +1287,8 @@ function renderResults(r){
   // Pré-computa bloco de documentos faltantes (evita IIFE aninhado em template literal)
   const docsFaltando=[];
   if(r.documentos){
-    if(!r.documentos.simulacaoCEF) docsFaltando.push({label:'Simulação CEF',impacto:'Parcela mensal e renda declarada não apuradas'});
-    if(!r.documentos.comprovanteCLT) docsFaltando.push({label:'Comprovante de renda formal (contracheque / pró-labore)',impacto:'Renda comprovável para a CEF pode estar incompleta'});
+    if(!r.documentos.simulacaoFinanciamento) docsFaltando.push({label:'Simulação de financiamento',impacto:'Parcela mensal e renda declarada não apuradas'});
+    if(!r.documentos.comprovanteCLT) docsFaltando.push({label:'Comprovante de renda formal (contracheque / pró-labore)',impacto:'Renda comprovável pode estar incompleta'});
     if(!r.documentos.extratoConjuge&&members.some(m=>m.type==='cônjuge')) docsFaltando.push({label:'Extrato do cônjuge',impacto:'Renda e comprometimentos do cônjuge não foram analisados'});
     if(!r.documentos.certidao) docsFaltando.push({label:'Certidão de estado civil',impacto:'Estado civil não confirmado — familiares podem não ter sido identificados'});
   }
@@ -1311,9 +1312,9 @@ function renderResults(r){
           <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px">Reserva ${reservaNum} · ${r.periodo||'—'}</div>
         </div>
         <div>
-          <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">Renda Comprovável CEF</div>
-          <div style="font-size:16px;font-weight:800;color:#C9A84C;font-family:'DM Mono',monospace">${fmt(r.rendaComprovavelCEF||0)}</div>
-          ${r.rendaDeclaradaCEF>0?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px">Declarada: '+fmt(r.rendaDeclaradaCEF)+'</div>':''}
+          <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">Renda Comprovável</div>
+          <div style="font-size:16px;font-weight:800;color:#C9A84C;font-family:'DM Mono',monospace">${fmt(r.rendaComprovavel||0)}</div>
+          ${r.rendaDeclarada>0?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px">Declarada: '+fmt(r.rendaDeclarada)+'</div>':''}
         </div>
         <div>
           <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">Renda Real (extratos)</div>
@@ -1340,10 +1341,10 @@ function renderResults(r){
 
     <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-bottom:10px">🏦 Renda para CEF</div>
-        ${r.rendaDeclaradaCEF>0?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Declarada na simulação</span><strong>${fmt(r.rendaDeclaradaCEF)}</strong></div>`:''}
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Comprovável com docs</span><strong style="color:var(--navy)">${fmt(r.rendaComprovavelCEF||0)}</strong></div>
-        ${r.parcelaCEF>0?`<div style="display:flex;justify-content:space-between;font-size:13px;padding-top:8px;border-top:1px solid var(--border);margin-top:4px"><span style="color:var(--text2)">Parcela estimada CEF</span><strong style="color:var(--navy)">${fmt(r.parcelaCEF)}/mês</strong></div>`:''}
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-bottom:10px">📋 Renda Comprovável</div>
+        ${r.rendaDeclarada>0?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Declarada na simulação</span><strong>${fmt(r.rendaDeclarada)}</strong></div>`:''}
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Comprovável com docs</span><strong style="color:var(--navy)">${fmt(r.rendaComprovavel||0)}</strong></div>
+        ${r.parcelaFinanciamento>0?`<div style="display:flex;justify-content:space-between;font-size:13px;padding-top:8px;border-top:1px solid var(--border);margin-top:4px"><span style="color:var(--text2)">Parcela financiamento</span><strong style="color:var(--navy)">${fmt(r.parcelaFinanciamento)}/mês</strong></div>`:''}
         ${r.divergenciaRenda?`<div style="margin-top:8px;padding:6px 10px;background:#fdecea;border-radius:6px;font-size:11px;color:#8b1a1a">⚠️ Renda declarada diverge da apurada nos extratos</div>`:''}
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
@@ -1351,7 +1352,7 @@ function renderResults(r){
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Renda real (extratos)</span><strong>${fmt(r.rendaRealTotal||0)}</strong></div>
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Comprometimentos fixos</span><span style="color:#8b1a1a">− ${fmt(r.totalComprometido||0)}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)"><span style="color:var(--text2)">Renda disponível</span><strong>${fmt(r.rendaDisponivelReal||0)}</strong></div>
-        ${r.parcelaCEF>0?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Parcela CEF</span><span style="color:#8b1a1a">− ${fmt(r.parcelaCEF)}</span></div>`:''}
+        ${r.parcelaFinanciamento>0?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Parcela financiamento</span><span style="color:#8b1a1a">− ${fmt(r.parcelaFinanciamento)}</span></div>`:''}
         <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding-top:8px;border-top:2px solid var(--border);margin-top:4px"><span>Margem pró-soluto</span><strong style="color:${(r.margemProSoluto||0)>500?'#1a7a3c':(r.margemProSoluto||0)>0?'#7a5a00':'#8b1a1a'}">${fmt(r.margemProSoluto||0)}/mês</strong></div>
         ${r.entradasBet>0?`<div style="margin-top:8px;padding:6px 10px;background:#fdecea;border-radius:6px;font-size:11px;color:#8b1a1a">🎰 ${fmt(r.entradasBet)} em apostas excluídos da renda</div>`:''}
       </div>
