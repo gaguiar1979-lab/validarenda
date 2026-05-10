@@ -254,6 +254,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div id="cvStatus" class="cv-status"></div>
 </div>
 
+<!-- PARCELA PRÓ-SOLUTO -->
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;margin-bottom:1.25rem;box-shadow:var(--shadow)">
+  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:10px">🏗️ Financiamento com a Construtora</div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px">
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Valor da parcela pró-soluto (pós-chaves)</label>
+      <input type="text" id="proSolutoValor" placeholder="Ex: 1.500,00" oninput="fmtProSoluto(this)"
+        style="width:100%;padding:10px 14px;font-size:15px;font-weight:700;font-family:'DM Mono',monospace;border:2px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--navy);outline:none">
+    </div>
+    <div style="font-size:12px;color:var(--text3);max-width:260px;line-height:1.6">
+      Parcela mensal que o cliente pagará diretamente à Casas Manager após receber as chaves. O agente vai analisar se a renda livre suporta essa dívida.
+    </div>
+  </div>
+</div>
+
 <!-- CHECKLIST DE DOCUMENTOS (preenchido automaticamente após busca no CV) -->
 <div id="checklistArea" style="display:none;margin-bottom:1.5rem"></div>
 
@@ -634,6 +649,16 @@ async function buscarReserva(){
 }
 
 function fmt(v){return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtProSoluto(el){
+  const nums=el.value.replace(/\D/g,'');
+  if(!nums){el.value='';return;}
+  const val=(parseInt(nums)/100).toFixed(2);
+  el.value=Number(val).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function getProSoluto(){
+  const raw=(document.getElementById('proSolutoValor').value||'').replace(/\./g,'').replace(',','.');
+  return parseFloat(raw)||0;
+}
 function toB64(file){
   return new Promise((res,rej)=>{
     const r=new FileReader();
@@ -718,7 +743,11 @@ async function analyze(){
     const memberList=members.length?members.map(m=>`- ${m.name} (${m.type})`).join('\n'):'(nenhum)';
     const filhosList=members.filter(m=>m.type!=='cônjuge').map(m=>m.name).join(', ')||'nenhum';
     const conjugesList=members.filter(m=>m.type==='cônjuge').map(m=>m.name).join(', ')||'nenhum';
-    contentParts.push({type:'text',text:`\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.\n\nRetorne apenas o JSON.`});
+    const proSoluto=getProSoluto();
+    const proSolutoInfo=proSoluto>0
+      ?`\nPARCELA PRÓ-SOLUTO (financiamento direto com a Casas Manager): R$ ${proSoluto.toFixed(2)}/mês\nEste é o valor real que o cliente se comprometeu a pagar à construtora após receber as chaves. Use este valor no campo "parcelaProSoluto" e analise a viabilidade.`
+      :'\nPARCELA PRÓ-SOLUTO: não informada pelo operador. Use margemProSoluto para indicar quanto sobra disponível.';
+    contentParts.push({type:'text',text:`\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.${proSolutoInfo}\n\nRetorne apenas o JSON.`});
     const systemPrompt=`Você é um analista de crédito imobiliário da Casas Manager Construções. Gere um laudo interno respondendo: (1) qual renda o cliente comprova para a CEF? (2) qual a renda real e ele consegue pagar parcela CEF + pró-soluto Casas Manager?
 
 PASSO 1 — SIMULAÇÃO CEF (se houver):
@@ -778,13 +807,15 @@ PASSO 4B — TRANSFERÊNCIAS QUE PRECISAM DE JUSTIFICATIVA DO CLIENTE:
 - Para cada uma: nome/chave do beneficiário, valor médio mensal, frequência observada
 - Ignore transferências únicas ou claramente eventuais
 
-PASSO 5 — VEREDITO:
-- "viavel": rendaDisponivelReal > 0 e margem pró-soluto positiva após parcela CEF
-- "apertado": margem existe mas < R$500 ou comprometimento > 60% da renda real
-- "inviavel": rendaDisponivelReal negativa ou comprometimento > renda real
+PASSO 5 — VEREDITO (use o parcelaProSoluto informado se disponível):
+- Se parcelaProSoluto > 0: compare com margemProSoluto para o veredito
+  - "viavel": margemProSoluto >= parcelaProSoluto (sobra margem após pagar o pró-soluto)
+  - "apertado": margemProSoluto >= parcelaProSoluto mas diferença < R$300, OU margemProSoluto entre 80% e 100% do parcelaProSoluto
+  - "inviavel": margemProSoluto < parcelaProSoluto (renda não cobre o pró-soluto)
+- Se parcelaProSoluto = 0 (não informado): use a margem disponível para orientar o parecer sem veredito definitivo
 
 Retorne SOMENTE este JSON sem markdown:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"valorImovel":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"Transferência recorrente sem identificação de destino — cliente deve justificar"}],"extratosFaltantes":[{"banco":"Nome do banco/instituição","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular nesta instituição","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"1 frase objetiva: veredito e margem pró-soluto disponível.","conclusao":"Laudo em 3 parágrafos: 1) renda comprovável para CEF vs declarada; 2) renda real apurada e comprometimentos fixos identificados; 3) capacidade líquida e recomendação objetiva sobre viabilidade do pró-soluto."}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"Transferência recorrente sem identificação de destino — cliente deve justificar"}],"extratosFaltantes":[{"banco":"Nome do banco/instituição","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular nesta instituição","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"1 frase objetiva com veredito claro: ex — Cliente consegue pagar o pró-soluto de R$ X com sobra de R$ Y / ou não consegue pois margem é inferior ao compromisso.","conclusao":"Laudo em 3 parágrafos: 1) renda comprovável para CEF vs declarada; 2) renda real apurada e comprometimentos fixos; 3) análise direta da capacidade de pagar o pró-soluto — viável ou não, com os números."}
 
 Tipos válidos para fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros
 Frequencia: mensal, quinzenal, semanal, irregular.
