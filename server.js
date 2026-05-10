@@ -262,34 +262,14 @@ startxref
 app.post('/api/cv/precadastro/:id/salvar-relatorio', async (req, res) => {
   try {
     const precadastroId = req.params.id;
-    const { texto, mediaMensal, rendaTotal, periodo } = req.body;
-    const agora = new Date().toLocaleString('pt-BR');
-
-    const conteudo = `ANALISE DE CAPACIDADE DE PAGAMENTO
-Casas Manager Construcoes - ${agora}
-
-Pre-Cadastro: ${precadastroId}
-Periodo analisado: ${periodo || '-'}
-Renda total do periodo: R$ ${rendaTotal || '-'}
-Media mensal: R$ ${mediaMensal || '-'}
-
--------------------------------------------
-
-${texto || ''}
-
--------------------------------------------
-Gerado pelo Sistema Validador de Renda
-www.casasmanager.com.br | @casasmanager`;
-
-    const pdfBuffer = gerarPDF(conteudo);
-    const pdfBase64 = pdfBuffer.toString('base64');
+    const { pdfBase64, fileName, periodo } = req.body;
     const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
-    const fileName = `Analise_Capacidade_Pagamento_PreCadastro_${precadastroId}_${dataHoje}.pdf`;
+    const nome = fileName || `Analise_Capacidade_Pagamento_PreCadastro_${precadastroId}_${dataHoje}.pdf`;
 
     const payload = JSON.stringify({
       idprecadastro: parseInt(precadastroId),
       idtipo: 3,
-      nome: fileName,
+      nome,
       documento_base64: pdfBase64
     });
 

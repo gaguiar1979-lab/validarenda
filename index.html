@@ -6,6 +6,7 @@
 <title>Validador de Renda — Casas Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1280,16 +1281,40 @@ async function salvarNoCVCRM(){
   if(!reservaId){showToast('⚠️ Digite o número do pré-cadastro para salvar.');return;}
   if(!lastResult){showToast('⚠️ Gere a análise antes de salvar.');return;}
   const btn=document.getElementById('btnSalvarCV');
-  btn.disabled=true;btn.textContent='⏳ Salvando...';
+  btn.disabled=true;btn.textContent='⏳ Gerando PDF...';
   try{
-    const texto=(lastResult.parecer||'')+'\n\n'+(lastResult.conclusao||'');
+    // Captura o HTML completo do relatório renderizado no iframe
+    const frame=document.getElementById('reportFrame');
+    const iframeDoc=frame.contentDocument||frame.contentWindow.document;
+    const reportEl=iframeDoc.body;
+    if(!reportEl||!reportEl.children.length){showToast('⚠️ Relatório não encontrado. Gere a análise primeiro.');btn.disabled=false;btn.textContent='💾 Salvar no CV CRM';return;}
+
+    // Gera PDF a partir do HTML do relatório
+    const dataHoje=new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+    const fileName=`Analise_Capacidade_Pagamento_PreCadastro_${reservaId}_${dataHoje}.pdf`;
+    const pdfBlob=await html2pdf().set({
+      margin:[10,10,10,10],
+      filename:fileName,
+      image:{type:'jpeg',quality:0.95},
+      html2canvas:{scale:1.5,useCORS:true,logging:false},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+    }).from(reportEl).outputPdf('blob');
+
+    // Converte para base64
+    btn.textContent='⏳ Enviando...';
+    const base64=await new Promise((res,rej)=>{
+      const reader=new FileReader();
+      reader.onload=()=>res(reader.result.split(',')[1]);
+      reader.onerror=rej;
+      reader.readAsDataURL(pdfBlob);
+    });
+
     const resp=await fetch('/api/cv/precadastro/'+reservaId+'/salvar-relatorio',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        texto,
-        mediaMensal:(lastResult.mediamensal||lastResult.rendaTotal/lastResult.meses||0).toFixed(2),
-        rendaTotal:(lastResult.rendaTotal||0).toFixed(2),
+        pdfBase64:base64,
+        fileName,
         periodo:lastResult.periodo||''
       })
     });
