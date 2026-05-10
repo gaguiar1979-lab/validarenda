@@ -1291,7 +1291,8 @@ async function salvarNoCVCRM(){
 
     // Gera PDF a partir do HTML do relatório
     const dataHoje=new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
-    const fileName=`Analise da Renda pelo Validador - PreCadastro ${reservaId} - ${dataHoje}.pdf`;
+    const nomeCliente=(lastResult.nomeComprador||'Cliente').replace(/[^a-zA-ZÀ-ÿ\s]/g,'').trim();
+    const fileName=`Analise da Renda pelo Validador - ${nomeCliente} - PreCadastro ${reservaId} - ${dataHoje}.pdf`;
     const pdfBlob=await html2pdf().set({
       margin:[10,10,10,10],
       filename:fileName,
