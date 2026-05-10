@@ -901,13 +901,15 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
     // Lê o stream SSE e acumula o texto gerado pela IA
     const reader=resp.body.getReader();
     const decoder=new TextDecoder();
-    let sseBuf='';let raw='';
+    let sseBuf='';let raw='';let fullBody='';
     document.getElementById('progressLabel').textContent='Gerando laudo...';
     try{
       while(true){
         const{done,value}=await reader.read();
         if(done)break;
-        sseBuf+=decoder.decode(value,{stream:true});
+        const chunk=decoder.decode(value,{stream:true});
+        fullBody+=chunk;
+        sseBuf+=chunk;
         const lines=sseBuf.split('\n');
         sseBuf=lines.pop();
         for(const line of lines){
@@ -922,7 +924,12 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
         }
       }
     }finally{clearTimeout(abortTimer);}
-    if(!raw){throw new Error('A IA não retornou resposta. Verifique se o modelo está disponível e tente novamente.');}
+    if(!raw){
+      console.error('RESPOSTA BRUTA DA API:',fullBody.substring(0,800));
+      // Tenta extrair mensagem de erro do corpo bruto (Anthropic pode retornar JSON de erro sem SSE)
+      try{const errObj=JSON.parse(fullBody);if(errObj.error?.message)throw new Error('Anthropic: '+errObj.error.message);}catch(pe){if(pe.message.startsWith('Anthropic:'))throw pe;}
+      throw new Error('A IA não retornou resposta. Detalhes no console (F12). Tente novamente.');
+    }
     const jsonMatch=raw.match(/\{[\s\S]*\}/);
     if(!jsonMatch){throw new Error('Resposta fora do formato esperado: '+raw.substring(0,300));}
     renderResults(JSON.parse(jsonMatch[0]));
