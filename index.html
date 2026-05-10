@@ -176,12 +176,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .conjuge-section-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin:1rem 0 10px}
 
 @media print{
-  .topbar,.brand-banner,.access-alert,.cv-search-card,.or-divider,.upload-grid,.card:not(.result-card),.btn-analyze,.progress-wrap,.btn-print,#conjugeDocsArea,.footer{display:none!important}
-  .results{display:block!important}
+  .topbar,.brand-banner,.access-alert,.cv-search-card,.or-divider,.upload-grid,.card,.btn-analyze,.progress-wrap,.btn-print,.btn-save,#conjugeDocsArea,.footer,#familiaresCard,#printDate,.section-title,.divider{display:none!important}
+  .results{display:block!important;padding:0!important}
+  #relatorioInline{border:none!important;border-radius:0!important}
   body{background:#fff}
   .page{padding:0}
-  .print-header{display:flex!important}
-  .income-table th{border-bottom:2px solid var(--gold)}
 }
 @media(max-width:600px){
   .page{padding:1.5rem 1rem 3rem}
@@ -293,8 +292,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 </div>
 <div id="conjugeDocsArea"></div>
 
-<!-- ANALISAR -->
-<button class="btn-analyze" id="analyzeBtn" onclick="analyze()" style="margin-top:8px">🔄 Re-analisar</button>
+<!-- PROGRESSO (oculto, só aparece durante análise) -->
+<button id="analyzeBtn" onclick="analyze()" style="display:none"></button>
 <div class="progress-wrap" id="progressWrap">
   <div class="progress-label" id="progressLabel">Lendo documentos...</div>
   <div class="progress-track"><div class="progress-fill"></div></div>
@@ -303,32 +302,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 <!-- RESULTADOS -->
 <div class="results" id="results">
   <div class="divider"></div>
-  <div class="section-title">Resultado da análise · <span id="periodoLabel"></span></div>
-  <div class="metrics" id="metricsGrid"></div>
-  <div class="card result-card">
-    <div class="card-title" style="color:var(--navy)">💰 Fontes de renda identificadas</div>
-    <table class="income-table">
-      <thead><tr><th>Fonte / Remetente</th><th style="text-align:right">Total período</th><th style="text-align:right">Média mensal</th></tr></thead>
-      <tbody id="incomeRows"></tbody>
-    </table>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div class="section-title" style="margin:0">Resultado da análise · <span id="periodoLabel"></span></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-print" onclick="gerarRelatorio()">🖨️ Imprimir / Salvar PDF</button>
+      <button class="btn-save" id="btnSalvarCV" onclick="salvarNoCVCRM()">💾 Salvar no CV CRM</button>
+    </div>
   </div>
-  <div class="card result-card">
-    <div class="card-title" style="color:var(--navy)">🚫 Transferências desconsideradas — detalhamento</div>
-    <div id="excludedRows"></div>
-  </div>
-  <div class="card result-card">
-    <div class="card-title" style="color:var(--navy)">📁 Documentos verificados</div>
-    <div class="doc-grid" id="docGrid"></div>
-  </div>
-  <div class="card result-card">
-    <div class="card-title" style="color:var(--navy)">📄 Relatório de análise</div>
-    <div id="reportContent"></div>
-    <div id="alertBox" style="display:none"></div>
-    <div class="report-stamp" id="reportStamp"></div>
-    <button class="btn-print" onclick="gerarRelatorio()">🖨️ Imprimir / Salvar PDF</button>
-    <div id="printFrame" style="display:none"></div>
-    <button class="btn-save" id="btnSalvarCV" onclick="salvarNoCVCRM()">💾 Salvar no CV CRM</button>
-  </div>
+  <div id="printDate" style="font-size:11px;color:var(--text3);margin-bottom:12px"></div>
+
+  <!-- Relatório inline — gerado automaticamente após análise -->
+  <div id="relatorioInline" style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden"></div>
+
+  <!-- Dados auxiliares (hidden, mantidos para compatibilidade) -->
+  <div id="metricsGrid" style="display:none"></div>
+  <div id="incomeRows" style="display:none"></div>
+  <div id="excludedRows" style="display:none"></div>
+  <div id="docGrid" style="display:none"></div>
+  <div id="reportContent" style="display:none"></div>
+  <div id="alertBox" style="display:none"></div>
+  <div id="reportStamp" style="display:none"></div>
+  <div id="printFrame" style="display:none"></div>
 </div>
 
 </div>
@@ -808,10 +802,15 @@ let lastResult=null;
 function gerarRelatorio(){
   const r=lastResult;
   if(!r){showToast('⚠️ Gere a análise antes de imprimir.');return;}
-  // Tenta abrir popup; se bloqueado, renderiza na mesma página
+  // Abre popup para impressão — se bloqueado, usa a versão já renderizada na página
   let w=null;
   try{w=window.open('','_blank');}catch(e){}
-  _gerarHTML(r,w);
+  if(w&&!w.closed){
+    _gerarHTML(r,w);
+  } else {
+    // Popup bloqueado: aciona print direto da página com CSS específico
+    window.print();
+  }
 }
 function _gerarHTML(r,w){
   const reservaNum=document.getElementById('reservaId').value||'—';
@@ -963,33 +962,16 @@ ${(r.excluidos&&r.excluidos.length)?`<h2>Transferências Excluídas da Renda (Fa
 
 </body></html>`;
 
-  if(w&&!w.closed){
-    // Popup disponível
-    w.document.write(html);
+  // Sempre renderiza inline na página
+  const inline=document.getElementById('relatorioInline');
+  if(inline){
+    inline.innerHTML='<div style="padding:28px 32px;font-family:\'Segoe UI\',Arial,sans-serif;font-size:13px;color:#1a1a2e">'+html+'</div>';
+  }
+  // Abre popup para impressão se solicitado via botão
+  if(w&&!w.closed&&w!==window){
+    w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:\'Segoe UI\',Arial,sans-serif;padding:24px}</style></head><body>'+html+'</body></html>');
     w.document.close();
     setTimeout(()=>{ try{w.print();}catch(e){} },600);
-  } else {
-    // Popup bloqueado → renderiza na mesma página com overlay
-    const frame=document.getElementById('printFrame');
-    frame.innerHTML='<div style="position:fixed;inset:0;z-index:9999;background:#fff;overflow:auto;padding:32px">'
-      +'<div style="max-width:860px;margin:0 auto">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
-      +'<strong style="font-size:15px">Relatório gerado — clique em Imprimir para salvar como PDF</strong>'
-      +'<div style="display:flex;gap:10px">'
-      +'<button onclick="window.print()" style="padding:8px 18px;background:#1C1E35;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:sans-serif">🖨️ Imprimir / PDF</button>'
-      +'<button onclick="document.getElementById(\'printFrame\').innerHTML=\'\'" style="padding:8px 18px;background:#eee;color:#333;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-family:sans-serif">✕ Fechar</button>'
-      +'</div></div>'
-      +'<div id="printContent">'+html+'</div>'
-      +'</div></div>';
-    frame.style.display='block';
-    // CSS de impressão: mostra só o conteúdo do relatório
-    const styleId='printOverrideStyle';
-    if(!document.getElementById(styleId)){
-      const s=document.createElement('style');
-      s.id=styleId;
-      s.textContent='@media print{body>*:not(#printFrame){display:none!important}#printFrame{display:block!important;position:static!important;padding:0!important}}';
-      document.head.appendChild(s);
-    }
   }
 }
 
@@ -1214,6 +1196,10 @@ function renderResults(r){
   ab.style.display='none';
 
   document.getElementById('results').classList.add('on');
+
+  // Renderiza o relatório formatado direto na página
+  _gerarHTML(r, null);
+
   document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
 }
 </script>
