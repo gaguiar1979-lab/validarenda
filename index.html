@@ -223,7 +223,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <span style="font-size:20px">🔒</span>
   <div>
     <strong>Sistema de uso exclusivo — Casas Manager Construções.</strong>
-    Para realizar uma análise é obrigatório informar o número da reserva cadastrada no CV CRM.
+    Para realizar uma análise é obrigatório informar o número do pré-cadastro cadastrado no CV CRM.
     Acesso não autorizado é monitorado. <a href="https://www.casasmanager.com.br" style="color:var(--gold)">www.casasmanager.com.br</a> · <a href="https://instagram.com/casasmanager" style="color:var(--gold)">@casasmanager</a>
   </div>
 </div>
@@ -243,13 +243,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 
-<!-- BUSCAR RESERVA NO CV -->
+<!-- BUSCAR PRÉ-CADASTRO NO CV -->
 <div class="cv-search-card">
   <h3>🔗 Buscar no CV CRM</h3>
-  <p>Digite o número da reserva para carregar os documentos automaticamente. Campo obrigatório.</p>
+  <p>Digite o número do pré-cadastro para carregar os documentos automaticamente. Campo obrigatório.</p>
   <div class="cv-search-row">
-    <input type="number" id="reservaId" placeholder="Número da reserva (ex: 1550)">
-    <button onclick="buscarReserva()" id="btnBuscarReserva">🔍 Buscar Reserva</button>
+    <input type="number" id="reservaId" placeholder="Número do pré-cadastro (ex: 933)">
+    <button onclick="buscarReserva()" id="btnBuscarReserva">🔍 Buscar</button>
   </div>
   <div id="cvStatus" class="cv-status"></div>
 </div>
@@ -524,17 +524,17 @@ async function handleFilhoCertidao(input,id,num){
 
 async function buscarReserva(){
   const reservaId=document.getElementById('reservaId').value.trim();
-  if(!reservaId){alert('Digite o número da reserva.');return;}
+  if(!reservaId){alert('Digite o número do pré-cadastro.');return;}
   const btn=document.getElementById('btnBuscarReserva');
   const status=document.getElementById('cvStatus');
   btn.disabled=true;
-  status.innerHTML='<span style="color:rgba(255,255,255,.6)">⏳ Buscando reserva no CV CRM...</span>';
+  status.innerHTML='<span style="color:rgba(255,255,255,.6)">⏳ Buscando pré-cadastro no CV CRM...</span>';
   try{
     const ctrl=new AbortController();
     const t=setTimeout(()=>ctrl.abort(),25000);
     let resp,data;
     try{
-      resp=await fetch(`/api/cv/reserva/${reservaId}/documentos`,{signal:ctrl.signal});
+      resp=await fetch(`/api/cv/precadastro/${reservaId}/documentos`,{signal:ctrl.signal});
       data=await resp.json();
     }catch(fe){
       clearTimeout(t);
@@ -550,7 +550,7 @@ async function buscarReserva(){
     const docsObj=(data.dados&&data.dados.documentos)||{};
     const docs=Object.entries(docsObj).flatMap(([pessoa,arr])=>arr.map(d=>({...d,pessoa})));
     if(!docs.length){
-      status.innerHTML='<span style="color:var(--gold2)">⚠️ Nenhum documento encontrado nesta reserva.</span>';
+      status.innerHTML='<span style="color:var(--gold2)">⚠️ Nenhum documento encontrado neste pré-cadastro.</span>';
       btn.disabled=false;return;
     }
     status.innerHTML=`<span style="color:var(--gold2)">⏳ ${docs.length} documento(s) encontrado(s). Baixando em paralelo...</span>`;
@@ -626,13 +626,13 @@ async function buscarReserva(){
     const bloqueadoHtml=bloqueado?`
       <div style="margin-top:14px;padding:14px 16px;background:#fdecea;border:2px solid #C0392B;border-radius:10px">
         <div style="font-size:14px;font-weight:800;color:#7f1d1d;margin-bottom:6px">🔴 Análise bloqueada — documentos obrigatórios ausentes</div>
-        <div style="font-size:13px;color:#7f1d1d;line-height:1.6">Acesse o <strong>CV CRM</strong>, anexe os documentos marcados como obrigatórios na reserva e clique em <strong>Buscar Reserva</strong> novamente.</div>
+        <div style="font-size:13px;color:#7f1d1d;line-height:1.6">Acesse o <strong>CV CRM</strong>, anexe os documentos marcados como obrigatórios no pré-cadastro e clique em <strong>Buscar</strong> novamente.</div>
       </div>`:'<div style="margin-top:14px;padding:10px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;font-size:13px;color:#166534;font-weight:600">✅ Todos os documentos obrigatórios encontrados — iniciando análise...</div>';
 
     document.getElementById('checklistArea').style.display='block';
     document.getElementById('checklistArea').innerHTML=`
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:var(--shadow)">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:12px">📋 Documentos no CV CRM — Reserva ${reservaId}</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:12px">📋 Documentos no CV CRM — Pré-Cadastro ${reservaId}</div>
         <div style="display:flex;flex-direction:column;gap:6px">${itemHtml}</div>
         ${bloqueadoHtml}
       </div>`;
@@ -1032,7 +1032,7 @@ function _gerarHTML(r,w){
     ?r.extratosFaltantes.map(e=>`<tr><td><strong>${e.banco}</strong></td><td>${e.motivo}</td><td>~${fmtR(e.valorMedioMensal)}/mês</td></tr>`).join(''):'';
 
   const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>Laudo de Renda — Reserva ${reservaNum}</title>
+<title>Laudo de Renda — Pré-Cadastro ${reservaNum}</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#1a1a2e;background:#fff;padding:24px 32px}
@@ -1258,7 +1258,7 @@ ${(r.excluidos&&r.excluidos.length)?`<h2>Transferências Excluídas da Renda (Fa
 
 <div class="footer">
   <span>Casas Manager Construções · www.casasmanager.com.br · @casasmanager</span>
-  <span>Laudo gerado em ${agora} · Reserva ${reservaNum} · Sistema Validador de Renda</span>
+  <span>Laudo gerado em ${agora} · Pré-Cadastro ${reservaNum} · Sistema Validador de Renda</span>
 </div>
 
 </body></html>`;
@@ -1277,13 +1277,13 @@ ${(r.excluidos&&r.excluidos.length)?`<h2>Transferências Excluídas da Renda (Fa
 
 async function salvarNoCVCRM(){
   const reservaId=document.getElementById('reservaId').value.trim();
-  if(!reservaId){showToast('⚠️ Digite o número da reserva para salvar.');return;}
+  if(!reservaId){showToast('⚠️ Digite o número do pré-cadastro para salvar.');return;}
   if(!lastResult){showToast('⚠️ Gere a análise antes de salvar.');return;}
   const btn=document.getElementById('btnSalvarCV');
   btn.disabled=true;btn.textContent='⏳ Salvando...';
   try{
     const texto=(lastResult.parecer||'')+'\n\n'+(lastResult.conclusao||'');
-    const resp=await fetch('/api/cv/reserva/'+reservaId+'/salvar-relatorio',{
+    const resp=await fetch('/api/cv/precadastro/'+reservaId+'/salvar-relatorio',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -1327,7 +1327,7 @@ function renderResults(r){
   const docsFaltandoHtml=docsFaltando.length
     ? '<div style="grid-column:1/-1;background:#fff8e8;border:2px solid #B8952A;border-radius:10px;padding:14px 18px">'
       +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#7a5a00;margin-bottom:8px">📋 Documentos Ausentes — Análise Parcial</div>'
-      +'<div style="font-size:12px;color:#7a5a00;margin-bottom:8px">Os itens abaixo não foram localizados na reserva. O cliente ou o corretor deve providenciá-los para completar a análise.</div>'
+      +'<div style="font-size:12px;color:#7a5a00;margin-bottom:8px">Os itens abaixo não foram localizados no pré-cadastro. O cliente ou o corretor deve providenciá-los para completar a análise.</div>'
       +docsFaltando.map(d=>'<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid #e8d59a">'
         +'<span style="font-size:13px;font-weight:700;color:#7a5a00;white-space:nowrap">⚠️ '+d.label+'</span>'
         +'<span style="font-size:12px;color:#9a7a30"> — '+d.impacto+'</span></div>').join('')
