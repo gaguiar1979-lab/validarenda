@@ -11,8 +11,8 @@ const CV_TOKEN = process.env.CV_TOKEN;
 const CV_EMAIL = process.env.CV_EMAIL || 'gustavo@casasmanager.com.br';
 const CV_BASE = 'manager.cvcrm.com.br';
 
-// Helper: HTTPS request
-function httpsRequest(options, body = null) {
+// Helper: HTTPS request com timeout de 30s
+function httpsRequest(options, body = null, timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
     const req = https.request(options, (res) => {
       let data = '';
@@ -20,6 +20,9 @@ function httpsRequest(options, body = null) {
       res.on('end', () => resolve({ status: res.statusCode, body: data }));
     });
     req.on('error', reject);
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error(`Timeout após ${timeoutMs/1000}s`));
+    });
     if (body) req.write(body);
     req.end();
   });

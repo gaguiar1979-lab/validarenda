@@ -514,10 +514,19 @@ async function buscarReserva(){
   const status=document.getElementById('cvStatus');
   btn.disabled=true;
   status.innerHTML='<span style="color:rgba(255,255,255,.6)">⏳ Buscando reserva no CV CRM...</span>';
-  document.getElementById('cvDocs').style.display='none';
   try{
-    const resp=await fetch(`/api/cv/reserva/${reservaId}/documentos`);
-    const data=await resp.json();
+    const ctrl=new AbortController();
+    const t=setTimeout(()=>ctrl.abort(),25000);
+    let resp,data;
+    try{
+      resp=await fetch(`/api/cv/reserva/${reservaId}/documentos`,{signal:ctrl.signal});
+      data=await resp.json();
+    }catch(fe){
+      clearTimeout(t);
+      status.innerHTML=`<span style="color:#ff6b6b">❌ ${fe.name==='AbortError'?'CV CRM demorou demais para responder. Tente novamente.':fe.message}</span>`;
+      btn.disabled=false;return;
+    }
+    clearTimeout(t);
     if(!resp.ok||data.error){
       status.innerHTML=`<span style="color:#ff6b6b">❌ ${data.message||data.error||'Reserva não encontrada.'}</span>`;
       btn.disabled=false;return;
