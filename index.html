@@ -866,14 +866,25 @@ Avalie de forma objetiva e honesta. Considere: capacidade financeira + comportam
 - "alta": margem apertada E/OU comportamento financeiro impulsivo
 - "muito_alta": sem margem real E comportamento de risco evidente
 
+MOTIVAÇÃO PARA REGULARIZAR SE NEGATIVADO:
+Esta é uma dimensão de risco psicológico/comportamental. Analise os extratos e responda:
+Se esse cliente deixar de pagar o pró-soluto e for negativado, o estilo de vida que ele demonstra ter seria ameaçado?
+
+Observe nos extratos: compras parceladas frequentes, cartão de crédito alto, restaurantes, viagens, delivery premium, assinaturas, academia, serviços que dependem de crédito limpo.
+- "alta": cliente tem lifestyle elevado e dependente de crédito — negativação impacta diretamente seu cotidiano. Forte incentivo para regularizar e sair do nome sujo.
+- "media": alguns hábitos dependem de crédito mas poderia adaptar — motivação moderada para regularizar.
+- "baixa": perfil simples, opera majoritariamente com dinheiro em conta, gastos essenciais — negativação pouco altera seu dia a dia, baixa pressão para regularizar espontaneamente.
+
+Em "justificativaMotivacao" escreva 1 parágrafo objetivo explicando o que nos extratos suporta essa conclusão.
+
 ORIENTAÇÃO PARA A EQUIPE COMERCIAL:
 Escreva 2-3 parágrafos diretos ao time de vendas explicando:
 1. Quem é esse cliente financeiramente — perfil em linguagem simples
 2. A probabilidade de ele honrar o pró-soluto e por quê
-3. O que fazer: aprovar, aprovar com ressalvas, pedir garantia ou não recomendar
+3. Considerando o perfil de motivação de regularização, o que fazer: aprovar, aprovar com ressalvas, pedir garantia ou não recomendar
 
 Retorne SOMENTE este JSON sem markdown:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição do fator identificado","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"Descrição objetiva do padrão de gastos do cliente","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["Saldo médio positivo ao longo dos meses","Renda regular e crescente"],"indicadoresNegativos":["Gastos com apostas recorrentes","Saldo zerado antes do fim do mês"],"orientacaoComercial":"2-3 parágrafos diretos para a equipe de vendas: quem é esse cliente, probabilidade de honrar o pró-soluto e recomendação clara de ação."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":""}],"extratosFaltantes":[{"banco":"Nome","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"1 frase: veredito + score de risco + probabilidade de inadimplência.","conclusao":"Laudo em 3 parágrafos técnicos: 1) renda comprovável CEF; 2) capacidade real de pagar o pró-soluto; 3) perfil de risco e recomendação."}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição do fator identificado","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"Descrição objetiva do padrão de gastos do cliente","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["Saldo médio positivo ao longo dos meses","Renda regular e crescente"],"indicadoresNegativos":["Gastos com apostas recorrentes","Saldo zerado antes do fim do mês"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"1 parágrafo: o que nos extratos indica que a negativação motivaria ou não a regularização."},"orientacaoComercial":"2-3 parágrafos diretos para a equipe de vendas: quem é esse cliente, probabilidade de honrar o pró-soluto, motivação de regularização e recomendação clara de ação."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":""}],"extratosFaltantes":[{"banco":"Nome","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"1 frase: veredito + score de risco + probabilidade de inadimplência.","conclusao":"Laudo em 3 parágrafos técnicos: 1) renda comprovável CEF; 2) capacidade real de pagar o pró-soluto; 3) perfil de risco e recomendação."}
 
 Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
     // Usa streaming para evitar timeout no Railway — resposta flui em tempo real
@@ -1117,6 +1128,24 @@ ${(()=>{
     </div>
   </div>
   ${c.perfilConsumo?`<div style="font-size:12px;color:#333;line-height:1.5;padding:10px 12px;background:rgba(0,0,0,.04);border-radius:6px;margin-bottom:12px">${c.perfilConsumo}</div>`:''}
+  ${(()=>{
+    const mn=c.motivacaoNegativacao||{};
+    if(!mn.nivel) return '';
+    const mMap={
+      alta:{label:'ALTA',sublabel:'Negativação impacta o estilo de vida — forte incentivo para regularizar',cor:'#1a7a3c',bg:'#e8f5ee',icon:'💳'},
+      media:{label:'MÉDIA',sublabel:'Motivação moderada — pode demorar para regularizar',cor:'#7a5a00',bg:'#fef6e4',icon:'🔄'},
+      baixa:{label:'BAIXA',sublabel:'Perfil simples, negativação pouco pressiona — risco de inadimplência prolongada',cor:'#8b1a1a',bg:'#fdecea',icon:'⚠️'}
+    };
+    const mm=mMap[mn.nivel]||mMap.media;
+    return `<div style="border:1.5px solid ${mm.cor};border-radius:8px;padding:12px 14px;margin-bottom:12px;background:${mm.bg}">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:${mm.cor};margin-bottom:6px">${mm.icon} Motivação para Regularizar se Negativado</div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px">
+        <span style="font-size:16px;font-weight:900;color:${mm.cor}">${mm.label}</span>
+        <span style="font-size:11px;color:${mm.cor};opacity:.85">${mm.sublabel}</span>
+      </div>
+      ${mn.justificativaMotivacao?`<div style="font-size:11px;color:#333;line-height:1.5;border-top:1px solid rgba(0,0,0,.08);padding-top:8px;margin-top:4px">${mn.justificativaMotivacao}</div>`:''}
+    </div>`;
+  })()}
   ${catItems.some(ci=>cats[ci.key]!=null)?`
   <div style="margin-bottom:12px">
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:6px">Composição dos Gastos (% da renda)</div>
