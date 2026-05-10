@@ -846,13 +846,36 @@ NÍVEIS DE RISCO:
 
 Para cada fator de redução aplicado, liste em "fatoresRisco" com descrição clara e pontos descontados.
 
-Retorne SOMENTE este JSON sem markdown:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição do fator identificado","impacto":-10}]},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":""}],"extratosFaltantes":[{"banco":"Nome do banco/instituição","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular nesta instituição","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"1 frase objetiva com veredito claro e score de risco.","conclusao":"Laudo em 3 parágrafos: 1) renda comprovável para CEF vs declarada; 2) renda real, comprometimentos e capacidade de pagar o pró-soluto; 3) análise de risco — score, principais fatores e recomendação objetiva para a equipe comercial."}
+PASSO 7 — PERFIL DE COMPORTAMENTO FINANCEIRO E PROBABILIDADE DE INADIMPLÊNCIA:
+Analise o extrato como um retrato do comportamento do cliente. Responda:
 
-Tipos válidos para fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros
-Frequencia: mensal, quinzenal, semanal, irregular.
-Regularidade: regular, irregular, esporadica.
-Níveis de risco válidos: baixo, medio, alto, muito_alto`;
+PADRÃO DE CONSUMO — identifique as principais categorias de gasto:
+- Essencial (mercado, farmácia, contas básicas, transporte): % aproximado da renda
+- Lazer e estilo de vida (restaurantes, streaming, viagens, delivery): % aproximado
+- Impulsivo/risco (apostas, saques frequentes em dinheiro, compras parceladas excessivas): % aproximado
+- Comprometimento com dívidas (parcelas, empréstimos, financiamentos): % aproximado
+
+DISCIPLINA FINANCEIRA — sinais positivos e negativos:
+Positivos: saldo médio positivo, entradas regulares, reserva acumulando, gastos controlados, sem cheque especial, paga contas em dia
+Negativos: saldo zerado ou negativo antes do fim do mês, muitos saques em dinheiro, apostas, parcelamentos excessivos, TEDs frequentes sem identificação, renda caindo mês a mês
+
+PROBABILIDADE DE INADIMPLÊNCIA com o pró-soluto:
+Avalie de forma objetiva e honesta. Considere: capacidade financeira + comportamento observado + regularidade da renda.
+- "baixa": cliente organizado, renda estável, folga real na margem, histórico positivo
+- "media": margem existe mas comportamento tem pontos de atenção, monitorar
+- "alta": margem apertada E/OU comportamento financeiro impulsivo
+- "muito_alta": sem margem real E comportamento de risco evidente
+
+ORIENTAÇÃO PARA A EQUIPE COMERCIAL:
+Escreva 2-3 parágrafos diretos ao time de vendas explicando:
+1. Quem é esse cliente financeiramente — perfil em linguagem simples
+2. A probabilidade de ele honrar o pró-soluto e por quê
+3. O que fazer: aprovar, aprovar com ressalvas, pedir garantia ou não recomendar
+
+Retorne SOMENTE este JSON sem markdown:
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição do fator identificado","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"Descrição objetiva do padrão de gastos do cliente","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["Saldo médio positivo ao longo dos meses","Renda regular e crescente"],"indicadoresNegativos":["Gastos com apostas recorrentes","Saldo zerado antes do fim do mês"],"orientacaoComercial":"2-3 parágrafos diretos para a equipe de vendas: quem é esse cliente, probabilidade de honrar o pró-soluto e recomendação clara de ação."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":""}],"extratosFaltantes":[{"banco":"Nome","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"1 frase: veredito + score de risco + probabilidade de inadimplência.","conclusao":"Laudo em 3 parágrafos técnicos: 1) renda comprovável CEF; 2) capacidade real de pagar o pró-soluto; 3) perfil de risco e recomendação."}
+
+Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
     // Usa streaming para evitar timeout no Railway — resposta flui em tempo real
     const abortCtrl=new AbortController();
     const abortTimer=setTimeout(()=>abortCtrl.abort(),120000); // 2 min máximo
@@ -1062,6 +1085,66 @@ ${(()=>{
     </div>
   </div>
   ${fatores.length?`<table style="margin:0"><tr><th>Fator de risco identificado</th><th style="text-align:right;width:80px">Impacto</th></tr>${fatores.map(f=>`<tr><td style="color:#333">${f.fator}</td><td style="text-align:right;color:#8b1a1a;font-weight:700">${f.impacto} pts</td></tr>`).join('')}</table>`:'<div style="font-size:11px;color:'+nm.cor+'">Nenhum fator de risco significativo identificado.</div>'}
+</div>`;
+})()}
+
+${(()=>{
+  const c=r.comportamento||{};
+  if(!c.probabilidadeInadimplencia) return '';
+  const inadMap={
+    baixa:{label:'BAIXA',cor:'#1a7a3c',bg:'#e8f5ee',icon:'✅'},
+    media:{label:'MÉDIA',cor:'#7a5a00',bg:'#fef6e4',icon:'⚠️'},
+    alta:{label:'ALTA',cor:'#b45309',bg:'#fff7ed',icon:'🔶'},
+    muito_alta:{label:'MUITO ALTA',cor:'#8b1a1a',bg:'#fdecea',icon:'🚨'}
+  };
+  const inad=inadMap[c.probabilidadeInadimplencia]||inadMap.media;
+  const cats=c.categorias||{};
+  const pos=c.indicadoresPositivos||[];
+  const neg=c.indicadoresNegativos||[];
+  const catItems=[
+    {key:'essencial',label:'Gastos Essenciais',color:'#1a7a3c'},
+    {key:'lazer',label:'Lazer / Estilo de Vida',color:'#2563eb'},
+    {key:'impulsivo',label:'Impulsivo / Risco',color:'#b45309'},
+    {key:'dividas',label:'Dívidas / Parcelamentos',color:'#8b1a1a'}
+  ];
+  return `<h2>Perfil de Comportamento Financeiro</h2>
+<div style="background:${inad.bg};border:2px solid ${inad.cor};border-radius:8px;padding:14px 16px;margin-bottom:12px">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <span style="font-size:24px">${inad.icon}</span>
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:${inad.cor};opacity:.7">Probabilidade de Inadimplência</div>
+      <div style="font-size:18px;font-weight:900;color:${inad.cor}">${inad.label}</div>
+    </div>
+  </div>
+  ${c.perfilConsumo?`<div style="font-size:12px;color:#333;line-height:1.5;padding:10px 12px;background:rgba(0,0,0,.04);border-radius:6px;margin-bottom:12px">${c.perfilConsumo}</div>`:''}
+  ${catItems.some(ci=>cats[ci.key]!=null)?`
+  <div style="margin-bottom:12px">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:6px">Composição dos Gastos (% da renda)</div>
+    ${catItems.filter(ci=>cats[ci.key]!=null).map(ci=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+      <div style="width:130px;font-size:11px;color:#444">${ci.label}</div>
+      <div style="flex:1;background:rgba(0,0,0,.08);border-radius:999px;height:8px;overflow:hidden">
+        <div style="width:${Math.min(100,cats[ci.key]||0)}%;height:100%;background:${ci.color};border-radius:999px"></div>
+      </div>
+      <div style="width:36px;text-align:right;font-size:11px;font-weight:700;color:${ci.color}">${cats[ci.key]||0}%</div>
+    </div>`).join('')}
+  </div>`:''}
+  ${(pos.length||neg.length)?`
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+    ${pos.length?`<div style="background:rgba(26,122,60,.08);border-radius:6px;padding:10px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#1a7a3c;margin-bottom:6px">✅ Indicadores Positivos</div>
+      ${pos.map(p=>`<div style="font-size:11px;color:#1a4d30;line-height:1.4;margin-bottom:3px">• ${p}</div>`).join('')}
+    </div>`:''}
+    ${neg.length?`<div style="background:rgba(139,26,26,.08);border-radius:6px;padding:10px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#8b1a1a;margin-bottom:6px">🔴 Pontos de Atenção</div>
+      ${neg.map(n=>`<div style="font-size:11px;color:#5c1010;line-height:1.4;margin-bottom:3px">• ${n}</div>`).join('')}
+    </div>`:''}
+  </div>`:''}
+  ${c.orientacaoComercial?`
+  <div style="border-top:1px solid rgba(0,0,0,.1);padding-top:12px">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:${inad.cor};margin-bottom:6px">💼 Orientação para a Equipe de Vendas</div>
+    <div style="font-size:12px;color:#1C1E35;line-height:1.6">${c.orientacaoComercial.replace(/\n/g,'<br>')}</div>
+  </div>`:''}
 </div>`;
 })()}
 
