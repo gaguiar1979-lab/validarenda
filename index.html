@@ -701,7 +701,10 @@ async function analyze(){
     const tiposBinario=new Set(['extrato','rendimento','simulacao','certidao','rg']);
     const tiposBinarioExtra=t=>t.endsWith('_extrato')||t.endsWith('_rg');
     let pdfCount=0;
-    const MAX_PDF_TOTAL=5; // segurança global: 2 extratos×20pág + 1 comprovante×5pág ≈ 45pág + margem
+    const MAX_PDF_TOTAL=5;
+    // Limite de tamanho acumulado de PDFs em bytes base64 (~4MB ≈ 60 páginas estimadas)
+    const MAX_PDF_BYTES=4*1024*1024;
+    let pdfBytesTotal=0;
     const pdfCountByType={};
     const contentParts=[];
     for(const [type,fileOrArr] of Object.entries(files)){
@@ -715,10 +718,12 @@ async function analyze(){
           const pessoaLabel=file.pessoa&&file.pessoa!=='titular'?` (${file.pessoa})`:'';
           const tipoBase=type.endsWith('_extrato')?'extrato':type.endsWith('_rg')?'rg':type;
           const limiteAtingido=(pdfCountByType[tipoBase]||0)>=(MAX_POR_TIPO[tipoBase]||1);
-          const podeEnviarBinario=(tiposBinario.has(type)||tiposBinarioExtra(type))&&pdfCount<MAX_PDF_TOTAL&&!limiteAtingido;
+          const pdfBytes=isPdf?(file.base64||'').length*0.75:0; // base64 → bytes aproximado
+          const dentroDoLimiteBytes=pdfBytesTotal+pdfBytes<=MAX_PDF_BYTES;
+          const podeEnviarBinario=(tiposBinario.has(type)||tiposBinarioExtra(type))&&pdfCount<MAX_PDF_TOTAL&&!limiteAtingido&&dentroDoLimiteBytes;
           if(podeEnviarBinario&&isPdf){
             contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}});
-            pdfCount++;pdfCountByType[tipoBase]=(pdfCountByType[tipoBase]||0)+1;
+            pdfCount++;pdfBytesTotal+=pdfBytes;pdfCountByType[tipoBase]=(pdfCountByType[tipoBase]||0)+1;
           }else if(podeEnviarBinario&&isImage){
             const imgMime=file.contentType?.startsWith('image/')?file.contentType:`image/${ext==='jpg'?'jpeg':ext}`;
             contentParts.push({type:'image',source:{type:'base64',media_type:imgMime,data:file.base64}});
