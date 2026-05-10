@@ -781,33 +781,43 @@ Tipos válidos para fontes: emprego_formal, prolabore, informal_extrato, autonom
 Frequencia: mensal, quinzenal, semanal, irregular.
 Regularidade: regular, irregular, esporadica.`;
     // Usa streaming para evitar timeout no Railway — resposta flui em tempo real
-    const resp=await fetch('/api/analyze-stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-sonnet-4-5',max_tokens:8000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
-    if(!resp.ok){const err=await resp.json().catch(()=>({}));throw new Error(err.error?.message||`Erro HTTP ${resp.status}`);}
+    const abortCtrl=new AbortController();
+    const abortTimer=setTimeout(()=>abortCtrl.abort(),120000); // 2 min máximo
+    let resp;
+    try{
+      resp=await fetch('/api/analyze-stream',{signal:abortCtrl.signal,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:8000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
+    }catch(fe){
+      clearTimeout(abortTimer);
+      throw new Error(fe.name==='AbortError'?'Tempo limite atingido (2 min). Tente novamente com menos documentos.':fe.message);
+    }
+    if(!resp.ok){clearTimeout(abortTimer);const err=await resp.json().catch(()=>({}));throw new Error(err.error?.message||`Erro HTTP ${resp.status}`);}
     // Lê o stream SSE e acumula o texto gerado pela IA
     const reader=resp.body.getReader();
     const decoder=new TextDecoder();
     let sseBuf='';let raw='';
     document.getElementById('progressLabel').textContent='Gerando laudo...';
-    while(true){
-      const{done,value}=await reader.read();
-      if(done)break;
-      sseBuf+=decoder.decode(value,{stream:true});
-      const lines=sseBuf.split('\n');
-      sseBuf=lines.pop();
-      for(const line of lines){
-        if(!line.startsWith('data: '))continue;
-        const jsonStr=line.slice(6).trim();
-        if(!jsonStr||jsonStr==='[DONE]')continue;
-        try{
-          const evt=JSON.parse(jsonStr);
-          if(evt.type==='content_block_delta'&&evt.delta?.type==='text_delta') raw+=evt.delta.text;
-          else if(evt.type==='error') throw new Error(evt.error?.message||'Erro da API Anthropic');
-        }catch(pe){if(pe.message?.includes('Erro da API'))throw pe;}
+    try{
+      while(true){
+        const{done,value}=await reader.read();
+        if(done)break;
+        sseBuf+=decoder.decode(value,{stream:true});
+        const lines=sseBuf.split('\n');
+        sseBuf=lines.pop();
+        for(const line of lines){
+          if(!line.startsWith('data: '))continue;
+          const jsonStr=line.slice(6).trim();
+          if(!jsonStr||jsonStr==='[DONE]')continue;
+          try{
+            const evt=JSON.parse(jsonStr);
+            if(evt.type==='content_block_delta'&&evt.delta?.type==='text_delta') raw+=evt.delta.text;
+            else if(evt.type==='error') throw new Error(evt.error?.message||'Erro da API Anthropic');
+          }catch(pe){if(pe.message&&!pe.message.includes('JSON'))throw pe;}
+        }
       }
-    }
-    if(!raw){throw new Error('A IA retornou resposta vazia. Tente novamente.');}
+    }finally{clearTimeout(abortTimer);}
+    if(!raw){throw new Error('A IA não retornou resposta. Verifique se o modelo está disponível e tente novamente.');}
     const jsonMatch=raw.match(/\{[\s\S]*\}/);
-    if(!jsonMatch){throw new Error('Resposta inesperada da IA: '+raw.substring(0,300));}
+    if(!jsonMatch){throw new Error('Resposta fora do formato esperado: '+raw.substring(0,300));}
     renderResults(JSON.parse(jsonMatch[0]));
   }catch(e){
     console.error('ERRO ANÁLISE:',e);
