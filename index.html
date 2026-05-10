@@ -931,9 +931,34 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
       try{const errObj=JSON.parse(fullBody);if(errObj.error?.message)throw new Error('Anthropic: '+errObj.error.message);}catch(pe){if(pe.message.startsWith('Anthropic:'))throw pe;}
       throw new Error('A IA não retornou resposta. Detalhes no console (F12). Tente novamente.');
     }
-    const jsonMatch=raw.match(/\{[\s\S]*\}/);
-    if(!jsonMatch){throw new Error('Resposta fora do formato esperado: '+raw.substring(0,300));}
-    renderResults(JSON.parse(jsonMatch[0]));
+    // Extrai JSON contando chaves — mais robusto que regex greedy
+    function extractJSON(text){
+      text=text.replace(/```json\s*/gi,'').replace(/```\s*/g,'');
+      const start=text.indexOf('{');
+      if(start===-1)return null;
+      let depth=0,inStr=false,esc=false;
+      for(let i=start;i<text.length;i++){
+        const c=text[i];
+        if(esc){esc=false;continue;}
+        if(c==='\\'&&inStr){esc=true;continue;}
+        if(c==='"'){inStr=!inStr;continue;}
+        if(inStr)continue;
+        if(c==='{')depth++;
+        else if(c==='}'){depth--;if(depth===0)return text.slice(start,i+1);}
+      }
+      return null;
+    }
+    const jsonStr=extractJSON(raw);
+    if(!jsonStr){throw new Error('Resposta fora do formato esperado: '+raw.substring(0,300));}
+    let parsed;
+    try{parsed=JSON.parse(jsonStr);}
+    catch(je){
+      // Tenta sanitizar caracteres de controle e re-parsear
+      const sanitized=jsonStr.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'');
+      try{parsed=JSON.parse(sanitized);}
+      catch(je2){throw new Error('JSON inválido mesmo após sanitização: '+je2.message+' | Trecho: '+jsonStr.substring(3900,4000));}
+    }
+    renderResults(parsed);
   }catch(e){
     console.error('ERRO ANÁLISE:',e);
     clearInterval(interval);
