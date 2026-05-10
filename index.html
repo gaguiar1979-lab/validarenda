@@ -596,8 +596,7 @@ async function buscarReserva(){
         const key=pessoa.includes('njuge')?'rg_conjuge':'rg';
         files[key]={_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq};
       }else if(tipo.includes('certid')||tipo.includes('civil')||tipo.includes('casamento')){
-        const ehCasamento=tipo.includes('casamento')||nomeArq.toLowerCase().includes('casamento');
-        files['certidao']={_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,ehCasamento};
+        files['certidao']={_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq};
       }else if(tipo.includes('rendimento')||tipo.includes('holerite')||tipo.includes('carteira de trabalho')||tipo.includes('prolabore')||tipo.includes('pró-labore')||tipo.includes('contracheque')||tipo.includes('contra cheque')||tipo.includes('imposto de renda')||tipo.includes('decore')||tipo.includes('declaracao')||tipo.includes('declaração')){
         if(!files['rendimento'])files['rendimento']=[];
         files['rendimento'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,tipoCV:doc.tipo,pessoa});
@@ -643,7 +642,6 @@ async function buscarReserva(){
     // Extrato só é obrigatório quando não há comprovante de renda formal (contracheque/holerite/pró-labore)
     // Com renda formal comprovada, a análise pode prosseguir sem extrato
     const extratoObrigatorio=!temRendimento&&!temDocsCv;
-    const temCertidaoCasamento=!!(files['certidao']?.ehCasamento);
     const temRGConjuge=!!(files['rg_conjuge']);
     const temExtratoConjuge=(files['extrato_conjuge']||[]).length>0;
     const checklist=[
@@ -653,14 +651,16 @@ async function buscarReserva(){
       {icon:'💼',label:'Comprovante de rendimento',detalhe:temRendimento?`${(files['rendimento']||[]).length} arquivo(s)`:temDocsCv?'Possível em documento combinado':'Não encontrado',ok:temRendimento||temDocsCv,obrigatorio:true},
       {icon:'🏦',label:'Simulação de financiamento',detalhe:temSim?'Encontrada':'Não encontrada',ok:temSim,obrigatorio:true},
       {icon:'🪪',label:'RG / CNH',detalhe:temRG?'Encontrado':'Não encontrado',ok:temRG,obrigatorio:false},
-      {icon:'📋',label:'Certidão de estado civil',detalhe:temCertidao?temCertidaoCasamento?'Encontrada — certidão de casamento':'Encontrada':'Não encontrada',ok:temCertidao,obrigatorio:false},
-      ...(temCertidaoCasamento?[
-        {icon:'👫',label:'RG / CNH do cônjuge',
-         detalhe:temRGConjuge?'Encontrado — transações entre cônjuges serão excluídas':'Obrigatório para identificar e excluir transações entre titular e cônjuge',
-         ok:temRGConjuge,obrigatorio:true},
+      {icon:'📋',label:'Certidão de estado civil',
+       detalhe:temCertidao?'Encontrada — a IA identificará o tipo (casamento/nascimento) e dará o tratamento adequado':'Não encontrada',
+       ok:temCertidao,obrigatorio:false},
+      ...(temRGConjuge?[
+        {icon:'👫',label:'RG / CNH do cônjuge',detalhe:'Encontrado — transações entre cônjuges serão excluídas',ok:true,obrigatorio:false}
+      ]:[]),
+      ...(temExtratoConjuge?[
         {icon:'🏦',label:'Extrato bancário do cônjuge',
-         detalhe:temExtratoConjuge?`${(files['extrato_conjuge']||[]).length} arquivo(s) — será incluído na renda familiar`:'Não encontrado — se houver, anexe no CV CRM para compor renda familiar',
-         ok:temExtratoConjuge,obrigatorio:false}
+         detalhe:`${(files['extrato_conjuge']||[]).length} arquivo(s) — será incluído na renda familiar`,
+         ok:true,obrigatorio:false}
       ]:[]),
     ];
 
@@ -821,6 +821,25 @@ async function analyze(){
     const systemPrompt=`Você é um analista de crédito imobiliário da Casas Manager Construções. Gere um laudo interno de capacidade financeira do cliente, respondendo: (1) qual a renda que o cliente consegue comprovar com documentos? (2) qual a renda real apurada nos extratos? (3) ele consegue arcar com a parcela do financiamento bancário + pró-soluto com a Casas Manager?
 
 ATENÇÃO: Os documentos podem estar organizados de formas diferentes — arquivos separados por tipo OU um único arquivo "kit" ou "pacote" contendo vários documentos juntos (extrato, holerite, simulação, etc.). Analise o CONTEÚDO de cada documento independente do nome ou categoria — se um arquivo chamado "Kit documentação" contém páginas de extrato bancário, leia e analise como extrato.
+
+PASSO 0 — CERTIDÃO DE ESTADO CIVIL (leia antes de qualquer análise):
+Se houver certidão de estado civil nos documentos, leia-a e identifique o tipo:
+
+CERTIDÃO DE CASAMENTO:
+- Identifique o nome completo do cônjuge
+- Exclua TODAS as transferências entre titular e cônjuge nos extratos (PIX, TED, DOC em ambos os sentidos)
+- Se houver extrato bancário do cônjuge (marcado como "Extrato bancário — cônjuge"): some a renda dele/dela à análise — a renda analisada é a RENDA FAMILIAR COMBINADA. Liste cada fonte de renda individualmente por pessoa no campo "fontes".
+- Se NÃO houver extrato do cônjuge: adicione em "ressalvas" que o extrato do cônjuge não foi apresentado e a renda familiar pode estar incompleta. Adicione também em "ressalvas" que o RG/CNH do cônjuge é necessário caso não esteja presente.
+
+CERTIDÃO DE NASCIMENTO:
+- Identifique os nomes dos filhos declarados
+- Exclua transações entre titular e filhos nos extratos
+- Não exige documentos adicionais dos filhos
+
+CERTIDÃO NEGATIVA / SOLTEIRO:
+- Nenhuma exclusão de familiar necessária além dos já listados
+
+Se não houver certidão: analise com base nos familiares já informados no contexto abaixo.
 
 PASSO 1 — SIMULAÇÃO DE FINANCIAMENTO (se houver):
 - Extraia renda declarada na simulação, parcela mensal do financiamento bancário, valor do imóvel e valor financiado
