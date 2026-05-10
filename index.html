@@ -814,12 +814,45 @@ PASSO 5 — VEREDITO (use o parcelaProSoluto informado se disponível):
   - "inviavel": margemProSoluto < parcelaProSoluto (renda não cobre o pró-soluto)
 - Se parcelaProSoluto = 0 (não informado): use a margem disponível para orientar o parecer sem veredito definitivo
 
+PASSO 6 — SCORE DE RISCO DO PRÓ-SOLUTO (0 a 100, quanto maior menor o risco):
+Parta de 100 e desconte conforme os fatores abaixo. Seja criterioso e justo.
+
+FATORES QUE REDUZEM O SCORE:
+Renda:
+- Renda 100% informal (sem comprovação formal): -20
+- Renda irregular (variação > 30% entre meses): -15
+- Divergência > 20% entre renda declarada e apurada: -10
+- Renda comprovável < 3x a parcela CEF: -10
+
+Comprometimento:
+- Comprometimento atual > 60% da renda real: -20
+- Comprometimento atual entre 40% e 60%: -10
+- Tem financiamento imobiliário ativo além da CEF: -10
+
+Comportamento financeiro:
+- Apostas identificadas nos extratos: -15
+- Transferências recorrentes não justificadas > R$500/mês: -10
+- Extratos de contas suspeitas não apresentados: -15
+
+Documentação:
+- Análise com documentação incompleta (falta extrato, comprovante): -10
+- Menos de 3 meses de extrato analisado: -5
+
+NÍVEIS DE RISCO:
+- 80-100: BAIXO — operação segura, aprovar com tranquilidade
+- 60-79: MÉDIO — aprovar com atenção, monitorar comprometimento
+- 40-59: ALTO — aprovar com cautela, exigir garantias adicionais
+- 0-39: MUITO ALTO — não recomendado sem análise presencial
+
+Para cada fator de redução aplicado, liste em "fatoresRisco" com descrição clara e pontos descontados.
+
 Retorne SOMENTE este JSON sem markdown:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"Transferência recorrente sem identificação de destino — cliente deve justificar"}],"extratosFaltantes":[{"banco":"Nome do banco/instituição","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular nesta instituição","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"1 frase objetiva com veredito claro: ex — Cliente consegue pagar o pró-soluto de R$ X com sobra de R$ Y / ou não consegue pois margem é inferior ao compromisso.","conclusao":"Laudo em 3 parágrafos: 1) renda comprovável para CEF vs declarada; 2) renda real apurada e comprometimentos fixos; 3) análise direta da capacidade de pagar o pró-soluto — viável ou não, com os números."}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclaradaCEF":0.00,"parcelaCEF":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"rendaComprovavelCEF":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição do fator identificado","impacto":-10}]},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":""}],"extratosFaltantes":[{"banco":"Nome do banco/instituição","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular nesta instituição","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoCEF":false},"ressalvas":[],"parecer":"1 frase objetiva com veredito claro e score de risco.","conclusao":"Laudo em 3 parágrafos: 1) renda comprovável para CEF vs declarada; 2) renda real, comprometimentos e capacidade de pagar o pró-soluto; 3) análise de risco — score, principais fatores e recomendação objetiva para a equipe comercial."}
 
 Tipos válidos para fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros
 Frequencia: mensal, quinzenal, semanal, irregular.
-Regularidade: regular, irregular, esporadica.`;
+Regularidade: regular, irregular, esporadica.
+Níveis de risco válidos: baixo, medio, alto, muito_alto`;
     // Usa streaming para evitar timeout no Railway — resposta flui em tempo real
     const abortCtrl=new AbortController();
     const abortTimer=setTimeout(()=>abortCtrl.abort(),120000); // 2 min máximo
@@ -1002,6 +1035,35 @@ function _gerarHTML(r,w){
     <div class="resumo-sub">Após comprometimentos</div>
   </div>
 </div>
+
+${(()=>{
+  const risco=r.risco||{};
+  const score=risco.score||0;
+  const nivel=risco.nivel||'alto';
+  const nivelMap={baixo:{label:'BAIXO',cor:'#1a7a3c',bg:'#e8f5ee',rec:'Operação segura — aprovar com tranquilidade'},medio:{label:'MÉDIO',cor:'#7a5a00',bg:'#fef6e4',rec:'Aprovar com atenção — monitorar comprometimento'},alto:{label:'ALTO',cor:'#b45309',bg:'#fff7ed',rec:'Aprovar com cautela — considerar garantias adicionais'},muito_alto:{label:'MUITO ALTO',cor:'#8b1a1a',bg:'#fdecea',rec:'Não recomendado sem análise presencial'}};
+  const nm=nivelMap[nivel]||nivelMap.alto;
+  const barW=Math.max(2,score);
+  const barColor=score>=80?'#1a7a3c':score>=60?'#B8952A':score>=40?'#b45309':'#C0392B';
+  const fatores=(risco.fatoresRisco||[]);
+  return `<h2>Score de Risco do Pró-Soluto</h2>
+<div style="background:${nm.bg};border:2px solid ${nm.cor};border-radius:8px;padding:14px 16px;margin-bottom:12px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div>
+      <div style="font-size:22px;font-weight:900;color:${nm.cor}">${score}<span style="font-size:13px;font-weight:400"> / 100</span></div>
+      <div style="font-size:13px;font-weight:700;color:${nm.cor}">Risco ${nm.label}</div>
+      <div style="font-size:11px;color:${nm.cor};margin-top:2px;opacity:.8">${nm.rec}</div>
+    </div>
+    <div style="width:160px">
+      <div style="font-size:10px;color:${nm.cor};margin-bottom:4px;text-align:right">Score de segurança</div>
+      <div style="background:rgba(0,0,0,.1);border-radius:999px;height:10px;overflow:hidden">
+        <div style="width:${barW}%;height:100%;background:${barColor};border-radius:999px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:${nm.cor};opacity:.6;margin-top:2px"><span>0</span><span>50</span><span>100</span></div>
+    </div>
+  </div>
+  ${fatores.length?`<table style="margin:0"><tr><th>Fator de risco identificado</th><th style="text-align:right;width:80px">Impacto</th></tr>${fatores.map(f=>`<tr><td style="color:#333">${f.fator}</td><td style="text-align:right;color:#8b1a1a;font-weight:700">${f.impacto} pts</td></tr>`).join('')}</table>`:'<div style="font-size:11px;color:'+nm.cor+'">Nenhum fator de risco significativo identificado.</div>'}
+</div>`;
+})()}
 
 <h2>Fontes de Renda Identificadas</h2>
 <table>
