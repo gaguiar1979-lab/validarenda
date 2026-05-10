@@ -635,8 +635,13 @@ async function buscarReserva(){
     const temRG=!!(files['rg']||files['rg_conjuge']);
     const temCertidao=!!files['certidao'];
 
+    // Extrato só é obrigatório quando não há comprovante de renda formal (contracheque/holerite/pró-labore)
+    // Com renda formal comprovada, a análise pode prosseguir sem extrato
+    const extratoObrigatorio=!temRendimento&&!temDocsCv;
     const checklist=[
-      {icon:'📄',label:'Extrato(s) bancário(s)',detalhe:temExtrato?`${(files['extrato']||[]).length} arquivo(s)`:temDocsCv?`Possível em documento combinado (${(files['docs_cv']||[]).length} arq.)`:'Nenhum encontrado',ok:temExtratoPossivel,obrigatorio:true},
+      {icon:'📄',label:'Extrato(s) bancário(s)',
+       detalhe:temExtrato?`${(files['extrato']||[]).length} arquivo(s)`:temDocsCv?`Possível em documento combinado (${(files['docs_cv']||[]).length} arq.)`:temRendimento?'Não encontrado — dispensado pois há comprovante de renda formal':'Nenhum encontrado',
+       ok:temExtratoPossivel||temRendimento,obrigatorio:extratoObrigatorio},
       {icon:'💼',label:'Comprovante de rendimento',detalhe:temRendimento?`${(files['rendimento']||[]).length} arquivo(s)`:temDocsCv?'Possível em documento combinado':'Não encontrado',ok:temRendimento||temDocsCv,obrigatorio:true},
       {icon:'🏦',label:'Simulação de financiamento',detalhe:temSim?'Encontrada':'Não encontrada',ok:temSim,obrigatorio:true},
       {icon:'🪪',label:'RG / CNH',detalhe:temRG?'Encontrado':'Não encontrado',ok:temRG,obrigatorio:false},
@@ -713,7 +718,9 @@ const freqBadge={mensal:'badge-gold',irregular:'badge-warn',quinzenal:'badge-nav
 let filhoCount=0;
 
 async function analyze(){
-  if(!files.extrato||(Array.isArray(files.extrato)&&!files.extrato.length)){alert('Envie ao menos o extrato bancário para análise.');return;}
+  const temExtratoAnalise=(files.extrato&&(Array.isArray(files.extrato)?files.extrato.length>0:true))||(files.docs_cv&&files.docs_cv.length>0);
+  const temRendimentoAnalise=(files.rendimento&&(Array.isArray(files.rendimento)?files.rendimento.length>0:true));
+  if(!temExtratoAnalise&&!temRendimentoAnalise){alert('Envie ao menos o extrato bancário ou um comprovante de renda para análise.');return;}
   const btn=document.getElementById('analyzeBtn');
   btn.disabled=true;
   document.getElementById('progressWrap').classList.add('active');
