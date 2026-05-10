@@ -254,16 +254,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div id="cvStatus" class="cv-status"></div>
 </div>
 
-<div class="or-divider">ou faça upload manual dos documentos</div>
-
-<!-- DOCUMENTOS COMPRADOR -->
-<div class="section-title">Documentos do comprador principal</div>
-<div class="upload-grid">
-  <div class="upload-card" id="card-extrato"><input type="file" accept=".pdf,.csv,.xlsx,.xls,.ofx,.txt" multiple onchange="handleExtratoFile(this,'extrato')"><div class="uc-icon">📄</div><div class="uc-label">Extrato bancário</div><div class="uc-hint">PDF · CSV · OFX · múltiplos</div><div class="uc-file" id="fn-extrato"></div></div>
-  <div class="upload-card" id="card-rg"><input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFile(this,'rg')"><div class="uc-icon">🪪</div><div class="uc-label">RG / CPF / CNH</div><div class="uc-hint">Comprador principal</div><div class="uc-file" id="fn-rg"></div></div>
-  <div class="upload-card" id="card-certidao"><input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleCertidao(this)"><div class="uc-icon">📋</div><div class="uc-label">Certidão de estado civil</div><div class="uc-hint">PDF · JPG · PNG</div><div class="uc-file" id="fn-certidao"></div></div>
-  <div class="upload-card" id="card-rendimento"><input type="file" accept=".pdf,.jpg,.jpeg,.png" multiple onchange="handleExtratoFile(this,'rendimento')"><div class="uc-icon">💼</div><div class="uc-label">Comprovante de rendimento</div><div class="uc-hint">Holerite · Pró-labore · múltiplos</div><div class="uc-file" id="fn-rendimento"></div></div>
-</div>
+<!-- CHECKLIST DE DOCUMENTOS (preenchido automaticamente após busca no CV) -->
+<div id="checklistArea" style="display:none;margin-bottom:1.5rem"></div>
 
 <!-- FAMILIARES (colapsado — só exibe se necessário) -->
 <div id="familiaresCard" style="margin-bottom:12px">
@@ -572,26 +564,55 @@ async function buscarReserva(){
     }
     if(extratoFiles.length>0){
       files['extrato']=extratoFiles;
-      document.getElementById('fn-extrato').innerHTML=`✓ ${extratoFiles.length} extrato(s) do CV`;
-      document.getElementById('card-extrato').classList.add('has-file');
     }
+
+    // Checklist de documentos obrigatórios e recomendados
     const temExtrato=(files['extrato']||[]).length>0;
-    const temSim=(files['simulacao']||[]).length>0;
     const temRendimento=(files['rendimento']||[]).length>0;
+    const temSim=(files['simulacao']||[]).length>0;
+    const temRG=!!(files['rg']||files['rg_conjuge']);
+    const temCertidao=!!files['certidao'];
 
-    if(!temExtrato){
-      status.innerHTML=`<span style="color:#ff6b6b">❌ Nenhum extrato bancário encontrado nesta reserva. A análise exige ao menos 1 extrato.</span>`;
-      btn.disabled=false;return;
-    }
+    const checklist=[
+      {icon:'📄',label:'Extrato(s) bancário(s)',detalhe:temExtrato?`${(files['extrato']||[]).length} arquivo(s)`:'Nenhum encontrado',ok:temExtrato,obrigatorio:true},
+      {icon:'💼',label:'Comprovante de rendimento',detalhe:temRendimento?`${(files['rendimento']||[]).length} arquivo(s)`:'Não encontrado',ok:temRendimento,obrigatorio:true},
+      {icon:'🏦',label:'Simulação CEF',detalhe:temSim?'Encontrada':'Não encontrada',ok:temSim,obrigatorio:true},
+      {icon:'🪪',label:'RG / CNH',detalhe:temRG?'Encontrado':'Não encontrado',ok:temRG,obrigatorio:false},
+      {icon:'📋',label:'Certidão de estado civil',detalhe:temCertidao?'Encontrada':'Não encontrada',ok:temCertidao,obrigatorio:false},
+    ];
 
-    const faltando=[];
-    if(!temSim) faltando.push('Simulação CEF');
-    if(!temRendimento) faltando.push('Comprovante de rendimento');
-    const faltandoHtml=faltando.length
-      ?`<br><span style="color:#fde68a;font-size:12px">⚠️ Não encontrado no CV: <strong>${faltando.join(', ')}</strong> — análise seguirá sem eles</span>`
-      :'';
-    status.innerHTML=`<span style="color:var(--gold2)">✅ ${baixados} documentos carregados${temSim?' · Simulação CEF':''}.${faltandoHtml}<br><span style="color:rgba(255,255,255,.5);font-size:12px">⏳ Iniciando análise automaticamente...</span></span>`;
-    setTimeout(()=>analyze(),900);
+    const faltandoObrigatorio=checklist.filter(c=>c.obrigatorio&&!c.ok);
+    const bloqueado=faltandoObrigatorio.length>0;
+
+    const itemHtml=checklist.map(c=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:8px;background:${c.ok?'#f0fdf4':c.obrigatorio?'#fdecea':'#fffbf0'};border:1px solid ${c.ok?'#86efac':c.obrigatorio?'#fca5a5':'#fde68a'}">
+        <span style="font-size:18px">${c.icon}</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:${c.ok?'#166534':c.obrigatorio?'#7f1d1d':'#713f12'}">${c.label}${c.obrigatorio?'<span style="font-size:10px;margin-left:6px;background:'+( c.ok?'#dcfce7':'#fee2e2')+';padding:1px 6px;border-radius:4px;color:'+(c.ok?'#166534':'#7f1d1d')+'">obrigatório</span>':''}</div>
+          <div style="font-size:11px;color:${c.ok?'#16a34a':c.obrigatorio?'#b91c1c':'#92400e'};margin-top:1px">${c.detalhe}</div>
+        </div>
+        <span style="font-size:18px">${c.ok?'✅':c.obrigatorio?'🔴':'⚠️'}</span>
+      </div>`).join('');
+
+    const bloqueadoHtml=bloqueado?`
+      <div style="margin-top:14px;padding:14px 16px;background:#fdecea;border:2px solid #C0392B;border-radius:10px">
+        <div style="font-size:14px;font-weight:800;color:#7f1d1d;margin-bottom:6px">🔴 Análise bloqueada — documentos obrigatórios ausentes</div>
+        <div style="font-size:13px;color:#7f1d1d;line-height:1.6">Acesse o <strong>CV CRM</strong>, anexe os documentos marcados como obrigatórios na reserva e clique em <strong>Buscar Reserva</strong> novamente.</div>
+      </div>`:'<div style="margin-top:14px;padding:10px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;font-size:13px;color:#166534;font-weight:600">✅ Todos os documentos obrigatórios encontrados — iniciando análise...</div>';
+
+    document.getElementById('checklistArea').style.display='block';
+    document.getElementById('checklistArea').innerHTML=`
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:var(--shadow)">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:12px">📋 Documentos no CV CRM — Reserva ${reservaId}</div>
+        <div style="display:flex;flex-direction:column;gap:6px">${itemHtml}</div>
+        ${bloqueadoHtml}
+      </div>`;
+
+    status.innerHTML=bloqueado
+      ?`<span style="color:#ff6b6b">❌ ${faltandoObrigatorio.length} documento(s) obrigatório(s) ausente(s). Veja o checklist abaixo.</span>`
+      :`<span style="color:var(--gold2)">✅ ${baixados} documentos carregados. Iniciando análise...</span>`;
+
+    if(!bloqueado) setTimeout(()=>analyze(),900);
   }catch(e){
     status.innerHTML=`<span style="color:#ff6b6b">❌ Erro: ${e.message}</span>`;
   }
