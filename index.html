@@ -1153,58 +1153,9 @@ function renderResults(r){
     mg.appendChild(rv);
   }
 
-  // TABELA DE FONTES
-  const regIcon={regular:'<span style="color:#1a7a3c;font-weight:700">● Regular</span>',irregular:'<span style="color:#7a5a00;font-weight:700">◐ Irregular</span>',esporadica:'<span style="color:#8b1a1a;font-weight:700">○ Esporádica</span>'};
-  const monthOrder={jan:0,fev:1,mar:2,abr:3,mai:4,jun:5,jul:6,ago:7,set:8,out:9,nov:10,dez:11};
-  const allMonths=[...new Set(r.fontes.flatMap(f=>(f.porMes||[]).map(m=>m.mes)))].sort((a,b)=>{const[ma,ya]=a.toLowerCase().split('/');const[mb,yb]=b.toLowerCase().split('/');return(parseInt(ya)-parseInt(yb))||((monthOrder[ma]||0)-(monthOrder[mb]||0));});
-  const monthHeaders=allMonths.map(m=>`<th style="text-align:right;font-size:11px">${m}</th>`).join('');
-  document.querySelector('.income-table thead tr').innerHTML=`<th>Fonte / Remetente</th>${monthHeaders}<th style="text-align:right">Média/mês</th><th style="text-align:right">CEF?</th><th style="text-align:right">Regularidade</th>`;
-  document.getElementById('incomeRows').innerHTML=r.fontes.map(f=>{
-    const monthCols=allMonths.map(mes=>{
-      const entry=(f.porMes||[]).find(m=>m.mes===mes);
-      return `<td style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)">${entry&&entry.valor>0?fmt(entry.valor):'—'}</td>`;
-    }).join('');
-    return `<tr>
-      <td><div class="src-name">${f.remetente}</div><div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap"><span class="badge badge-gray">${typeLabel[f.tipo]||f.tipo}</span><span class="badge ${freqBadge[f.frequencia]||'badge-gray'}">${freqLabel[f.frequencia]||f.frequencia}</span></div></td>
-      ${monthCols}
-      <td style="text-align:right;font-weight:700;color:var(--gold);font-family:'DM Mono',monospace">${fmt(f.mediaMensal||0)}</td>
-      <td style="text-align:center;font-size:13px">${f.comprovavel?'<span style="color:#1a7a3c">✓</span>':'<span style="color:#8b1a1a">✗</span>'}</td>
-      <td style="text-align:right;font-size:12px">${regIcon[f.regularidade]||regIcon['irregular']}</td>
-    </tr>`;
-  }).join('');
-
-  // EXCLUÍDOS
-  const relIcon={'cônjuge':'💑','filho(a)':'👦','pai/mãe':'👴','familiar':'👤'};
-  document.getElementById('excludedRows').innerHTML=r.excluidos.length
-    ?r.excluidos.map(e=>`<div class="excl-item"><div class="excl-header"><span style="font-size:16px">${relIcon[e.relacao]||'👤'}</span><div class="excl-header-name">${e.nome} <span style="font-size:11px;background:var(--gold-light);border:1px solid var(--gold2);padding:2px 8px;border-radius:999px;color:var(--gold);margin-left:6px">${e.relacao}</span></div><div class="excl-header-amount">${e.valorTotal>0?fmt(e.valorTotal):'—'}</div></div><div class="excl-body"><div style="margin-bottom:${e.transacoes&&e.transacoes.length?'10px':'0'}">${e.motivo||'Transferência familiar desconsiderada.'}</div>${e.transacoes&&e.transacoes.length?`<div class="excl-transactions"><div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Transações identificadas</div>${e.transacoes.map(t=>`<div class="excl-tx"><span>${t.data} — ${t.descricao}</span><span>${fmt(t.valor)}</span></div>`).join('')}</div>`:''}</div></div>`).join('')
-    :'<p style="font-size:13px;color:var(--text3)">Nenhuma transferência familiar identificada.</p>';
-
-  // CHECKLIST
-  const docs=r.documentos;
-  document.getElementById('docGrid').innerHTML=[
-    {key:'rg',label:'RG / CPF / CNH',icon:'🪪'},
-    {key:'certidao',label:'Certidão de estado civil',icon:'📋'},
-    {key:'extratoConjuge',label:'Extrato cônjuge',icon:'📄'},
-    {key:'comprovanteCLT',label:'Holerite / Contracheque',icon:'💼'},
-    {key:'simulacaoCEF',label:'Simulação CEF',icon:'🏦'}
-  ].map(d=>`<div class="doc-item"><span class="doc-icon">${d.icon}</span><span class="doc-label">${d.label}</span><span class="${docs[d.key]?'doc-ok':'doc-missing'}">${docs[d.key]?'✓ Verificado':'Pendente'}</span></div>`).join('');
-
-  // LAUDO
-  document.getElementById('reportContent').innerHTML=`
-    <div class="report-section">
-      <h4>Laudo Completo de Análise de Renda</h4>
-      <div class="report-text">${r.conclusao||''}</div>
-    </div>`;
-
-  const now=new Date().toLocaleString('pt-BR');
-  document.getElementById('reportStamp').innerHTML=`<img src="/logo.jpg" style="height:24px;object-fit:contain;opacity:.7"><span>Laudo gerado em <strong>${now}</strong> · Reserva <strong>${reservaNum}</strong> · Casas Manager Construções</span>`;
-
-  const ab=document.getElementById('alertBox');
-  ab.style.display='none';
-
   document.getElementById('results').classList.add('on');
 
-  // Renderiza o relatório formatado direto na página
+  // Renderiza o relatório completo no iframe inline
   _gerarHTML(r, null);
 
   document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
