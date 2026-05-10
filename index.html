@@ -596,7 +596,8 @@ async function buscarReserva(){
         const key=pessoa.includes('njuge')?'rg_conjuge':'rg';
         files[key]={_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq};
       }else if(tipo.includes('certid')||tipo.includes('civil')||tipo.includes('casamento')){
-        files['certidao']={_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq};
+        const ehCasamento=tipo.includes('casamento')||nomeArq.toLowerCase().includes('casamento');
+        files['certidao']={_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,ehCasamento};
       }else if(tipo.includes('rendimento')||tipo.includes('holerite')||tipo.includes('carteira de trabalho')||tipo.includes('prolabore')||tipo.includes('pró-labore')||tipo.includes('contracheque')||tipo.includes('contra cheque')||tipo.includes('imposto de renda')||tipo.includes('decore')||tipo.includes('declaracao')||tipo.includes('declaração')){
         if(!files['rendimento'])files['rendimento']=[];
         files['rendimento'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,tipoCV:doc.tipo,pessoa});
@@ -606,7 +607,11 @@ async function buscarReserva(){
       }
       baixados++;
     }
-    if(extratoFiles.length>0) files['extrato']=extratoFiles;
+    // Separa extratos por titular × cônjuge
+    const extratoTitular=extratoFiles.filter(f=>!f.pessoa?.includes('njuge'));
+    const extratoConjuge=extratoFiles.filter(f=>f.pessoa?.includes('njuge'));
+    if(extratoTitular.length>0) files['extrato']=extratoTitular;
+    if(extratoConjuge.length>0) files['extrato_conjuge']=extratoConjuge;
 
     // Extrai nome do cliente da resposta do CV CRM
     try{
@@ -638,14 +643,25 @@ async function buscarReserva(){
     // Extrato só é obrigatório quando não há comprovante de renda formal (contracheque/holerite/pró-labore)
     // Com renda formal comprovada, a análise pode prosseguir sem extrato
     const extratoObrigatorio=!temRendimento&&!temDocsCv;
+    const temCertidaoCasamento=!!(files['certidao']?.ehCasamento);
+    const temRGConjuge=!!(files['rg_conjuge']);
+    const temExtratoConjuge=(files['extrato_conjuge']||[]).length>0;
     const checklist=[
       {icon:'📄',label:'Extrato(s) bancário(s)',
-       detalhe:temExtrato?`${(files['extrato']||[]).length} arquivo(s)`:temDocsCv?`Possível em documento combinado (${(files['docs_cv']||[]).length} arq.)`:temRendimento?'Não encontrado — dispensado pois há comprovante de renda formal':'Nenhum encontrado',
+       detalhe:temExtrato?`${(files['extrato']||[]).length} arquivo(s)`:temDocsCv?`Possível em documento combinado (${(files['docs_cv']||[]).length} arq.)`:temRendimento?'Não encontrado — dispensado (há comprovante de renda formal)':'Nenhum encontrado',
        ok:temExtratoPossivel||temRendimento,obrigatorio:extratoObrigatorio},
       {icon:'💼',label:'Comprovante de rendimento',detalhe:temRendimento?`${(files['rendimento']||[]).length} arquivo(s)`:temDocsCv?'Possível em documento combinado':'Não encontrado',ok:temRendimento||temDocsCv,obrigatorio:true},
       {icon:'🏦',label:'Simulação de financiamento',detalhe:temSim?'Encontrada':'Não encontrada',ok:temSim,obrigatorio:true},
       {icon:'🪪',label:'RG / CNH',detalhe:temRG?'Encontrado':'Não encontrado',ok:temRG,obrigatorio:false},
-      {icon:'📋',label:'Certidão de estado civil',detalhe:temCertidao?'Encontrada':'Não encontrada',ok:temCertidao,obrigatorio:false},
+      {icon:'📋',label:'Certidão de estado civil',detalhe:temCertidao?temCertidaoCasamento?'Encontrada — certidão de casamento':'Encontrada':'Não encontrada',ok:temCertidao,obrigatorio:false},
+      ...(temCertidaoCasamento?[
+        {icon:'👫',label:'RG / CNH do cônjuge',
+         detalhe:temRGConjuge?'Encontrado — transações entre cônjuges serão excluídas':'Obrigatório para identificar e excluir transações entre titular e cônjuge',
+         ok:temRGConjuge,obrigatorio:true},
+        {icon:'🏦',label:'Extrato bancário do cônjuge',
+         detalhe:temExtratoConjuge?`${(files['extrato_conjuge']||[]).length} arquivo(s) — será incluído na renda familiar`:'Não encontrado — se houver, anexe no CV CRM para compor renda familiar',
+         ok:temExtratoConjuge,obrigatorio:false}
+      ]:[]),
     ];
 
     const faltandoObrigatorio=checklist.filter(c=>c.obrigatorio&&!c.ok);
@@ -737,9 +753,12 @@ async function analyze(){
     });
     // Limite por tipo: extratos têm muitas páginas (10-20/arquivo), então enviamos poucos como binário
     // e completamos com label de texto. Anthropic aceita no máximo 100 páginas por chamada.
-    const MAX_POR_TIPO={extrato:2,rendimento:1,simulacao:1,certidao:1,rg:1,docs_cv:2};
-    const tiposBinario=new Set(['extrato','rendimento','simulacao','certidao','rg','docs_cv']);
+    const MAX_POR_TIPO={extrato:2,extrato_conjuge:2,rendimento:1,simulacao:1,certidao:1,rg:1,rg_conjuge:1,docs_cv:2};
+    const tiposBinario=new Set(['extrato','extrato_conjuge','rendimento','simulacao','certidao','rg','rg_conjuge','docs_cv']);
     const tiposBinarioExtra=t=>t.endsWith('_extrato')||t.endsWith('_rg');
+    // Labels descritivos para cônjuge
+    docNames['extrato_conjuge']='Extrato bancário — cônjuge';
+    docNames['rg_conjuge']='RG/CPF/CNH — cônjuge';
     let pdfCount=0;
     const MAX_PDF_TOTAL=5;
     // PDF texto comprimido: ~5-10KB/pág → 300KB ≈ 30-60 páginas por arquivo. Total ~90 páginas máx.
@@ -794,7 +813,11 @@ async function analyze(){
     const proSolutoInfo=proSoluto>0
       ?`\nPARCELA PRÓ-SOLUTO (financiamento direto com a Casas Manager): R$ ${proSoluto.toFixed(2)}/mês\nEste é o valor real que o cliente se comprometeu a pagar à construtora após receber as chaves. Use este valor no campo "parcelaProSoluto" e analise a viabilidade.`
       :'\nPARCELA PRÓ-SOLUTO: não informada pelo operador. Use margemProSoluto para indicar quanto sobra disponível.';
-    contentParts.push({type:'text',text:`CLIENTE EM ANÁLISE: ${currentClienteName||'(identificar pelo nome que aparece nos documentos)'}\nPré-Cadastro CV CRM: ${document.getElementById('reservaId').value.trim()}\nIMPORTANTE: Use exatamente "${currentClienteName||'o nome identificado nos documentos'}" no campo "nomeComprador" do JSON.\n\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.${proSolutoInfo}\n\nRetorne apenas o JSON.`});
+    const temExtratoConjugeAnalise=(files['extrato_conjuge']||[]).length>0;
+    const instrucaoConjuge=temExtratoConjugeAnalise
+      ?'\n- EXTRATO DO CÔNJUGE: presente nos documentos. INCLUA a renda do cônjuge na análise familiar — some as fontes de renda de ambos. No campo "fontes", registre cada fonte com o nome do titular (titular ou cônjuge). A renda total analisada é a RENDA FAMILIAR COMBINADA.'
+      :'\n- EXTRATO DO CÔNJUGE: não enviado. Analise apenas a renda do titular.';
+    contentParts.push({type:'text',text:`CLIENTE EM ANÁLISE: ${currentClienteName||'(identificar pelo nome que aparece nos documentos)'}\nPré-Cadastro CV CRM: ${document.getElementById('reservaId').value.trim()}\nIMPORTANTE: Use exatamente "${currentClienteName||'o nome identificado nos documentos'}" no campo "nomeComprador" do JSON.\n\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.${instrucaoConjuge}${proSolutoInfo}\n\nRetorne apenas o JSON.`});
     const systemPrompt=`Você é um analista de crédito imobiliário da Casas Manager Construções. Gere um laudo interno de capacidade financeira do cliente, respondendo: (1) qual a renda que o cliente consegue comprovar com documentos? (2) qual a renda real apurada nos extratos? (3) ele consegue arcar com a parcela do financiamento bancário + pró-soluto com a Casas Manager?
 
 ATENÇÃO: Os documentos podem estar organizados de formas diferentes — arquivos separados por tipo OU um único arquivo "kit" ou "pacote" contendo vários documentos juntos (extrato, holerite, simulação, etc.). Analise o CONTEÚDO de cada documento independente do nome ou categoria — se um arquivo chamado "Kit documentação" contém páginas de extrato bancário, leia e analise como extrato.
