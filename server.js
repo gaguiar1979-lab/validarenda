@@ -264,7 +264,7 @@ app.post('/api/cv/precadastro/:id/salvar-relatorio', async (req, res) => {
     const precadastroId = req.params.id;
     const { pdfBase64, fileName, periodo } = req.body;
     const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
-    const nome = fileName || `Analise_Capacidade_Pagamento_PreCadastro_${precadastroId}_${dataHoje}.pdf`;
+    const nome = fileName || `Analise da Renda pelo Validador - PreCadastro ${precadastroId} - ${dataHoje}.pdf`;
 
     const payload = JSON.stringify({
       idprecadastro: parseInt(precadastroId),
