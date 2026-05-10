@@ -521,50 +521,47 @@ async function buscarReserva(){
       status.innerHTML='<span style="color:var(--gold2)">⚠️ Nenhum documento encontrado nesta reserva.</span>';
       btn.disabled=false;return;
     }
-    status.innerHTML=`<span style="color:var(--gold2)">⏳ ${docs.length} documento(s) encontrado(s). Baixando...</span>`;
-    let baixados=0;
-    const extratoFiles=[];
-    for(const doc of docs){
+    status.innerHTML=`<span style="color:var(--gold2)">⏳ ${docs.length} documento(s) encontrado(s). Baixando em paralelo...</span>`;
+
+    // Download de todos os documentos em paralelo (muito mais rápido que sequencial)
+    const dlResults=await Promise.all(docs.map(async doc=>{
       try{
         const urlDoc=doc.link||doc.url_arquivo||doc.arquivo_url||doc.path;
-        if(!urlDoc)continue;
+        if(!urlDoc)return null;
         const dlResp=await fetch(`/api/cv/documento/arquivo?url=${encodeURIComponent(urlDoc)}`);
         const dlData=await dlResp.json();
-        if(!dlData.base64)continue;
-        const tipo=doc.tipo?.toLowerCase()||'';
-        const nomeArq=doc.nome||doc.nome_arquivo||'documento';
-        const pessoa=doc.pessoa?.toLowerCase()||'titular';
-        if(tipo.includes('extrat')){
-          extratoFiles.push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,pessoa});
-        }else if(tipo.includes('simulac')||tipo.includes('simulaç')||nomeArq.toLowerCase().includes('simul')){
-          if(!files['simulacao'])files['simulacao']=[];
-          files['simulacao'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq});
-          document.getElementById('fn-rendimento').innerHTML=(document.getElementById('fn-rendimento').innerHTML||'')+'✓ Simulação CEF (CV) ';
-        }else if(tipo.includes('rg')||tipo.includes('cnh')){
-          const key=pessoa.includes('njuge')?'rg_conjuge':'rg';
-          files[key]={_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq};
-          document.getElementById('fn-rg').innerHTML='✓ '+nomeArq+' (CV)';
-          document.getElementById('card-rg').classList.add('has-file');
-        }else if(tipo.includes('certid')||tipo.includes('civil')||tipo.includes('casamento')){
-          files['certidao']={_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq};
-          document.getElementById('fn-certidao').innerHTML='✓ '+nomeArq+' (CV)';
-          document.getElementById('card-certidao').classList.add('has-file');
-        }else if(tipo.includes('rendimento')||tipo.includes('holerite')||tipo.includes('carteira de trabalho')||tipo.includes('prolabore')||tipo.includes('pró-labore')||tipo.includes('contracheque')||tipo.includes('contra cheque')||tipo.includes('imposto de renda')||tipo.includes('decore')||tipo.includes('declaracao')||tipo.includes('declaração')){
-          if(!files['rendimento'])files['rendimento']=[];
-          files['rendimento'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,tipoCV:doc.tipo,pessoa});
-          document.getElementById('fn-rendimento').innerHTML=`✓ ${(files['rendimento']||[]).length} comprovante(s) do CV`;
-          document.getElementById('card-rendimento').classList.add('has-file');
-        }else{
-          // Qualquer outro doc do CV também é enviado para análise — Claude identifica o que é
-          if(!files['docs_cv'])files['docs_cv']=[];
-          files['docs_cv'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,tipoCV:doc.tipo||nomeArq,pessoa});
-        }
-        baixados++;
-      }catch(e){console.error(e);}
+        if(!dlData.base64)return null;
+        return{doc,dlData};
+      }catch(e){console.error(e);return null;}
+    }));
+
+    let baixados=0;
+    const extratoFiles=[];
+    for(const r of dlResults.filter(r=>r)){
+      const{doc,dlData}=r;
+      const tipo=doc.tipo?.toLowerCase()||'';
+      const nomeArq=doc.nome||doc.nome_arquivo||'documento';
+      const pessoa=doc.pessoa?.toLowerCase()||'titular';
+      if(tipo.includes('extrat')){
+        extratoFiles.push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,pessoa});
+      }else if(tipo.includes('simulac')||tipo.includes('simulaç')||nomeArq.toLowerCase().includes('simul')){
+        if(!files['simulacao'])files['simulacao']=[];
+        files['simulacao'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq});
+      }else if(tipo.includes('rg')||tipo.includes('cnh')){
+        const key=pessoa.includes('njuge')?'rg_conjuge':'rg';
+        files[key]={_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq};
+      }else if(tipo.includes('certid')||tipo.includes('civil')||tipo.includes('casamento')){
+        files['certidao']={_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq};
+      }else if(tipo.includes('rendimento')||tipo.includes('holerite')||tipo.includes('carteira de trabalho')||tipo.includes('prolabore')||tipo.includes('pró-labore')||tipo.includes('contracheque')||tipo.includes('contra cheque')||tipo.includes('imposto de renda')||tipo.includes('decore')||tipo.includes('declaracao')||tipo.includes('declaração')){
+        if(!files['rendimento'])files['rendimento']=[];
+        files['rendimento'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,tipoCV:doc.tipo,pessoa});
+      }else{
+        if(!files['docs_cv'])files['docs_cv']=[];
+        files['docs_cv'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,tipoCV:doc.tipo||nomeArq,pessoa});
+      }
+      baixados++;
     }
-    if(extratoFiles.length>0){
-      files['extrato']=extratoFiles;
-    }
+    if(extratoFiles.length>0) files['extrato']=extratoFiles;
 
     // Checklist de documentos obrigatórios e recomendados
     const temExtrato=(files['extrato']||[]).length>0;
@@ -775,7 +772,7 @@ Retorne SOMENTE este JSON sem markdown:
 Tipos válidos para fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros
 Frequencia: mensal, quinzenal, semanal, irregular.
 Regularidade: regular, irregular, esporadica.`;
-    const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:8000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
+    const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-sonnet-4-5',max_tokens:8000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
     if(!resp.ok){const err=await resp.json();throw new Error(err.error?.message||`Erro HTTP ${resp.status}`);}
     const data=await resp.json();
     if(data.error){throw new Error(data.error.message||JSON.stringify(data.error));}
