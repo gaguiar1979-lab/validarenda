@@ -105,7 +105,7 @@ app.get('/api/cv/documento/arquivo', async (req, res) => {
   }
 });
 
-// Anthropic proxy
+// Anthropic proxy (não-streaming — usado para certidão, filhos, etc.)
 app.post('/api/analyze', async (req, res) => {
   try {
     const payload = req.body.payload;
@@ -128,6 +128,46 @@ app.post('/api/analyze', async (req, res) => {
     res.status(result.status).json(parsed);
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// Anthropic proxy com streaming — evita timeout no Railway para análises longas
+app.post('/api/analyze-stream', (req, res) => {
+  try {
+    const payload = req.body.payload;
+    if (!payload) return res.status(400).json({ error: 'Payload não informado' });
+
+    payload.stream = true;
+    const payloadStr = JSON.stringify(payload);
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.setHeader('Connection', 'keep-alive');
+
+    const apiReq = https.request({
+      hostname: 'api.anthropic.com',
+      path: '/v1/messages',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'Content-Length': Buffer.byteLength(payloadStr)
+      }
+    }, (apiRes) => {
+      apiRes.pipe(res);
+    });
+
+    apiReq.on('error', (e) => {
+      if (!res.headersSent) res.status(500).json({ error: e.message });
+      else res.end();
+    });
+
+    apiReq.write(payloadStr);
+    apiReq.end();
+  } catch (e) {
+    if (!res.headersSent) res.status(500).json({ error: e.message });
   }
 });
 

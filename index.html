@@ -780,11 +780,31 @@ Retorne SOMENTE este JSON sem markdown:
 Tipos válidos para fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros
 Frequencia: mensal, quinzenal, semanal, irregular.
 Regularidade: regular, irregular, esporadica.`;
-    const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-sonnet-4-5',max_tokens:8000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
-    if(!resp.ok){const err=await resp.json();throw new Error(err.error?.message||`Erro HTTP ${resp.status}`);}
-    const data=await resp.json();
-    if(data.error){throw new Error(data.error.message||JSON.stringify(data.error));}
-    const raw=data.content?.map(b=>b.text||'').join('')||'';
+    // Usa streaming para evitar timeout no Railway — resposta flui em tempo real
+    const resp=await fetch('/api/analyze-stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-sonnet-4-5',max_tokens:8000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
+    if(!resp.ok){const err=await resp.json().catch(()=>({}));throw new Error(err.error?.message||`Erro HTTP ${resp.status}`);}
+    // Lê o stream SSE e acumula o texto gerado pela IA
+    const reader=resp.body.getReader();
+    const decoder=new TextDecoder();
+    let sseBuf='';let raw='';
+    document.getElementById('progressLabel').textContent='Gerando laudo...';
+    while(true){
+      const{done,value}=await reader.read();
+      if(done)break;
+      sseBuf+=decoder.decode(value,{stream:true});
+      const lines=sseBuf.split('\n');
+      sseBuf=lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data: '))continue;
+        const jsonStr=line.slice(6).trim();
+        if(!jsonStr||jsonStr==='[DONE]')continue;
+        try{
+          const evt=JSON.parse(jsonStr);
+          if(evt.type==='content_block_delta'&&evt.delta?.type==='text_delta') raw+=evt.delta.text;
+          else if(evt.type==='error') throw new Error(evt.error?.message||'Erro da API Anthropic');
+        }catch(pe){if(pe.message?.includes('Erro da API'))throw pe;}
+      }
+    }
     if(!raw){throw new Error('A IA retornou resposta vazia. Tente novamente.');}
     const jsonMatch=raw.match(/\{[\s\S]*\}/);
     if(!jsonMatch){throw new Error('Resposta inesperada da IA: '+raw.substring(0,300));}
