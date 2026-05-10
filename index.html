@@ -528,6 +528,7 @@ async function buscarReserva(){
   if(!reservaId){alert('Digite o número do pré-cadastro.');return;}
   // Limpa análise anterior
   lastResult=null;
+  currentClienteName=null;
   const inline=document.getElementById('relatorioInline');
   const frame=document.getElementById('reportFrame');
   if(inline) inline.style.display='none';
@@ -562,6 +563,10 @@ async function buscarReserva(){
       btn.disabled=false;return;
     }
     status.innerHTML=`<span style="color:var(--gold2)">⏳ ${docs.length} documento(s) encontrado(s). Baixando em paralelo...</span>`;
+
+    // Busca dados do cliente (nome) no CV CRM em paralelo com os downloads
+    const clienteInfoPromise=fetch(`/api/cv/precadastro/${reservaId}`)
+      .then(r=>r.ok?r.json():null).catch(()=>null);
 
     // Download de todos os documentos em paralelo (muito mais rápido que sequencial)
     const dlResults=await Promise.all(docs.map(async doc=>{
@@ -602,6 +607,24 @@ async function buscarReserva(){
       baixados++;
     }
     if(extratoFiles.length>0) files['extrato']=extratoFiles;
+
+    // Extrai nome do cliente da resposta do CV CRM
+    try{
+      const ci=await clienteInfoPromise;
+      const d=ci?.dados;
+      if(d){
+        // Tenta diferentes campos que o CV CRM pode usar para o nome
+        const candidatos=[
+          d.nome_completo, d.nome, d.nome_comprador,
+          d.titular?.nome_completo, d.titular?.nome,
+          d.comprador?.nome_completo, d.comprador?.nome
+        ];
+        const nome=candidatos.find(v=>v&&typeof v==='string'&&v.trim().length>1);
+        if(nome) currentClienteName=nome.trim();
+      }
+      if(currentClienteName) console.log('Nome CV CRM:',currentClienteName);
+      else console.warn('Nome do cliente não encontrado na API do CV CRM. Dados:',ci?.dados);
+    }catch(e){console.warn('Erro ao obter nome do cliente:',e);}
 
     // Checklist de documentos obrigatórios e recomendados
     const temExtrato=(files['extrato']||[]).length>0;
@@ -764,7 +787,7 @@ async function analyze(){
     const proSolutoInfo=proSoluto>0
       ?`\nPARCELA PRÓ-SOLUTO (financiamento direto com a Casas Manager): R$ ${proSoluto.toFixed(2)}/mês\nEste é o valor real que o cliente se comprometeu a pagar à construtora após receber as chaves. Use este valor no campo "parcelaProSoluto" e analise a viabilidade.`
       :'\nPARCELA PRÓ-SOLUTO: não informada pelo operador. Use margemProSoluto para indicar quanto sobra disponível.';
-    contentParts.push({type:'text',text:`\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.${proSolutoInfo}\n\nRetorne apenas o JSON.`});
+    contentParts.push({type:'text',text:`CLIENTE EM ANÁLISE: ${currentClienteName||'(identificar pelo nome que aparece nos documentos)'}\nPré-Cadastro CV CRM: ${document.getElementById('reservaId').value.trim()}\nIMPORTANTE: Use exatamente "${currentClienteName||'o nome identificado nos documentos'}" no campo "nomeComprador" do JSON.\n\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.${proSolutoInfo}\n\nRetorne apenas o JSON.`});
     const systemPrompt=`Você é um analista de crédito imobiliário da Casas Manager Construções. Gere um laudo interno de capacidade financeira do cliente, respondendo: (1) qual a renda que o cliente consegue comprovar com documentos? (2) qual a renda real apurada nos extratos? (3) ele consegue arcar com a parcela do financiamento bancário + pró-soluto com a Casas Manager?
 
 ATENÇÃO: Os documentos podem estar organizados de formas diferentes — arquivos separados por tipo OU um único arquivo "kit" ou "pacote" contendo vários documentos juntos (extrato, holerite, simulação, etc.). Analise o CONTEÚDO de cada documento independente do nome ou categoria — se um arquivo chamado "Kit documentação" contém páginas de extrato bancário, leia e analise como extrato.
@@ -1006,6 +1029,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
 }
 
 let lastResult=null;
+let currentClienteName=null; // nome direto do CV CRM — sempre sobrescreve o retorno da IA
 
 function gerarRelatorio(){
   const r=lastResult;
@@ -1302,7 +1326,7 @@ async function salvarNoCVCRM(){
 
     // Gera PDF a partir do HTML do relatório
     const dataHoje=new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
-    const nomeCliente=(lastResult.nomeComprador||'Cliente').replace(/[^a-zA-ZÀ-ÿ\s]/g,'').trim();
+    const nomeCliente=(currentClienteName||(lastResult&&lastResult.nomeComprador)||'Cliente').replace(/[^a-zA-ZÀ-ÿ\s]/g,'').trim();
     const fileName=`Analise da Renda pelo Validador - ${nomeCliente} - PreCadastro ${reservaId} - ${dataHoje}.pdf`;
     const pdfBlob=await html2pdf().set({
       margin:[10,10,10,10],
@@ -1338,6 +1362,9 @@ async function salvarNoCVCRM(){
 }
 
 function renderResults(r){
+  // Sobrescreve nome do comprador com dado direto do CV CRM
+  // (evita que a IA reutilize nome de análise anterior quando os docs não mencionam o cliente)
+  if(currentClienteName) r.nomeComprador=currentClienteName;
   lastResult=r;
   document.getElementById('periodoLabel').textContent=r.periodo||'—';
   document.getElementById('printDate').textContent='Gerado em: '+new Date().toLocaleString('pt-BR');
