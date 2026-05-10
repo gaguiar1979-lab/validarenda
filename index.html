@@ -526,6 +526,13 @@ async function handleFilhoCertidao(input,id,num){
 async function buscarReserva(){
   const reservaId=document.getElementById('reservaId').value.trim();
   if(!reservaId){alert('Digite o número do pré-cadastro.');return;}
+  // Limpa análise anterior
+  lastResult=null;
+  const inline=document.getElementById('relatorioInline');
+  const frame=document.getElementById('reportFrame');
+  if(inline) inline.style.display='none';
+  if(frame){try{const d=frame.contentDocument||frame.contentWindow.document;d.open();d.write('');d.close();}catch(e){}}
+  document.getElementById('periodoLabel').textContent='—';
   const btn=document.getElementById('btnBuscarReserva');
   const status=document.getElementById('cvStatus');
   btn.disabled=true;
