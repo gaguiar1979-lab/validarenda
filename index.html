@@ -341,7 +341,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div class="section-title" style="margin:0">Resultado da análise · <span id="periodoLabel"></span></div>
     <div style="display:flex;gap:8px">
       <button class="btn-print" onclick="gerarRelatorio()">🖨️ Imprimir / Salvar PDF</button>
-      <button class="btn-save" id="btnSalvarCV" onclick="salvarNoCVCRM()">💾 Salvar no CV CRM</button>
+      <button class="btn-save" id="btnSalvarCV" onclick="salvarNoCVCRM()" style="display:none">💾 Salvar no CV CRM</button>
+      <button class="btn-save" id="btnBaixarPDF" onclick="baixarPDF()" style="display:none">⬇️ Baixar PDF</button>
     </div>
   </div>
   <div id="printDate" style="font-size:11px;color:var(--text3);margin-bottom:12px"></div>
@@ -1558,6 +1559,31 @@ ${(r.excluidos&&r.excluidos.length)?`<h2>Transferências Excluídas da Renda (Fa
   if(inline) inline.style.display='block';
 }
 
+async function baixarPDF(){
+  if(!lastResult){showToast('⚠️ Gere a análise antes de baixar.');return;}
+  const btn=document.getElementById('btnBaixarPDF');
+  btn.disabled=true;btn.textContent='⏳ Gerando PDF...';
+  try{
+    const frame=document.getElementById('reportFrame');
+    const iframeDoc=frame.contentDocument||frame.contentWindow.document;
+    const reportEl=iframeDoc.body;
+    if(!reportEl||!reportEl.children.length){showToast('⚠️ Relatório não encontrado.');btn.disabled=false;btn.textContent='⬇️ Baixar PDF';return;}
+    const reservaId=document.getElementById('reservaId').value.trim();
+    const dataHoje=new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+    const nomeCliente=(currentClienteName||(lastResult&&lastResult.nomeComprador)||'Cliente').replace(/[^a-zA-ZÀ-ÿ\s]/g,'').trim();
+    const origemLabel=origemBusca==='reserva'?'Reserva':origemBusca==='repasse'?'Repasse':'PreCadastro';
+    const fileName=`Analise da Renda pelo Validador - ${nomeCliente} - ${origemLabel} ${reservaId} - ${dataHoje}.pdf`;
+    await html2pdf().set({
+      margin:[10,10,10,10],filename:fileName,
+      image:{type:'jpeg',quality:0.95},
+      html2canvas:{scale:1.5,useCORS:true,logging:false},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+    }).from(reportEl).save();
+    showToast('✅ PDF baixado! Faça o upload manualmente no CV CRM.');
+  }catch(e){showToast('❌ Erro: '+e.message);}
+  btn.disabled=false;btn.textContent='⬇️ Baixar PDF';
+}
+
 async function salvarNoCVCRM(){
   const reservaId=document.getElementById('reservaId').value.trim();
   const origemLabel2=origemBusca==='reserva'?'Reserva':origemBusca==='repasse'?'Repasse':'Pré-Cadastro';
@@ -1619,6 +1645,15 @@ function renderResults(r){
   lastResult=r;
   document.getElementById('periodoLabel').textContent=r.periodo||'—';
   document.getElementById('printDate').textContent='Gerado em: '+new Date().toLocaleString('pt-BR');
+
+  // Mostra botão correto: Salvar no CV CRM só para pré-cadastro; Baixar PDF para reserva/repasse
+  const btnSalvar=document.getElementById('btnSalvarCV');
+  const btnBaixar=document.getElementById('btnBaixarPDF');
+  if(origemBusca==='precadastro'){
+    btnSalvar.style.display='';btnBaixar.style.display='none';
+  } else {
+    btnSalvar.style.display='none';btnBaixar.style.display='';
+  }
 
   // VEREDITO
   const verMap={
