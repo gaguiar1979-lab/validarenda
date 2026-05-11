@@ -1614,6 +1614,73 @@ function renderResults(r){
       </div>
     </div>
 
+    ${(()=>{
+      // Evolução da renda por proponente
+      if(!r.fontes||!r.fontes.length) return '';
+      const monthOrder={jan:0,fev:1,mar:2,abr:3,mai:4,jun:5,jul:6,ago:7,set:8,out:9,nov:10,dez:11};
+      const allMonths=[...new Set(r.fontes.flatMap(f=>(f.porMes||[]).map(m=>m.mes)))].sort((a,b)=>{
+        const[ma,ya]=a.toLowerCase().split('/');const[mb,yb]=b.toLowerCase().split('/');
+        return(parseInt(ya)-parseInt(yb))||((monthOrder[ma]||0)-(monthOrder[mb]||0));
+      });
+      if(!allMonths.length) return '';
+
+      // Agrupa fontes por proponente (usa remetente para identificar)
+      // Se compradores definidos, associa fontes ao comprador pelo nome
+      const compradores=r.compradores&&r.compradores.length>0?r.compradores:[{nome:r.nomeComprador||'Titular',relacao:'titular'}];
+      const fontesPorProponente=compradores.map(comp=>{
+        const fontesDele=r.fontes.filter(f=>
+          compradores.length===1 ||
+          (f.remetente&&f.remetente.toLowerCase().includes((comp.nome||'').split(' ')[0].toLowerCase())) ||
+          (comp.relacao==='titular'&&!r.fontes.some(f2=>compradores.slice(1).some(c2=>f2.remetente&&f2.remetente.toLowerCase().includes((c2.nome||'').split(' ')[0].toLowerCase()))))
+        );
+        return{comp,fontes:fontesDele.length?fontesDele:[]};
+      });
+
+      return fontesPorProponente.map(({comp,fontes:fts})=>{
+        if(!fts.length) return `<div style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-bottom:8px">📈 Evolução de Renda — ${comp.nome||'Proponente'}</div><div style="font-size:12px;color:#8b1a1a;font-weight:600">⚠️ Nenhuma fonte de renda identificada para este proponente.</div></div>`;
+
+        // Totais por mês
+        const totaisMes=allMonths.map(mes=>{
+          return fts.reduce((s,f)=>{const e=(f.porMes||[]).find(m=>m.mes===mes);return s+(e?e.valor:0);},0);
+        });
+        const maxVal=Math.max(...totaisMes,1);
+        const tendencia=totaisMes.length>=2?(totaisMes[totaisMes.length-1]>totaisMes[0]*1.05?'📈 Crescente':totaisMes[totaisMes.length-1]<totaisMes[0]*0.95?'📉 Queda':'➡️ Estável'):'—';
+        const media=totaisMes.reduce((s,v)=>s+v,0)/(totaisMes.length||1);
+
+        return `<div style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gold)">📈 Evolução de Renda — ${comp.nome||'Proponente'} <span style="font-size:10px;font-weight:400;color:var(--text3);text-transform:none">${comp.relacao||''}</span></div>
+            <div style="font-size:11px;color:var(--text2)">Média: <strong style="color:var(--navy)">${fmt(media)}/mês</strong> &nbsp;${tendencia}</div>
+          </div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:400px">
+              <thead><tr>
+                <th style="background:#f5f5f8;padding:6px 8px;text-align:left;font-weight:700;color:#555;border-bottom:2px solid var(--border)">Fonte de renda</th>
+                ${allMonths.map(m=>`<th style="background:#f5f5f8;padding:6px 8px;text-align:right;font-weight:700;color:#555;border-bottom:2px solid var(--border);white-space:nowrap">${m}</th>`).join('')}
+                <th style="background:#f5f5f8;padding:6px 8px;text-align:right;font-weight:700;color:var(--navy);border-bottom:2px solid var(--border)">Média</th>
+              </tr></thead>
+              <tbody>
+                ${fts.map(f=>`<tr>
+                  <td style="padding:5px 8px;border-bottom:1px solid #eee;color:#333"><strong>${f.remetente}</strong><br><span style="font-size:10px;color:#888">${f.tipo||''} · ${f.regularidade||''}</span></td>
+                  ${allMonths.map(mes=>{const e=(f.porMes||[]).find(m=>m.mes===mes);const v=e?e.valor:0;return`<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;color:${v>0?'#1C1E35':'#ccc'}">${v>0?fmt(v):'—'}</td>`;}).join('')}
+                  <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:700;color:var(--navy)">${fmt(f.mediaMensal||0)}</td>
+                </tr>`).join('')}
+                <tr style="background:#f0f4ff">
+                  <td style="padding:6px 8px;font-weight:800;color:var(--navy);font-size:12px">TOTAL</td>
+                  ${totaisMes.map((v,i)=>{
+                    const bar=Math.round((v/maxVal)*40);
+                    const cor=v>=media*0.9?'#1a7a3c':v>=media*0.7?'#7a5a00':'#8b1a1a';
+                    return`<td style="padding:5px 8px;text-align:right;font-weight:800;color:${cor};border-top:2px solid var(--border)">${v>0?fmt(v):'—'}<div style="margin-top:2px;height:4px;border-radius:2px;background:${cor};width:${bar}px;margin-left:auto"></div></td>`;
+                  }).join('')}
+                  <td style="padding:6px 8px;text-align:right;font-weight:800;color:var(--navy);border-top:2px solid var(--border);font-size:13px">${fmt(media)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+      }).join('');
+    })()}
+
     <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-bottom:10px">📋 Renda Comprovável</div>
