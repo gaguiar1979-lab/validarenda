@@ -116,12 +116,21 @@ app.get('/api/cv/reserva/:id', async (req, res) => {
 app.get('/api/cv/repasse/:id/documentos', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await httpsRequest({
+    // Tenta /financeiro/repasses primeiro, fallback para /comercial/repasses
+    let result = await httpsRequest({
       hostname: CV_BASE,
-      path: `/api/v1/comercial/repasses/${id}/documentos`,
+      path: `/api/v1/financeiro/repasses/${id}/documentos`,
       method: 'GET',
       headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' }
     });
+    if (result.status === 405 || result.status === 404) {
+      result = await httpsRequest({
+        hostname: CV_BASE,
+        path: `/api/v1/comercial/repasses/${id}/documentos`,
+        method: 'GET',
+        headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' }
+      });
+    }
     const data = JSON.parse(result.body);
     res.status(result.status).json(data);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -131,12 +140,21 @@ app.get('/api/cv/repasse/:id/documentos', async (req, res) => {
 app.get('/api/cv/repasse/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await httpsRequest({
+    // Tenta /financeiro/repasses primeiro, fallback para /comercial/repasses
+    let result = await httpsRequest({
       hostname: CV_BASE,
-      path: `/api/v1/comercial/repasses/${id}`,
+      path: `/api/v1/financeiro/repasses/${id}`,
       method: 'GET',
       headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' }
     });
+    if (result.status === 405 || result.status === 404) {
+      result = await httpsRequest({
+        hostname: CV_BASE,
+        path: `/api/v1/comercial/repasses/${id}`,
+        method: 'GET',
+        headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' }
+      });
+    }
     const data = JSON.parse(result.body);
     res.status(result.status).json(data);
   } catch (e) { res.status(500).json({ error: e.message }); }
