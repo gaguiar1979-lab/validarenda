@@ -567,6 +567,7 @@ async function buscarReserva(){
       status.innerHTML=`<span style="color:#ff6b6b">❌ Informe o número da reserva vinculada ao repasse ${reservaId}.</span>`;
       btn.disabled=false;return;
     }
+    repasseReservaVinculada=reservaVinculada; // guarda para usar no salvamento do PDF
     // Substitui temporariamente o ID usado pelo fluxo normal
     document.getElementById('reservaId').value=reservaVinculada;
     origemBusca='reserva';
@@ -576,6 +577,7 @@ async function buscarReserva(){
     origemBusca='repasse';
     return;
   }
+  repasseReservaVinculada=null;
   const origemLabel3=origemBusca==='reserva'?'reserva':'pré-cadastro';
   status.innerHTML=`<span style="color:rgba(255,255,255,.6)">⏳ Buscando ${origemLabel3} no CV CRM...</span>`;
   try{
@@ -1255,6 +1257,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
 let lastResult=null;
 let currentClienteName=null; // nome direto do CV CRM — sempre sobrescreve o retorno da IA
 let origemBusca='precadastro'; // 'precadastro' | 'reserva' | 'repasse'
+let repasseReservaVinculada=null; // ID da reserva vinculada ao repasse (para salvar PDF)
 
 function setOrigem(origem){
   origemBusca=origem;
@@ -1591,7 +1594,8 @@ async function salvarNoCVCRM(){
       reader.readAsDataURL(pdfBlob);
     });
 
-    const saveEndpoint=origemBusca==='reserva'?`/api/cv/reserva/${reservaId}/salvar-relatorio`:origemBusca==='repasse'?`/api/cv/repasse/${reservaId}/salvar-relatorio`:`/api/cv/precadastro/${reservaId}/salvar-relatorio`;
+    // Repasse: salva na reserva vinculada (CV CRM não expõe API de docs do repasse)
+    const saveEndpoint=origemBusca==='repasse'?`/api/cv/reserva/${repasseReservaVinculada||reservaId}/salvar-relatorio`:origemBusca==='reserva'?`/api/cv/reserva/${reservaId}/salvar-relatorio`:`/api/cv/precadastro/${reservaId}/salvar-relatorio`;
     const resp=await fetch(saveEndpoint,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
