@@ -118,7 +118,7 @@ app.get('/api/cv/repasse/:id/documentos', async (req, res) => {
     const id = req.params.id;
     const result = await httpsRequest({
       hostname: CV_BASE,
-      path: `/api/v1/comercial/repasse/${id}/documentos`,
+      path: `/api/v1/comercial/repasses/${id}/documentos`,
       method: 'GET',
       headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' }
     });
@@ -133,7 +133,7 @@ app.get('/api/cv/repasse/:id', async (req, res) => {
     const id = req.params.id;
     const result = await httpsRequest({
       hostname: CV_BASE,
-      path: `/api/v1/comercial/repasse/${id}`,
+      path: `/api/v1/comercial/repasses/${id}`,
       method: 'GET',
       headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' }
     });
@@ -371,7 +371,7 @@ app.post('/api/cv/repasse/:id/salvar-relatorio', async (req, res) => {
 
     const result = await httpsRequest({
       hostname: CV_BASE,
-      path: '/api/v1/comercial/repasse/documentos',
+      path: '/api/v1/comercial/repasses/documentos',
       method: 'POST',
       headers: {
         'email': CV_EMAIL,
