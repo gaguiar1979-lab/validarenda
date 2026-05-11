@@ -646,7 +646,7 @@ async function buscarReserva(){
     const temExtratoConjuge=(files['extrato_conjuge']||[]).length>0;
     const checklist=[
       {icon:'📄',label:'Extrato(s) bancário(s)',
-       detalhe:temExtrato?`${(files['extrato']||[]).length} arquivo(s)`:temDocsCv?`Possível em documento combinado (${(files['docs_cv']||[]).length} arq.)`:temRendimento?'Não encontrado — dispensado (há comprovante de renda formal)':'Nenhum encontrado',
+       detalhe:temExtrato?`${(files['extrato']||[]).length} arquivo(s) — renda informal complementar será identificada`:temDocsCv?`Possível em documento combinado (${(files['docs_cv']||[]).length} arq.)`:temRendimento?'Não encontrado — análise prossegue com renda formal (extrato recomendado para identificar renda complementar)':'Nenhum encontrado',
        ok:temExtratoPossivel||temRendimento,obrigatorio:extratoObrigatorio},
       {icon:'💼',label:'Comprovante de rendimento',detalhe:temRendimento?`${(files['rendimento']||[]).length} arquivo(s)`:temDocsCv?'Possível em documento combinado':'Não encontrado',ok:temRendimento||temDocsCv,obrigatorio:true},
       {icon:'🏦',label:'Simulação de financiamento',detalhe:temSim?'Encontrada':'Não encontrada',ok:temSim,obrigatorio:true},
@@ -864,8 +864,10 @@ CENÁRIO C — TRABALHADOR INFORMAL (apenas extrato, sem contracheque nem pró-l
 - Declare no parecer: "Renda 100% informal — comprovação via extrato bancário"
 
 CENÁRIO MISTO: se o comprador tem MAIS DE UM perfil (ex: CLT + renda extra informal):
-- Some a renda formal comprovada + 70% da renda informal regular identificada no extrato
-- Classifique cada fonte com seu tipo correto
+- rendaComprovavel = renda formal (valor do contracheque/pró-labore) + 70% da renda informal COMPLEMENTAR identificada no extrato
+- Renda informal complementar = créditos regulares no extrato que NÃO sejam o salário já contabilizado no contracheque (ex: freelas, aluguéis, bicos, depósitos de outras origens)
+- NUNCA some o salário duas vezes (extrato + contracheque)
+- Classifique cada fonte com seu tipo correto e deixe claro no parecer que parte da renda é informal e não comprovável formalmente
 
 Aposentadoria/pensão = integral. Aluguel com contrato = integral.
 
