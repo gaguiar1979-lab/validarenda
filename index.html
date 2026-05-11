@@ -842,7 +842,11 @@ CERTIDÃO NEGATIVA / SOLTEIRO:
 Se não houver certidão: analise com base nos familiares já informados no contexto abaixo.
 
 PASSO 1 — SIMULAÇÃO DE FINANCIAMENTO (se houver):
-- Extraia renda declarada na simulação, parcela mensal do financiamento bancário, valor do imóvel e valor financiado
+- Extraia da simulação os seguintes campos — ATENÇÃO: não confunda valor do imóvel com valor financiado, são campos distintos:
+  - valorImovel = valor TOTAL do imóvel (preço de venda cheio, ex: R$350.000). Se não estiver explícito, some valor financiado + entrada + demais parcelas diretas.
+  - valorFinanciado = valor que o banco está financiando (parcela do banco, geralmente 70-80% do imóvel, ex: R$270.000)
+  - parcelaFinanciamento = prestação mensal do financiamento bancário
+  - rendaDeclarada = renda declarada pelo cliente na simulação (se informada)
 - Não mencione o banco/financeira específico — trate como "financiamento bancário" ou "financiamento imobiliário"
 
 PASSO 2 — RENDA COMPROVÁVEL (com documentos):
