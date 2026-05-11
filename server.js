@@ -321,6 +321,72 @@ app.post('/api/cv/precadastro/:id/salvar-relatorio', async (req, res) => {
   }
 });
 
+// CV API: salva relatório na reserva
+app.post('/api/cv/reserva/:id/salvar-relatorio', async (req, res) => {
+  try {
+    const reservaId = req.params.id;
+    const { pdfBase64, fileName, periodo } = req.body;
+    const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+    const nome = fileName || `Analise da Renda pelo Validador - Reserva ${reservaId} - ${dataHoje}.pdf`;
+
+    const payload = JSON.stringify({
+      idreserva: parseInt(reservaId),
+      idtipo: 28, // OUTROS DOCUMENTOS
+      nome,
+      documento_base64: pdfBase64
+    });
+
+    const result = await httpsRequest({
+      hostname: CV_BASE,
+      path: '/api/v1/comercial/reservas/documentos',
+      method: 'POST',
+      headers: {
+        'email': CV_EMAIL,
+        'token': CV_TOKEN,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    }, payload);
+
+    res.status(result.status).json({ ok: result.status < 300, raw: result.body });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// CV API: salva relatório no repasse
+app.post('/api/cv/repasse/:id/salvar-relatorio', async (req, res) => {
+  try {
+    const repasseId = req.params.id;
+    const { pdfBase64, fileName, periodo } = req.body;
+    const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+    const nome = fileName || `Analise da Renda pelo Validador - Repasse ${repasseId} - ${dataHoje}.pdf`;
+
+    const payload = JSON.stringify({
+      idrepasse: parseInt(repasseId),
+      idtipo: 28, // OUTROS DOCUMENTOS
+      nome,
+      documento_base64: pdfBase64
+    });
+
+    const result = await httpsRequest({
+      hostname: CV_BASE,
+      path: '/api/v1/comercial/repasse/documentos',
+      method: 'POST',
+      headers: {
+        'email': CV_EMAIL,
+        'token': CV_TOKEN,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    }, payload);
+
+    res.status(result.status).json({ ok: result.status < 300, raw: result.body });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/logo.jpg', (req, res) => {
   res.sendFile(path.join(__dirname, 'logo.jpg'));
 });
