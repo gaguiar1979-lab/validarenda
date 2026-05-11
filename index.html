@@ -884,15 +884,30 @@ PASSO 3B — CONTAS DE MESMA TITULARIDADE SEM EXTRATO (obrigatório verificar):
 - Se JÁ estiver na análise: não registre (já foi considerado)
 - Inclua: nome do banco/instituição identificada, valor médio transferido por mês, motivo
 
-PASSO 4A — COMPROMETIMENTOS FIXOS (obrigações com TERCEIROS / instituições):
-- São débitos recorrentes para CREDORES identificáveis: banco, financeira, seguradora, operadora de saúde, locador PJ
-- Inclua: financiamentos bancários, parcelas de veículo, fatura de cartão de crédito, consignado, empréstimo pessoal, aluguel pago a PJ, plano de saúde
-- NÃO inclua transferências para pessoas físicas (PIX para CPF) — essas vão em 4B
-- Para cada comprometimento: nome do credor, categoria, valor médio mensal
-- Categorias: "financiamento_imobiliario", "veiculo", "cartao_credito", "consignado", "emprestimo", "aluguel_pago", "saude", "outros_fixos"
-- totalComprometido = soma de todos os comprometimentos mensais médios
+PASSO 4A — ANÁLISE DE CAPACIDADE DE PAGAMENTO (raciocínio de analista de crédito sênior):
+Você deve mapear TUDO que sai habitualmente do extrato e entender o padrão real de gastos do cliente.
+Não se limite às parcelas óbvias — olhe o extrato como um retrato financeiro completo.
+
+COMPROMETIMENTOS FIXOS (saídas recorrentes para credores/instituições):
+- Financiamentos: imobiliário, veículo, consignado — identifique credor e valor médio mensal
+- Cartão de crédito: some o total pago ao cartão todo mês (fatura). Se pagar mínimo repetidamente, é sinal de endividamento crescente — registre como alerta
+- Empréstimos pessoais / CDC / crédito rotativo
+- Aluguel pago a PJ ou imobiliária
+- Plano de saúde, seguro de vida, seguro auto
+- Mensalidades recorrentes (escola, academia, assinaturas que indiquem comprometimento fixo relevante)
+- NÃO inclua PIX para pessoas físicas aqui — vão em 4B
+
+GASTOS HABITUAIS DE SUBSISTÊNCIA (não são dívidas, mas reduzem a capacidade real):
+- Identifique o padrão de gastos mensais com mercado, combustível, farmácia, transporte, contas básicas (energia, água, internet, telefone)
+- Estime o total mensal médio desses gastos com base no que aparece no extrato
+- Registre como "gastos_subsistencia" na análise — não entram em comprometimentos mas compõem o custo de vida real
+
+CÁLCULO DE CAPACIDADE REAL:
+- totalComprometido = soma dos comprometimentos fixos (dívidas/obrigações com credores)
+- custoVidaEstimado = estimativa dos gastos habituais de subsistência
 - rendaDisponivelReal = rendaRealTotal - totalComprometido
-- margemProSoluto = rendaDisponivelReal × 0.30
+- margemProSoluto = rendaDisponivelReal - custoVidaEstimado (o que sobra de fato para uma nova obrigação)
+- Se margemProSoluto for negativa ou muito apertada, sinalize claramente mesmo que a parcela do pró-soluto caiba no papel
 
 PASSO 4B — TRANSFERÊNCIAS QUE PRECISAM DE JUSTIFICATIVA DO CLIENTE:
 - PIX/TED recorrentes para pessoas físicas (CPF) ou destinos não identificados que NÃO são familiares já excluídos
@@ -903,10 +918,11 @@ PASSO 4B — TRANSFERÊNCIAS QUE PRECISAM DE JUSTIFICATIVA DO CLIENTE:
 
 PASSO 5 — VEREDITO (use o parcelaProSoluto informado se disponível):
 - Se parcelaProSoluto > 0: compare com margemProSoluto para o veredito
-  - "viavel": margemProSoluto >= parcelaProSoluto (sobra margem após pagar o pró-soluto)
-  - "apertado": margemProSoluto >= parcelaProSoluto mas diferença < R$300, OU margemProSoluto entre 80% e 100% do parcelaProSoluto
-  - "inviavel": margemProSoluto < parcelaProSoluto (renda não cobre o pró-soluto)
-- Se parcelaProSoluto = 0 (não informado): use a margem disponível para orientar o parecer sem veredito definitivo
+  - "viavel": margemProSoluto >= parcelaProSoluto com folga real (sobra ao menos R$300 após pagar o pró-soluto)
+  - "apertado": margemProSoluto cobre o parcelaProSoluto mas com folga < R$300, OU margemProSoluto entre 80% e 100% do parcelaProSoluto
+  - "inviavel": margemProSoluto < parcelaProSoluto (renda não cobre o pró-soluto considerando o custo de vida real)
+- Se parcelaProSoluto = 0 (não informado): calcule e informe a margemProSoluto disponível para orientar o parecer
+- Seja honesto: se o cliente está no limite mesmo que os números "fechem", declare como "apertado" e explique os riscos
 
 PASSO 6 — SCORE DE RISCO DO PRÓ-SOLUTO (0 a 100, quanto maior menor o risco):
 Parta de 100 e desconte conforme os fatores abaixo. Seja criterioso e justo.
@@ -978,7 +994,7 @@ Escreva 2-3 parágrafos diretos ao time de vendas explicando:
 3. Considerando o perfil de motivação de regularização, o que fazer: aprovar, aprovar com ressalvas, pedir garantia ou não recomendar
 
 Retorne SOMENTE este JSON sem markdown:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição do fator identificado","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"Descrição objetiva do padrão de gastos do cliente","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["Saldo médio positivo ao longo dos meses","Renda regular e crescente"],"indicadoresNegativos":["Gastos com apostas recorrentes","Saldo zerado antes do fim do mês"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"1 parágrafo: o que nos extratos indica que a negativação motivaria ou não a regularização."},"orientacaoComercial":"2-3 parágrafos diretos para a equipe de vendas: quem é esse cliente, probabilidade de honrar o pró-soluto, motivação de regularização e recomendação clara de ação."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":""}],"extratosFaltantes":[{"banco":"Nome","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":[],"parecer":"1 frase: veredito + score de risco + probabilidade de inadimplência.","conclusao":"Laudo em 3 parágrafos técnicos: 1) renda comprovável com documentos e renda real apurada; 2) capacidade real de pagar a parcela do financiamento + pró-soluto; 3) perfil de risco e recomendação."}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição do fator identificado","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"Descrição objetiva do padrão de gastos do cliente","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["Saldo médio positivo ao longo dos meses","Renda regular e crescente"],"indicadoresNegativos":["Gastos com apostas recorrentes","Saldo zerado antes do fim do mês"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"1 parágrafo: o que nos extratos indica que a negativação motivaria ou não a regularização."},"orientacaoComercial":"2-3 parágrafos diretos para a equipe de vendas: quem é esse cliente, probabilidade de honrar o pró-soluto, motivação de regularização e recomendação clara de ação."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":""}],"extratosFaltantes":[{"banco":"Nome","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":[],"parecer":"1 frase: veredito + score de risco + probabilidade de inadimplência.","conclusao":"Laudo em 3 parágrafos técnicos: 1) renda comprovável com documentos e renda real apurada; 2) capacidade real de pagar a parcela do financiamento + pró-soluto; 3) perfil de risco e recomendação."}
 
 Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
     // Usa streaming para evitar timeout no Railway — resposta flui em tempo real
@@ -1499,6 +1515,7 @@ function renderResults(r){
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Renda real (extratos)</span><strong>${fmt(r.rendaRealTotal||0)}</strong></div>
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Comprometimentos fixos</span><span style="color:#8b1a1a">− ${fmt(r.totalComprometido||0)}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)"><span style="color:var(--text2)">Renda disponível</span><strong>${fmt(r.rendaDisponivelReal||0)}</strong></div>
+        ${(r.custoVidaEstimado>0)?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Custo de vida estimado</span><span style="color:#7a5a00">− ${fmt(r.custoVidaEstimado)}</span></div>`:''}
         ${r.parcelaFinanciamento>0?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Parcela financiamento</span><span style="color:#8b1a1a">− ${fmt(r.parcelaFinanciamento)}</span></div>`:''}
         <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding-top:8px;border-top:2px solid var(--border);margin-top:4px"><span>Margem pró-soluto</span><strong style="color:${(r.margemProSoluto||0)>500?'#1a7a3c':(r.margemProSoluto||0)>0?'#7a5a00':'#8b1a1a'}">${fmt(r.margemProSoluto||0)}/mês</strong></div>
         ${r.entradasBet>0?`<div style="margin-top:8px;padding:6px 10px;background:#fdecea;border-radius:6px;font-size:11px;color:#8b1a1a">🎰 ${fmt(r.entradasBet)} em apostas excluídos da renda</div>`:''}
