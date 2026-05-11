@@ -554,13 +554,19 @@ async function buscarReserva(){
   const btn=document.getElementById('btnBuscarReserva');
   const status=document.getElementById('cvStatus');
   btn.disabled=true;
-  status.innerHTML='<span style="color:rgba(255,255,255,.6)">⏳ Buscando pré-cadastro no CV CRM...</span>';
+  // Repasse: CV CRM não expõe documentos via API — orientar upload manual
+  if(origemBusca==='repasse'){
+    status.innerHTML=`<span style="color:var(--gold2)">ℹ️ Repasse ${reservaId} — o CV CRM não disponibiliza documentos de repasse via API. Faça o upload manual dos documentos abaixo para prosseguir com a análise.</span>`;
+    btn.disabled=false;return;
+  }
+  const origemLabel3=origemBusca==='reserva'?'reserva':'pré-cadastro';
+  status.innerHTML=`<span style="color:rgba(255,255,255,.6)">⏳ Buscando ${origemLabel3} no CV CRM...</span>`;
   try{
     const ctrl=new AbortController();
     const t=setTimeout(()=>ctrl.abort(),25000);
     let resp,data;
     try{
-      const endpointDocs=origemBusca==='reserva'?`/api/cv/reserva/${reservaId}/documentos`:origemBusca==='repasse'?`/api/cv/repasse/${reservaId}/documentos`:`/api/cv/precadastro/${reservaId}/documentos`;
+      const endpointDocs=origemBusca==='reserva'?`/api/cv/reserva/${reservaId}/documentos`:`/api/cv/precadastro/${reservaId}/documentos`;
       resp=await fetch(endpointDocs,{signal:ctrl.signal});
       data=await resp.json();
     }catch(fe){
@@ -570,7 +576,7 @@ async function buscarReserva(){
     }
     clearTimeout(t);
     if(!resp.ok||data.error){
-      status.innerHTML=`<span style="color:#ff6b6b">❌ ${data.message||data.error||'Reserva não encontrada.'}</span>`;
+      status.innerHTML=`<span style="color:#ff6b6b">❌ ${data.message||data.error||'Cadastro não encontrado.'}</span>`;
       btn.disabled=false;return;
     }
     // Estrutura real: data.dados.documentos.titular / .conjuge
