@@ -244,10 +244,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 
-<!-- BUSCAR PRÉ-CADASTRO NO CV -->
+<!-- BUSCAR NO CV CRM -->
 <div class="cv-search-card">
   <h3>🔗 Buscar no CV CRM</h3>
-  <p>Digite o número do pré-cadastro para carregar os documentos automaticamente. Campo obrigatório.</p>
+  <p>Selecione o módulo e informe o número do cadastro para carregar os documentos automaticamente.</p>
+
+  <!-- Seletor de origem -->
+  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <button onclick="setOrigem('precadastro')" id="btnOrigem_precadastro"
+      style="flex:1;min-width:120px;padding:8px 12px;border-radius:8px;border:2px solid var(--gold);background:var(--gold);color:#1C1E35;font-size:12px;font-weight:700;cursor:pointer">
+      📋 Pré-Cadastro
+    </button>
+    <button onclick="setOrigem('reserva')" id="btnOrigem_reserva"
+      style="flex:1;min-width:120px;padding:8px 12px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.6);font-size:12px;font-weight:600;cursor:pointer">
+      🏠 Reserva
+    </button>
+    <button onclick="setOrigem('repasse')" id="btnOrigem_repasse"
+      style="flex:1;min-width:120px;padding:8px 12px;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.6);font-size:12px;font-weight:600;cursor:pointer">
+      🔄 Repasse
+    </button>
+  </div>
+
   <div class="cv-search-row">
     <input type="number" id="reservaId" placeholder="Número do pré-cadastro (ex: 933)">
     <button onclick="buscarReserva()" id="btnBuscarReserva">🔍 Buscar</button>
@@ -525,7 +542,7 @@ async function handleFilhoCertidao(input,id,num){
 
 async function buscarReserva(){
   const reservaId=document.getElementById('reservaId').value.trim();
-  if(!reservaId){alert('Digite o número do pré-cadastro.');return;}
+  if(!reservaId){alert('Digite o número do cadastro.');return;}
   // Limpa análise anterior
   lastResult=null;
   currentClienteName=null;
@@ -543,7 +560,8 @@ async function buscarReserva(){
     const t=setTimeout(()=>ctrl.abort(),25000);
     let resp,data;
     try{
-      resp=await fetch(`/api/cv/precadastro/${reservaId}/documentos`,{signal:ctrl.signal});
+      const endpointDocs=origemBusca==='reserva'?`/api/cv/reserva/${reservaId}/documentos`:origemBusca==='repasse'?`/api/cv/repasse/${reservaId}/documentos`:`/api/cv/precadastro/${reservaId}/documentos`;
+      resp=await fetch(endpointDocs,{signal:ctrl.signal});
       data=await resp.json();
     }catch(fe){
       clearTimeout(t);
@@ -565,7 +583,8 @@ async function buscarReserva(){
     status.innerHTML=`<span style="color:var(--gold2)">⏳ ${docs.length} documento(s) encontrado(s). Baixando em paralelo...</span>`;
 
     // Busca dados do cliente (nome) no CV CRM em paralelo com os downloads
-    const clienteInfoPromise=fetch(`/api/cv/precadastro/${reservaId}`)
+    const endpointInfo=origemBusca==='reserva'?`/api/cv/reserva/${reservaId}`:origemBusca==='repasse'?`/api/cv/repasse/${reservaId}`:`/api/cv/precadastro/${reservaId}`;
+    const clienteInfoPromise=fetch(endpointInfo)
       .then(r=>r.ok?r.json():null).catch(()=>null);
 
     // Download de todos os documentos em paralelo (muito mais rápido que sequencial)
@@ -686,7 +705,7 @@ async function buscarReserva(){
     document.getElementById('checklistArea').style.display='block';
     document.getElementById('checklistArea').innerHTML=`
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:var(--shadow)">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:12px">📋 Documentos no CV CRM — Pré-Cadastro ${reservaId}</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:12px">📋 Documentos no CV CRM — ${origemBusca==='reserva'?'Reserva':origemBusca==='repasse'?'Repasse':'Pré-Cadastro'} ${reservaId}</div>
         <div style="display:flex;flex-direction:column;gap:6px">${itemHtml}</div>
         ${bloqueadoHtml}
       </div>`;
@@ -1212,6 +1231,24 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
 
 let lastResult=null;
 let currentClienteName=null; // nome direto do CV CRM — sempre sobrescreve o retorno da IA
+let origemBusca='precadastro'; // 'precadastro' | 'reserva' | 'repasse'
+
+function setOrigem(origem){
+  origemBusca=origem;
+  const labels={precadastro:'Pré-Cadastro',reserva:'Reserva',repasse:'Repasse'};
+  const placeholders={precadastro:'Número do pré-cadastro (ex: 933)',reserva:'Número da reserva (ex: 1550)',repasse:'Número do repasse (ex: 42)'};
+  document.getElementById('reservaId').placeholder=placeholders[origem];
+  ['precadastro','reserva','repasse'].forEach(o=>{
+    const btn=document.getElementById('btnOrigem_'+o);
+    if(o===origem){
+      btn.style.background='var(--gold)';btn.style.color='#1C1E35';
+      btn.style.borderColor='var(--gold)';btn.style.fontWeight='700';
+    } else {
+      btn.style.background='transparent';btn.style.color='rgba(255,255,255,.6)';
+      btn.style.borderColor='rgba(255,255,255,.2)';btn.style.fontWeight='600';
+    }
+  });
+}
 
 function gerarRelatorio(){
   const r=lastResult;
@@ -1509,7 +1546,8 @@ async function salvarNoCVCRM(){
     // Gera PDF a partir do HTML do relatório
     const dataHoje=new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
     const nomeCliente=(currentClienteName||(lastResult&&lastResult.nomeComprador)||'Cliente').replace(/[^a-zA-ZÀ-ÿ\s]/g,'').trim();
-    const fileName=`Analise da Renda pelo Validador - ${nomeCliente} - PreCadastro ${reservaId} - ${dataHoje}.pdf`;
+    const origemLabel=origemBusca==='reserva'?'Reserva':origemBusca==='repasse'?'Repasse':'PreCadastro';
+    const fileName=`Analise da Renda pelo Validador - ${nomeCliente} - ${origemLabel} ${reservaId} - ${dataHoje}.pdf`;
     const pdfBlob=await html2pdf().set({
       margin:[10,10,10,10],
       filename:fileName,

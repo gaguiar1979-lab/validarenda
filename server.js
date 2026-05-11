@@ -112,6 +112,36 @@ app.get('/api/cv/reserva/:id', async (req, res) => {
   }
 });
 
+// CV API: busca documentos do repasse
+app.get('/api/cv/repasse/:id/documentos', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await httpsRequest({
+      hostname: CV_BASE,
+      path: `/api/v1/comercial/repasse/${id}/documentos`,
+      method: 'GET',
+      headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' }
+    });
+    const data = JSON.parse(result.body);
+    res.status(result.status).json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// CV API: busca informações do repasse
+app.get('/api/cv/repasse/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await httpsRequest({
+      hostname: CV_BASE,
+      path: `/api/v1/comercial/repasse/${id}`,
+      method: 'GET',
+      headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' }
+    });
+    const data = JSON.parse(result.body);
+    res.status(result.status).json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // CV API: baixa arquivo do documento
 app.get('/api/cv/documento/arquivo', async (req, res) => {
   try {
