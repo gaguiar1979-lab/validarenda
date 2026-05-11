@@ -560,88 +560,21 @@ async function buscarReserva(){
   const btn=document.getElementById('btnBuscarReserva');
   const status=document.getElementById('cvStatus');
   btn.disabled=true;
-  // Repasse: busca documentos pela reserva vinculada
+  // Repasse: usa reserva vinculada para buscar documentos, mantém origemBusca='repasse' para o relatório
   if(origemBusca==='repasse'){
     const reservaVinculada=document.getElementById('repasseReservaId').value.trim();
     if(!reservaVinculada){
       status.innerHTML=`<span style="color:#ff6b6b">❌ Informe o número da reserva vinculada ao repasse ${reservaId}.</span>`;
       btn.disabled=false;return;
     }
-    status.innerHTML=`<span style="color:rgba(255,255,255,.6)">⏳ Buscando documentos da reserva ${reservaVinculada} (Repasse ${reservaId})...</span>`;
-    // A partir daqui usa o ID da reserva para buscar docs, mas mantém origemBusca='repasse' para o relatório
-    try{
-      const ctrl=new AbortController();
-      const t=setTimeout(()=>ctrl.abort(),25000);
-      let resp,data;
-      try{
-        resp=await fetch(`/api/cv/reserva/${reservaVinculada}/documentos`,{signal:ctrl.signal});
-        data=await resp.json();
-      }catch(fe){
-        clearTimeout(t);
-        status.innerHTML=`<span style="color:#ff6b6b">❌ ${fe.name==='AbortError'?'CV CRM demorou demais. Tente novamente.':fe.message}</span>`;
-        btn.disabled=false;return;
-      }
-      clearTimeout(t);
-      if(!resp.ok||data.error){
-        status.innerHTML=`<span style="color:#ff6b6b">❌ ${data.message||data.error||'Reserva não encontrada.'}</span>`;
-        btn.disabled=false;return;
-      }
-      // Continua o fluxo normal usando reservaVinculada como ID para busca de info do cliente
-      const clienteInfoPromise=fetch(`/api/cv/reserva/${reservaVinculada}`).then(r=>r.ok?r.json():null).catch(()=>null);
-      const docsObj=(data.dados&&data.dados.documentos)||{};
-      const docs=Object.entries(docsObj).flatMap(([pessoa,arr])=>arr.map(d=>({...d,pessoa})));
-      if(!docs.length){
-        status.innerHTML=`<span style="color:var(--gold2)">⚠️ Nenhum documento encontrado na reserva ${reservaVinculada}.</span>`;
-        btn.disabled=false;return;
-      }
-      // Usa o mesmo fluxo de download de docs
-      const docsArea=document.getElementById('cvDocsArea');
-      const docsList=document.getElementById('cvDocsList');
-      docsArea.style.display='block';
-      docsList.innerHTML='';
-      status.innerHTML=`<span style="color:rgba(255,255,255,.6)">⏳ Baixando ${docs.length} documento(s)...</span>`;
-      let downloaded=0;
-      for(const doc of docs){
-        if(!doc.url_documento) continue;
-        try{
-          const r2=await fetch(`/api/cv/documento/arquivo?url=${encodeURIComponent(doc.url_documento)}`);
-          const d2=await r2.json();
-          if(d2.base64){
-            const tipo=(doc.tipo_documento_nome||doc.tipo||'').toLowerCase();
-            const nome=(doc.nome_original||doc.nome||doc.tipo_documento_nome||'doc').toLowerCase();
-            let slot='outros';
-            if(/extrato|bancari/i.test(tipo)||/extrato|bancari/i.test(nome)) slot='extratos';
-            else if(/rg|cnh|identidade|cpf/i.test(tipo)||/rg|cnh|identidade|cpf/i.test(nome)) slot='rg';
-            else if(/holerite|contracheque|rendimento|salario|prolabore|pró-labore/i.test(tipo)||/holerite|contracheque|rendimento|salario|prolabore/i.test(nome)) slot='holerite';
-            else if(/certid/i.test(tipo)||/certid/i.test(nome)) slot='certidao';
-            else if(/simula/i.test(tipo)||/simula/i.test(nome)) slot='simulacao';
-            const existing=cvFiles[slot]||[];
-            existing.push({base64:d2.base64,contentType:d2.contentType,name:doc.nome_original||doc.nome||'documento'});
-            cvFiles[slot]=existing;
-            downloaded++;
-            const li=document.createElement('div');
-            const isExtrato=/extrato|bancari/i.test(tipo)||/extrato|bancari/i.test(nome);
-            li.className='cv-doc-item'+(isExtrato?' extrato':'');
-            li.innerHTML=`<span>📄</span><span>${doc.nome_original||doc.nome||'—'}</span><span style="margin-left:auto;opacity:.5;font-size:11px">${doc.tipo_documento_nome||'—'}</span>`;
-            docsList.appendChild(li);
-          }
-        }catch(e2){console.warn('Erro ao baixar doc:',e2);}
-      }
-      try{
-        const ci=await clienteInfoPromise;
-        const d=ci?.dados;
-        if(d){
-          const candidatos=[d.nome_completo,d.nome,d.nome_comprador,d.titular?.nome_completo,d.titular?.nome,d.comprador?.nome_completo,d.comprador?.nome];
-          const nome=candidatos.find(v=>v&&typeof v==='string'&&v.trim().length>1);
-          if(nome) currentClienteName=nome.trim();
-        }
-      }catch(e){}
-      status.innerHTML=`<span style="color:#6ee7a0">✅ ${downloaded} documento(s) carregado(s) da Reserva ${reservaVinculada} — Repasse ${reservaId}</span>`;
-      btn.disabled=false;return;
-    }catch(e){
-      status.innerHTML=`<span style="color:#ff6b6b">❌ Erro: ${e.message}</span>`;
-      btn.disabled=false;return;
-    }
+    // Substitui temporariamente o ID usado pelo fluxo normal
+    document.getElementById('reservaId').value=reservaVinculada;
+    origemBusca='reserva';
+    await buscarReserva();
+    // Restaura os valores originais do repasse
+    document.getElementById('reservaId').value=reservaId;
+    origemBusca='repasse';
+    return;
   }
   const origemLabel3=origemBusca==='reserva'?'reserva':'pré-cadastro';
   status.innerHTML=`<span style="color:rgba(255,255,255,.6)">⏳ Buscando ${origemLabel3} no CV CRM...</span>`;
