@@ -1144,10 +1144,23 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
     let parsed;
     try{parsed=JSON.parse(jsonStr);}
     catch(je){
-      // Tenta sanitizar caracteres de controle e re-parsear
-      const sanitized=jsonStr.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'');
+      // Remove todos os caracteres de controle incluindo \n e \r literais dentro de strings
+      // (IA às vezes coloca quebras de linha reais dentro de valores de string)
+      let sanitized=jsonStr
+        .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'')  // controle exceto \t \n \r
+        .replace(/(?<=":[\s]*"[^"]*)\n(?=[^"]*")/g,' ') // \n dentro de strings → espaço
+        .replace(/(?<=":[\s]*"[^"]*)\r(?=[^"]*")/g,' '); // \r dentro de strings → espaço
       try{parsed=JSON.parse(sanitized);}
-      catch(je2){throw new Error('JSON inválido mesmo após sanitização: '+je2.message+' | Trecho: '+jsonStr.substring(3900,4000));}
+      catch(je2){
+        // Última tentativa: remove TODOS os \n e \r (o JSON não precisa deles)
+        const sanitized2=jsonStr.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\r\n]/g,' ');
+        try{parsed=JSON.parse(sanitized2);}
+        catch(je3){
+          // Mostra trecho próximo ao erro para diagnóstico
+          const pos=parseInt((je2.message.match(/position (\d+)/)||[])[1])||0;
+          throw new Error('JSON inválido: '+je2.message+' | Trecho: '+jsonStr.substring(Math.max(0,pos-50),pos+50));
+        }
+      }
     }
     renderResults(parsed);
   }catch(e){
