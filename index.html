@@ -862,11 +862,21 @@ Relações válidas: "titular", "co-comprador", "cônjuge"
 
 COMPOSIÇÃO DE RENDA — DOIS COMPRADORES NÃO CASADOS:
 Se identificar documentos (extratos, RG, holerites) de duas pessoas distintas que NÃO são casadas entre si (sem certidão de casamento ou os documentos indicam nomes diferentes sem vínculo conjugal), trate como COMPOSIÇÃO DE RENDA:
-- Analise a renda de cada comprador individualmente — liste as fontes de cada um separadamente no campo "fontes", identificando claramente o nome de cada pessoa
-- Some as rendas para obter a renda familiar total
-- Exclua transferências entre os dois compradores dos extratos de ambos — assim como cônjuges, transferências entre eles não representam renda real, são apenas movimentações internas da composição
-- No parecer e conclusão, deixe claro que é uma composição de renda entre dois compradores independentes
-- Avalie o risco de cada um individualmente: se um perder a renda, o outro consegue sustentar a parcela sozinho? Registre essa análise em ressalvas.
+
+EXCLUSÃO DE TRANSFERÊNCIAS ENTRE COMPRADORES (obrigatório):
+- Identifique TODAS as transferências entre os dois compradores nos extratos de ambos (PIX, TED, DOC em qualquer sentido)
+- Essas transferências NÃO são renda — são movimentações internas. Exclua-as totalmente da renda apurada de ambos
+- Registre em "excluidos" cada comprador com o valor total excluído e o motivo "Transferências entre co-compradores"
+- Se não identificar transferências entre eles: registre em ressalvas que não foram detectadas transferências cruzadas
+
+ANÁLISE INDIVIDUAL:
+- Analise a renda de cada comprador separadamente — fontes, regularidade, comprovação
+- Preencha "compradores[]" com rendaIndividual de cada um
+- COMPRADOR SEM RENDA: se um dos compradores não apresentar renda comprovável (rendaIndividual = 0 ou próximo de zero):
+  → Adicione ressalva crítica: "ATENÇÃO: [Nome] não apresenta renda comprovável. A operação depende integralmente da renda de [outro nome]. Se [nome sem renda] sair da composição, a operação fica inviável."
+  → Force o veredito para "apertado" se a renda do outro comprador sozinho cobrir as parcelas, ou "inviavel" se não cobrir
+- Avalie: se um dos dois perder a renda amanhã, o outro sustenta sozinho? Registre essa análise claramente em ressalvas
+- Some as rendas individuais para a renda familiar total
 - Calcule o percentualComprometido usando a renda somada dos dois
 
 PASSO 1 — SIMULAÇÃO DE FINANCIAMENTO (leia com atenção todos os campos presentes):
@@ -1567,7 +1577,7 @@ function renderResults(r){
         <div>
           <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">${(r.compradores&&r.compradores.length>1)?'Compradores':'Comprador'}</div>
           ${(r.compradores&&r.compradores.length>1)
-            ? r.compradores.map(c=>`<div style="font-size:13px;font-weight:700;color:#fff">${c.nome} <span style="font-size:10px;font-weight:400;color:rgba(255,255,255,.4)">${c.relacao||''}${c.rendaIndividual>0?' · '+fmt(c.rendaIndividual):''}</span></div>`).join('')
+            ? r.compradores.map(c=>`<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px">${c.nome} <span style="font-size:10px;font-weight:400;color:rgba(255,255,255,.4)">${c.relacao||''}</span>${c.rendaIndividual>0?`<span style="font-size:11px;color:#C9A84C;margin-left:6px">${fmt(c.rendaIndividual)}</span>`:'<span style="font-size:10px;color:#fca5a5;margin-left:6px;font-weight:600">⚠️ sem renda comprovada</span>'}</div>`).join('')
             : `<div style="font-size:15px;font-weight:700;color:#fff">${r.nomeComprador||'—'}</div>`}
           <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px">Pré-Cadastro ${reservaNum} · ${r.periodo||'—'}</div>
         </div>
