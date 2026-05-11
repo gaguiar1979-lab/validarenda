@@ -837,6 +837,16 @@ Para CADA arquivo recebido, faça uma varredura completa e identifique:
 → Há RG/CNH? → identifique nome e CPF do titular/cônjuge
 Nunca descarte um arquivo sem antes verificar todo o seu conteúdo.
 
+INVENTÁRIO DE DOCUMENTOS (preencher antes de qualquer análise):
+Para cada arquivo recebido, registre em "documentosEncontrados" o que foi identificado dentro dele.
+Exemplo: "Arquivo RG: contém RG do titular + certidão de casamento"
+Após varrer todos, preencha "documentosCadastroAusentes" com o que está FALTANDO para uma análise completa:
+- Certidão de estado civil (se não encontrada em nenhum arquivo)
+- Simulação de financiamento (se não encontrada)
+- Comprovante de renda formal (holerite/pró-labore) — se cliente parece CLT/empresário mas não enviou
+- Extrato bancário (se cliente informal sem extrato)
+- RG/CNH do cônjuge (se certidão de casamento encontrada mas RG do cônjuge ausente)
+
 PASSO 0 — CERTIDÃO DE ESTADO CIVIL (leia antes de qualquer análise):
 Se houver certidão de estado civil nos documentos, leia-a e identifique o tipo:
 
@@ -1065,7 +1075,7 @@ Retorne SOMENTE este JSON sem markdown. REGRAS DE CONCISÃO OBRIGATÓRIAS:
 - porMes: inclua apenas os meses com valor > 0, máximo 6 meses
 - fatoresRisco: máximo 6 itens
 - indicadoresPositivos e indicadoresNegativos: máximo 3 itens cada:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"rendaDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"1 frase"}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"documentosEncontrados":["Arquivo RG: contém RG + certidão de casamento","Kit: contém extrato Jan-Mar/2025 + holerite"],"documentosCadastroAusentes":["Simulação de financiamento","Certidão de estado civil"],"rendaDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"1 frase"}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
 
 Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
     // Usa streaming para evitar timeout no Railway — resposta flui em tempo real
@@ -1552,25 +1562,22 @@ function renderResults(r){
 
   const margemColor=(r.margemProSoluto||0)>500?'#6ee7a0':(r.margemProSoluto||0)>0?'#fde68a':'#fca5a5';
 
-  // Pré-computa bloco de documentos faltantes (evita IIFE aninhado em template literal)
-  const docsFaltando=[];
-  if(r.documentos){
-    if(!r.documentos.simulacaoFinanciamento) docsFaltando.push({label:'Simulação de financiamento',impacto:'Parcela mensal e renda declarada não apuradas'});
-    if(!r.documentos.comprovanteCLT) docsFaltando.push({label:'Comprovante de renda formal (contracheque / pró-labore)',impacto:'Renda comprovável pode estar incompleta'});
-    if(!r.documentos.extratoConjuge&&members.some(m=>m.type==='cônjuge')) docsFaltando.push({label:'Extrato do cônjuge',impacto:'Renda e comprometimentos do cônjuge não foram analisados'});
-    if(!r.documentos.certidao) docsFaltando.push({label:'Certidão de estado civil',impacto:'Estado civil não confirmado — familiares podem não ter sido identificados'});
-  }
-  const docsFaltandoHtml=docsFaltando.length
-    ? '<div style="grid-column:1/-1;background:#fff8e8;border:2px solid #B8952A;border-radius:10px;padding:14px 18px">'
-      +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#7a5a00;margin-bottom:8px">📋 Documentos Ausentes — Análise Parcial</div>'
-      +'<div style="font-size:12px;color:#7a5a00;margin-bottom:8px">Os itens abaixo não foram localizados no pré-cadastro. O cliente ou o corretor deve providenciá-los para completar a análise.</div>'
-      +docsFaltando.map(d=>'<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid #e8d59a">'
-        +'<span style="font-size:13px;font-weight:700;color:#7a5a00;white-space:nowrap">⚠️ '+d.label+'</span>'
-        +'<span style="font-size:12px;color:#9a7a30"> — '+d.impacto+'</span></div>').join('')
-      +'</div>'
-    : '';
+  // Bloco auditoria de documentos (topo do relatório)
+  const temAusentes=(r.documentosCadastroAusentes&&r.documentosCadastroAusentes.length>0);
+  const temExtratosFalt=(r.extratosFaltantes&&r.extratosFaltantes.length>0);
+  const temEncontrados=(r.documentosEncontrados&&r.documentosEncontrados.length>0);
+  const auditoriaHtml=(temAusentes||temExtratosFalt||temEncontrados)?`
+    <div style="grid-column:1/-1;border:2px solid #C0392B;border-radius:12px;overflow:hidden;margin-bottom:4px">
+      <div style="background:#C0392B;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#fff">📋 Auditoria de Documentos</div>
+      <div style="padding:14px 16px;background:#fff;display:flex;flex-direction:column;gap:10px">
+        ${temAusentes?`<div><div style="font-size:11px;font-weight:700;color:#8b1a1a;margin-bottom:6px">🔴 Documentos do cadastro ausentes — solicitar ao cliente:</div>${r.documentosCadastroAusentes.map(d=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #fdecea;color:#7f1d1d">• ${d}</div>`).join('')}</div>`:''}
+        ${temExtratosFalt?`<div><div style="font-size:11px;font-weight:700;color:#7a5a00;margin-bottom:6px">🏦 Contas bancárias identificadas cujos extratos não foram enviados:</div>${r.extratosFaltantes.map(e=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #fff8e8;color:#7a5a00">• <strong>${e.banco}</strong> — ${e.motivo}${e.valorMedioMensal>0?' (~'+fmt(e.valorMedioMensal)+'/mês em saídas)':''}</div>`).join('')}</div>`:''}
+        ${temEncontrados?`<div><div style="font-size:11px;font-weight:700;color:#1C1E35;margin-bottom:6px">🔍 O que foi identificado dentro de cada arquivo:</div>${r.documentosEncontrados.map(d=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #eee;color:#333">• ${d}</div>`).join('')}</div>`:''}
+      </div>
+    </div>`:'';
 
   document.getElementById('metricsGrid').innerHTML=`
+    ${auditoriaHtml}
     <div style="grid-column:1/-1;background:var(--navy);border-radius:12px;padding:18px 20px;margin-bottom:4px">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.45);margin-bottom:12px">📋 Resumo Executivo</div>
       <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px;align-items:start">
@@ -1598,8 +1605,6 @@ function renderResults(r){
         </div>
       </div>
     </div>
-
-    ${docsFaltandoHtml}
 
     <div style="grid-column:1/-1;padding:14px 18px;background:${vd.bg};border:2px solid ${vd.border};border-radius:12px;display:flex;align-items:center;gap:12px">
       <span style="font-size:26px">${vd.icon}</span>
