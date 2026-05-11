@@ -1053,7 +1053,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
     const abortTimer=setTimeout(()=>abortCtrl.abort(),120000); // 2 min máximo
     let resp;
     try{
-      resp=await fetch('/api/analyze-stream',{signal:abortCtrl.signal,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:16000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
+      resp=await fetch('/api/analyze-stream',{signal:abortCtrl.signal,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:32000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
     }catch(fe){
       clearTimeout(abortTimer);
       throw new Error(fe.name==='AbortError'?'Tempo limite atingido (2 min). Tente novamente com menos documentos.':fe.message);
@@ -1106,9 +1106,30 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
         if(c==='{')depth++;
         else if(c==='}'){depth--;if(depth===0)return text.slice(start,i+1);}
       }
+      // Se o JSON não fechou (truncado), tenta fechar adicionando chaves/colchetes faltantes
+      if(depth>0){
+        let partial=text.slice(start);
+        // Fecha arrays e objetos abertos
+        let d2=0,inS=false,es=false;
+        for(const c of partial){
+          if(es){es=false;continue;}
+          if(c==='\\'&&inS){es=true;continue;}
+          if(c==='"'){inS=!inS;continue;}
+          if(inS)continue;
+          if(c==='{'||c==='[')d2++;
+          else if(c==='}'||c===']')d2--;
+        }
+        // Adiciona fechamentos faltantes
+        if(d2>0){
+          // Remove última vírgula pendente antes de fechar
+          partial=partial.replace(/,\s*$/,'');
+          for(let i=0;i<d2;i++) partial+='"}';
+          return partial;
+        }
+      }
       return null;
     }
-    const jsonStr=extractJSON(raw);
+    let jsonStr=extractJSON(raw);
     if(!jsonStr){throw new Error('Resposta fora do formato esperado: '+raw.substring(0,300));}
     let parsed;
     try{parsed=JSON.parse(jsonStr);}
