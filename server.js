@@ -112,16 +112,44 @@ app.get('/api/cv/reserva/:id', async (req, res) => {
   }
 });
 
+// CV API: debug — testa todos os caminhos possíveis do repasse
+app.get('/api/cv/repasse/:id/debug', async (req, res) => {
+  const id = req.params.id;
+  const paths = [
+    `/api/v1/financeiro/repasses/${id}`,
+    `/api/v1/financeiro/repasses/${id}/documentos`,
+    `/api/v1/comercial/repasses/${id}`,
+    `/api/v1/comercial/repasses/${id}/documentos`,
+    `/api/v1/financeiro/repasse/${id}`,
+    `/api/v1/financeiro/repasse/${id}/documentos`,
+    `/api/v1/comercial/repasse/${id}`,
+    `/api/v1/comercial/repasse/${id}/documentos`,
+  ];
+  const results = {};
+  for (const p of paths) {
+    try {
+      const r = await httpsRequest({ hostname: CV_BASE, path: p, method: 'GET', headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' } });
+      results[p] = { status: r.status, preview: r.body.substring(0, 120) };
+    } catch (e) { results[p] = { error: e.message }; }
+  }
+  res.json(results);
+});
+
 // CV API: busca documentos do repasse
 app.get('/api/cv/repasse/:id/documentos', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await httpsRequest({
-      hostname: CV_BASE,
-      path: `/api/v1/financeiro/repasses/${id}/documentos`,
-      method: 'GET',
-      headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' }
-    });
+    const paths = [
+      `/api/v1/financeiro/repasses/${id}/documentos`,
+      `/api/v1/comercial/repasses/${id}/documentos`,
+      `/api/v1/financeiro/repasse/${id}/documentos`,
+      `/api/v1/comercial/repasse/${id}/documentos`,
+    ];
+    let result;
+    for (const p of paths) {
+      result = await httpsRequest({ hostname: CV_BASE, path: p, method: 'GET', headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' } });
+      if (result.status !== 405 && result.status !== 404) break;
+    }
     const data = JSON.parse(result.body);
     res.status(result.status).json(data);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -131,12 +159,17 @@ app.get('/api/cv/repasse/:id/documentos', async (req, res) => {
 app.get('/api/cv/repasse/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await httpsRequest({
-      hostname: CV_BASE,
-      path: `/api/v1/financeiro/repasses/${id}`,
-      method: 'GET',
-      headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' }
-    });
+    const paths = [
+      `/api/v1/financeiro/repasses/${id}`,
+      `/api/v1/comercial/repasses/${id}`,
+      `/api/v1/financeiro/repasse/${id}`,
+      `/api/v1/comercial/repasse/${id}`,
+    ];
+    let result;
+    for (const p of paths) {
+      result = await httpsRequest({ hostname: CV_BASE, path: p, method: 'GET', headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' } });
+      if (result.status !== 405 && result.status !== 404) break;
+    }
     const data = JSON.parse(result.body);
     res.status(result.status).json(data);
   } catch (e) { res.status(500).json({ error: e.message }); }
