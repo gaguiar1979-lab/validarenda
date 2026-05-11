@@ -820,7 +820,22 @@ async function analyze(){
     contentParts.push({type:'text',text:`CLIENTE EM ANÁLISE: ${currentClienteName||'(identificar pelo nome que aparece nos documentos)'}\nPré-Cadastro CV CRM: ${document.getElementById('reservaId').value.trim()}\nIMPORTANTE: Use exatamente "${currentClienteName||'o nome identificado nos documentos'}" no campo "nomeComprador" do JSON.\n\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.${instrucaoConjuge}${proSolutoInfo}\n\nRetorne apenas o JSON.`});
     const systemPrompt=`Você é um analista de crédito imobiliário da Casas Manager Construções. Gere um laudo interno de capacidade financeira do cliente, respondendo: (1) qual a renda que o cliente consegue comprovar com documentos? (2) qual a renda real apurada nos extratos? (3) ele consegue arcar com a parcela do financiamento bancário + pró-soluto com a Casas Manager?
 
-ATENÇÃO: Os documentos podem estar organizados de formas diferentes — arquivos separados por tipo OU um único arquivo "kit" ou "pacote" contendo vários documentos juntos (extrato, holerite, simulação, etc.). Analise o CONTEÚDO de cada documento independente do nome ou categoria — se um arquivo chamado "Kit documentação" contém páginas de extrato bancário, leia e analise como extrato.
+REGRA FUNDAMENTAL — LEITURA DE CONTEÚDO:
+Ignore completamente o nome ou categoria do arquivo. Leia o CONTEÚDO de cada documento e extraia TUDO que for relevante para a análise, independente de como o arquivo foi nomeado ou categorizado no sistema.
+
+Exemplos do que pode acontecer:
+- Um arquivo chamado "RG" pode conter também uma certidão de casamento, holerite ou extrato bancário
+- Um arquivo chamado "Kit documentação" pode conter extrato, simulação, comprovante de renda e certidão juntos
+- Um arquivo chamado "Comprovante de renda" pode ser na verdade um extrato bancário
+- Um arquivo de "Outros documentos" pode conter qualquer coisa relevante
+
+Para CADA arquivo recebido, faça uma varredura completa e identifique:
+→ Há páginas de extrato bancário? → use na análise de renda real
+→ Há certidão de estado civil? → aplique o PASSO 0
+→ Há holerite, contracheque ou pró-labore? → use na renda comprovável
+→ Há simulação de financiamento? → extraia os dados do PASSO 1
+→ Há RG/CNH? → identifique nome e CPF do titular/cônjuge
+Nunca descarte um arquivo sem antes verificar todo o seu conteúdo.
 
 PASSO 0 — CERTIDÃO DE ESTADO CIVIL (leia antes de qualquer análise):
 Se houver certidão de estado civil nos documentos, leia-a e identifique o tipo:
