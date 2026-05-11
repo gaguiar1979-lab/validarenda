@@ -917,11 +917,19 @@ PASSO 4B — TRANSFERÊNCIAS QUE PRECISAM DE JUSTIFICATIVA DO CLIENTE:
 - Ignore transferências únicas ou claramente eventuais
 
 PASSO 5 — VEREDITO (use o parcelaProSoluto informado se disponível):
-- Se parcelaProSoluto > 0: compare com margemProSoluto para o veredito
-  - "viavel": margemProSoluto >= parcelaProSoluto com folga real (sobra ao menos R$300 após pagar o pró-soluto)
-  - "apertado": margemProSoluto cobre o parcelaProSoluto mas com folga < R$300, OU margemProSoluto entre 80% e 100% do parcelaProSoluto
-  - "inviavel": margemProSoluto < parcelaProSoluto (renda não cobre o pró-soluto considerando o custo de vida real)
-- Se parcelaProSoluto = 0 (não informado): calcule e informe a margemProSoluto disponível para orientar o parecer
+
+REGRA DOS 40% (comprometimento máximo de renda):
+- Calcule: percentualComprometido = (parcelaFinanciamento + parcelaProSoluto) / rendaComprovavel × 100
+- Registre esse percentual no campo "percentualComprometido" do JSON
+- Até 40%: dentro do limite aceitável
+- Entre 40% e 50%: atenção — comprometimento elevado, registre em ressalvas
+- Acima de 50%: comprometimento crítico — force veredito "inviavel" independentemente dos outros cálculos
+
+VEREDITO FINAL (considere AMBOS os critérios — margem disponível E regra dos 40%):
+- "viavel": margemProSoluto >= parcelaProSoluto com folga real (≥R$300) E percentualComprometido ≤ 40%
+- "apertado": margem cobre o pró-soluto mas folga < R$300, OU percentualComprometido entre 40% e 50%
+- "inviavel": margemProSoluto < parcelaProSoluto OU percentualComprometido > 50%
+- Se parcelaProSoluto = 0: calcule e informe a margemProSoluto disponível e o percentualComprometido com apenas a parcela do financiamento
 - Seja honesto: se o cliente está no limite mesmo que os números "fechem", declare como "apertado" e explique os riscos
 
 PASSO 6 — SCORE DE RISCO DO PRÓ-SOLUTO (0 a 100, quanto maior menor o risco):
@@ -935,8 +943,9 @@ Renda:
 - Renda comprovável < 3x a parcela do financiamento: -10
 
 Comprometimento:
-- Comprometimento atual > 60% da renda real: -20
-- Comprometimento atual entre 40% e 60%: -10
+- (financiamento + pró-soluto) > 50% da renda comprovável: -25
+- (financiamento + pró-soluto) entre 40% e 50% da renda comprovável: -15
+- Comprometimentos existentes (dívidas atuais) > 40% da renda real: -15
 - Tem financiamento imobiliário ativo além do atual: -10
 
 Comportamento financeiro:
@@ -994,7 +1003,7 @@ Escreva 2-3 parágrafos diretos ao time de vendas explicando:
 3. Considerando o perfil de motivação de regularização, o que fazer: aprovar, aprovar com ressalvas, pedir garantia ou não recomendar
 
 Retorne SOMENTE este JSON sem markdown:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição do fator identificado","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"Descrição objetiva do padrão de gastos do cliente","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["Saldo médio positivo ao longo dos meses","Renda regular e crescente"],"indicadoresNegativos":["Gastos com apostas recorrentes","Saldo zerado antes do fim do mês"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"1 parágrafo: o que nos extratos indica que a negativação motivaria ou não a regularização."},"orientacaoComercial":"2-3 parágrafos diretos para a equipe de vendas: quem é esse cliente, probabilidade de honrar o pró-soluto, motivação de regularização e recomendação clara de ação."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":""}],"extratosFaltantes":[{"banco":"Nome","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":[],"parecer":"1 frase: veredito + score de risco + probabilidade de inadimplência.","conclusao":"Laudo em 3 parágrafos técnicos: 1) renda comprovável com documentos e renda real apurada; 2) capacidade real de pagar a parcela do financiamento + pró-soluto; 3) perfil de risco e recomendação."}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome ou null","rendaDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição do fator identificado","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"Descrição objetiva do padrão de gastos do cliente","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["Saldo médio positivo ao longo dos meses","Renda regular e crescente"],"indicadoresNegativos":["Gastos com apostas recorrentes","Saldo zerado antes do fim do mês"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"1 parágrafo: o que nos extratos indica que a negativação motivaria ou não a regularização."},"orientacaoComercial":"2-3 parágrafos diretos para a equipe de vendas: quem é esse cliente, probabilidade de honrar o pró-soluto, motivação de regularização e recomendação clara de ação."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome do banco/credor","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome ou chave PIX","valorMedioMensal":0.00,"frequencia":"mensal","observacao":""}],"extratosFaltantes":[{"banco":"Nome","motivo":"Transferências recorrentes de saída sugerem conta do próprio titular","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"Explicação.","transacoes":[{"data":"10/03/2025","descricao":"PIX","valor":500.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":[],"parecer":"1 frase: veredito + score de risco + probabilidade de inadimplência.","conclusao":"Laudo em 3 parágrafos técnicos: 1) renda comprovável com documentos e renda real apurada; 2) capacidade real de pagar a parcela do financiamento + pró-soluto; 3) perfil de risco e recomendação."}
 
 Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
     // Usa streaming para evitar timeout no Railway — resposta flui em tempo real
@@ -1508,6 +1517,19 @@ function renderResults(r){
         ${r.rendaDeclarada>0?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Declarada na simulação</span><strong>${fmt(r.rendaDeclarada)}</strong></div>`:''}
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Comprovável com docs</span><strong style="color:var(--navy)">${fmt(r.rendaComprovavel||0)}</strong></div>
         ${r.parcelaFinanciamento>0?`<div style="display:flex;justify-content:space-between;font-size:13px;padding-top:8px;border-top:1px solid var(--border);margin-top:4px"><span style="color:var(--text2)">Parcela financiamento</span><strong style="color:var(--navy)">${fmt(r.parcelaFinanciamento)}/mês</strong></div>`:''}
+        ${(r.parcelaProSoluto>0&&r.parcelaFinanciamento>0)?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Parcela pró-soluto</span><strong style="color:var(--navy)">${fmt(r.parcelaProSoluto)}/mês</strong></div>`:''}
+        ${(r.percentualComprometido>0)?`
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px">
+            <span style="color:var(--text2);font-weight:600">Comprometimento de renda</span>
+            <strong style="color:${r.percentualComprometido>50?'#8b1a1a':r.percentualComprometido>40?'#7a5a00':'#1a7a3c'}">${r.percentualComprometido.toFixed(1)}%</strong>
+          </div>
+          <div style="background:#eee;border-radius:999px;height:8px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(r.percentualComprometido,100)}%;background:${r.percentualComprometido>50?'#C0392B':r.percentualComprometido>40?'#B8952A':'#1a7a3c'};border-radius:999px;transition:width .4s"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:3px"><span>0%</span><span style="color:#1a7a3c">40% limite</span><span>100%</span></div>
+          ${r.percentualComprometido>50?'<div style="margin-top:6px;font-size:11px;color:#8b1a1a;font-weight:600">⛔ Acima de 50% — comprometimento crítico</div>':r.percentualComprometido>40?'<div style="margin-top:6px;font-size:11px;color:#7a5a00;font-weight:600">⚠️ Entre 40–50% — comprometimento elevado</div>':'<div style="margin-top:6px;font-size:11px;color:#1a7a3c;font-weight:600">✅ Dentro do limite de 40%</div>'}
+        </div>`:''}
         ${r.divergenciaRenda?`<div style="margin-top:8px;padding:6px 10px;background:#fdecea;border-radius:6px;font-size:11px;color:#8b1a1a">⚠️ Renda declarada diverge da apurada nos extratos</div>`:''}
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
