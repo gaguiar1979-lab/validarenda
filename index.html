@@ -856,6 +856,10 @@ CERTIDÃO NEGATIVA / SOLTEIRO:
 
 Se não houver certidão: analise com base nos familiares já informados no contexto abaixo.
 
+CAMPO "compradores" (sempre preencher):
+Liste todos os compradores identificados nos documentos. Para comprador único use apenas 1 item. Para composição de renda use 2 itens com a renda individual de cada um.
+Relações válidas: "titular", "co-comprador", "cônjuge"
+
 COMPOSIÇÃO DE RENDA — DOIS COMPRADORES NÃO CASADOS:
 Se identificar documentos (extratos, RG, holerites) de duas pessoas distintas que NÃO são casadas entre si (sem certidão de casamento ou os documentos indicam nomes diferentes sem vínculo conjugal), trate como COMPOSIÇÃO DE RENDA:
 - Analise a renda de cada comprador individualmente — liste as fontes de cada um separadamente no campo "fontes", identificando claramente o nome de cada pessoa
@@ -1044,8 +1048,14 @@ Escreva 2-3 parágrafos diretos ao time de vendas explicando:
 2. A probabilidade de ele honrar o pró-soluto e por quê
 3. Considerando o perfil de motivação de regularização, o que fazer: aprovar, aprovar com ressalvas, pedir garantia ou não recomendar
 
-Retorne SOMENTE este JSON sem markdown. Seja CONCISO em todos os campos de texto — máximo 2-3 frases por campo. Não liste transações individuais. Priorize dados numéricos precisos sobre descrições longas:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","rendaDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"1 frase"}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
+Retorne SOMENTE este JSON sem markdown. REGRAS DE CONCISÃO OBRIGATÓRIAS:
+- Campos de texto: máximo 2 frases. Sem listas, sem exemplos, sem detalhes extras.
+- "observacao" e "motivo": máximo 8 palavras cada
+- Arrays limitados: fontes (máx 10 itens), comprometimentos (máx 8), transferenciasAtencao (máx 5), extratosFaltantes (máx 3), excluidos (máx 5), ressalvas (máx 5)
+- porMes: inclua apenas os meses com valor > 0, máximo 6 meses
+- fatoresRisco: máximo 6 itens
+- indicadoresPositivos e indicadoresNegativos: máximo 3 itens cada:
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"rendaDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"1 frase"}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
 
 Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
     // Usa streaming para evitar timeout no Railway — resposta flui em tempo real
@@ -1542,9 +1552,11 @@ function renderResults(r){
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.45);margin-bottom:12px">📋 Resumo Executivo</div>
       <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px;align-items:start">
         <div>
-          <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">Comprador</div>
-          <div style="font-size:15px;font-weight:700;color:#fff">${r.nomeComprador||'—'}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px">Reserva ${reservaNum} · ${r.periodo||'—'}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">${(r.compradores&&r.compradores.length>1)?'Compradores':'Comprador'}</div>
+          ${(r.compradores&&r.compradores.length>1)
+            ? r.compradores.map(c=>`<div style="font-size:13px;font-weight:700;color:#fff">${c.nome} <span style="font-size:10px;font-weight:400;color:rgba(255,255,255,.4)">${c.relacao||''}${c.rendaIndividual>0?' · '+fmt(c.rendaIndividual):''}</span></div>`).join('')
+            : `<div style="font-size:15px;font-weight:700;color:#fff">${r.nomeComprador||'—'}</div>`}
+          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px">Pré-Cadastro ${reservaNum} · ${r.periodo||'—'}</div>
         </div>
         <div>
           <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:3px">Renda Comprovável</div>
