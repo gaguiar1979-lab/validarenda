@@ -1044,7 +1044,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
     const abortTimer=setTimeout(()=>abortCtrl.abort(),120000); // 2 min máximo
     let resp;
     try{
-      resp=await fetch('/api/analyze-stream',{signal:abortCtrl.signal,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:8000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
+      resp=await fetch('/api/analyze-stream',{signal:abortCtrl.signal,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:16000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
     }catch(fe){
       clearTimeout(abortTimer);
       throw new Error(fe.name==='AbortError'?'Tempo limite atingido (2 min). Tente novamente com menos documentos.':fe.message);
