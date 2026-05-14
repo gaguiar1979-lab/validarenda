@@ -827,9 +827,12 @@ async function analyze(){
           const arquivoOk=pdfBytes<=MAX_BYTES_POR_PDF; // arquivo individual não pode exceder ~15 páginas
           const totalOk=pdfBytesTotal+pdfBytes<=MAX_PDF_BYTES;
           const podeEnviarBinario=(tiposBinario.has(type)||tiposBinarioExtra(type))&&pdfCount<MAX_PDF_TOTAL&&!limiteAtingido&&arquivoOk&&totalOk;
-          if(podeEnviarBinario&&isPdf){
+          const pdfValido=isPdf&&(file.base64||'').startsWith('JVBE'); // %PDF- em base64
+          if(podeEnviarBinario&&isPdf&&pdfValido){
             contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}});
             pdfCount++;pdfBytesTotal+=pdfBytes;pdfCountByType[tipoBase]=(pdfCountByType[tipoBase]||0)+1;
+          }else if(podeEnviarBinario&&isPdf&&!pdfValido){
+            console.warn(`Arquivo ignorado (não é PDF válido): ${file.name}`);
           }else if(podeEnviarBinario&&isImage){
             const imgMime=file.contentType?.startsWith('image/')?file.contentType:`image/${ext==='jpg'?'jpeg':ext}`;
             contentParts.push({type:'image',source:{type:'base64',media_type:imgMime,data:file.base64}});
@@ -843,7 +846,8 @@ async function analyze(){
           if(isImage||isPdf){
             const b64=await toB64(file);
             if(isImage){contentParts.push({type:'image',source:{type:'base64',media_type:file.type,data:b64}});}
-            else{contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}});}
+            else if(b64.startsWith('JVBE')){contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}});}
+            else{console.warn(`PDF inválido ignorado: ${file.name}`);}
             contentParts.push({type:'text',text:`[Arquivo: ${docNames[type]||type} - ${file.name}]`});
           }else{
             contentParts.push({type:'text',text:`[Arquivo: ${docNames[type]||type} - ${file.name}]`});
