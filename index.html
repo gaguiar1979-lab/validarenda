@@ -964,9 +964,26 @@ PASSO 2 — RENDA COMPROVÁVEL (com documentos):
 Identifique o perfil do comprador pelos documentos presentes e aplique:
 
 CENÁRIO A — EMPREGADO CLT (há contracheque / holerite):
-- rendaComprovavel = salário LÍQUIDO do contracheque
+- rendaComprovavel = salário LÍQUIDO do contracheque (valor efetivamente recebido após todos os descontos)
 - tipo da fonte: "emprego_formal"
 - Use o extrato para confirmar o crédito e identificar renda complementar informal regular
+
+ANÁLISE OBRIGATÓRIA DO CONTRACHEQUE — LINHAS DE DESCONTO:
+Leia todas as linhas de desconto do contracheque e identifique empréstimos com desconto em folha (crédito consignado).
+Exemplos de linhas que indicam consignado: "Empréstimo Consignado", "Consignado INSS", "Consig.", "Empréstimo Banco X", "Parcela Empréstimo", "CDC Consignado", "BMG Consignado", "Sicredi Consig.", "Crefisa", "BV Financeira", ou qualquer linha de desconto com nome de banco/financeira.
+
+NÃO confunda com descontos normais que NÃO são empréstimos:
+- INSS — desconto previdenciário obrigatório (não é empréstimo)
+- IRRF — imposto de renda retido (não é empréstimo)
+- Vale transporte, Vale refeição — benefícios (não são empréstimos)
+- Plano de saúde, seguro de vida — benefícios corporativos (registre em comprometimentos mas categoria "saude")
+- Sindicato, contribuição sindical — (não é empréstimo)
+
+Para cada consignado identificado:
+- Adicione em "comprometimentos" com categoria "consignado", credor = nome da linha do contracheque, valorMedioMensal = valor descontado
+- Este valor JÁ está descontado do salário líquido, portanto NÃO some novamente ao totalComprometido — apenas registre para evidenciar o endividamento
+- Mencione no parecer: "Identificado desconto em folha de consignado com X instituição(ões), totalizando R$ Y/mês já deduzidos do salário líquido"
+- Se houver consignado E o salário líquido já é baixo, isso é fator de risco relevante — mencione nas ressalvas
 
 CENÁRIO B — EMPRESÁRIO / SÓCIO (há recibo de pró-labore):
 - rendaComprovavel = média dos recibos de pró-labore
