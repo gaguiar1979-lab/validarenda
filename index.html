@@ -202,9 +202,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <span class="topbar-sub">Análise de crédito imobiliário</span>
   </div>
   <div class="topbar-spacer"></div>
+  <!-- Seletor de empresa -->
+  <div style="display:flex;gap:6px;align-items:center">
+    <button id="btnEmpresa_manager" onclick="setEmpresa('manager')"
+      style="padding:6px 14px;border-radius:20px;border:2px solid var(--gold);background:var(--gold);color:#1C1E35;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">
+      🏠 Manager
+    </button>
+    <button id="btnEmpresa_kapaz" onclick="setEmpresa('kapaz')"
+      style="padding:6px 14px;border-radius:20px;border:2px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.6);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">
+      🏗️ Kapaz
+    </button>
+  </div>
+  <div class="topbar-divider"></div>
   <div class="topbar-links">
     <a href="https://www.casasmanager.com.br" target="_blank">🌐 casasmanager.com.br</a>
-    <a href="https://instagram.com/casasmanager" target="_blank">📸 @casasmanager</a>
   </div>
 </div>
 
@@ -586,7 +597,8 @@ async function buscarReserva(){
     const t=setTimeout(()=>ctrl.abort(),25000);
     let resp,data;
     try{
-      const endpointDocs=origemBusca==='reserva'?`/api/cv/reserva/${reservaId}/documentos`:`/api/cv/precadastro/${reservaId}/documentos`;
+      const ep=`?empresa=${empresaAtiva}`;
+      const endpointDocs=origemBusca==='reserva'?`/api/cv/reserva/${reservaId}/documentos${ep}`:`/api/cv/precadastro/${reservaId}/documentos${ep}`;
       resp=await fetch(endpointDocs,{signal:ctrl.signal});
       data=await resp.json();
     }catch(fe){
@@ -609,7 +621,7 @@ async function buscarReserva(){
     status.innerHTML=`<span style="color:var(--gold2)">⏳ ${docs.length} documento(s) encontrado(s). Baixando em paralelo...</span>`;
 
     // Busca dados do cliente (nome) no CV CRM em paralelo com os downloads
-    const endpointInfo=origemBusca==='reserva'?`/api/cv/reserva/${reservaId}`:origemBusca==='repasse'?`/api/cv/repasse/${reservaId}`:`/api/cv/precadastro/${reservaId}`;
+    const endpointInfo=origemBusca==='reserva'?`/api/cv/reserva/${reservaId}?empresa=${empresaAtiva}`:origemBusca==='repasse'?`/api/cv/repasse/${reservaId}?empresa=${empresaAtiva}`:`/api/cv/precadastro/${reservaId}?empresa=${empresaAtiva}`;
     const clienteInfoPromise=fetch(endpointInfo)
       .then(r=>r.ok?r.json():null).catch(()=>null);
 
@@ -618,7 +630,7 @@ async function buscarReserva(){
       try{
         const urlDoc=doc.link||doc.url_arquivo||doc.arquivo_url||doc.path;
         if(!urlDoc)return null;
-        const dlResp=await fetch(`/api/cv/documento/arquivo?url=${encodeURIComponent(urlDoc)}`);
+        const dlResp=await fetch(`/api/cv/documento/arquivo?url=${encodeURIComponent(urlDoc)}&empresa=${empresaAtiva}`);
         const dlData=await dlResp.json();
         if(!dlData.base64)return null;
         return{doc,dlData};
@@ -1277,9 +1289,27 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
 }
 
 let lastResult=null;
-let currentClienteName=null; // nome direto do CV CRM — sempre sobrescreve o retorno da IA
-let origemBusca='precadastro'; // 'precadastro' | 'reserva' | 'repasse'
-let repasseReservaVinculada=null; // ID da reserva vinculada ao repasse (para salvar PDF)
+let currentClienteName=null;
+let origemBusca='precadastro';
+let repasseReservaVinculada=null;
+let empresaAtiva='manager'; // 'manager' | 'kapaz'
+
+function setEmpresa(empresa){
+  empresaAtiva=empresa;
+  ['manager','kapaz'].forEach(e=>{
+    const btn=document.getElementById('btnEmpresa_'+e);
+    if(e===empresa){
+      btn.style.background='var(--gold)';btn.style.color='#1C1E35';
+      btn.style.borderColor='var(--gold)';btn.style.fontWeight='700';
+    } else {
+      btn.style.background='transparent';btn.style.color='rgba(255,255,255,.6)';
+      btn.style.borderColor='rgba(255,255,255,.3)';btn.style.fontWeight='600';
+    }
+  });
+  // Limpa busca anterior ao trocar de empresa
+  lastResult=null;currentClienteName=null;
+  document.getElementById('cvStatus').innerHTML=`<span style="color:var(--gold2)">🔄 Empresa alterada para ${empresa==='kapaz'?'Kapaz':'Casas Manager'}. Faça uma nova busca.</span>`;
+}
 
 function setOrigem(origem){
   origemBusca=origem;
@@ -1642,7 +1672,7 @@ async function salvarNoCVCRM(){
     });
 
     // Repasse: salva na reserva vinculada (CV CRM não expõe API de docs do repasse)
-    const saveEndpoint=origemBusca==='repasse'?`/api/cv/reserva/${repasseReservaVinculada||reservaId}/salvar-relatorio`:origemBusca==='reserva'?`/api/cv/reserva/${reservaId}/salvar-relatorio`:`/api/cv/precadastro/${reservaId}/salvar-relatorio`;
+    const saveEndpoint=origemBusca==='repasse'?`/api/cv/reserva/${repasseReservaVinculada||reservaId}/salvar-relatorio?empresa=${empresaAtiva}`:origemBusca==='reserva'?`/api/cv/reserva/${reservaId}/salvar-relatorio?empresa=${empresaAtiva}`:`/api/cv/precadastro/${reservaId}/salvar-relatorio?empresa=${empresaAtiva}`;
     const resp=await fetch(saveEndpoint,{
       method:'POST',
       headers:{'Content-Type':'application/json'},

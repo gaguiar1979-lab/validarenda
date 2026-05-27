@@ -7,6 +7,27 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, '.')));
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+
+// Credenciais por empresa
+const CV_EMPRESAS = {
+  manager: {
+    base: 'manager.cvcrm.com.br',
+    token: process.env.CV_TOKEN,
+    email: process.env.CV_EMAIL || 'gustavo@casasmanager.com.br'
+  },
+  kapaz: {
+    base: 'kapaz.cvcrm.com.br',
+    token: process.env.CV_TOKEN_KAPAZ,
+    email: process.env.CV_EMAIL_KAPAZ || 'gustavo@casasmanager.com.br'
+  }
+};
+
+function getCreds(req) {
+  const empresa = req.query.empresa === 'kapaz' ? 'kapaz' : 'manager';
+  return CV_EMPRESAS[empresa];
+}
+
+// Mantém compatibilidade com código legado
 const CV_TOKEN = process.env.CV_TOKEN;
 const CV_EMAIL = process.env.CV_EMAIL || 'gustavo@casasmanager.com.br';
 const CV_BASE = 'manager.cvcrm.com.br';
@@ -31,147 +52,78 @@ function httpsRequest(options, body = null, timeoutMs = 30000) {
 // CV API: busca documentos do pré-cadastro
 app.get('/api/cv/precadastro/:id/documentos', async (req, res) => {
   try {
-    const id = req.params.id;
+    const { base, token, email } = getCreds(req);
     const result = await httpsRequest({
-      hostname: CV_BASE,
-      path: `/api/v1/comercial/precadastro/${id}/documentos`,
-      method: 'GET',
-      headers: {
-        'email': CV_EMAIL,
-        'token': CV_TOKEN,
-        'Content-Type': 'application/json'
-      }
+      hostname: base, path: `/api/v1/comercial/precadastro/${req.params.id}/documentos`,
+      method: 'GET', headers: { 'email': email, 'token': token, 'Content-Type': 'application/json' }
     });
-    const data = JSON.parse(result.body);
-    res.status(result.status).json(data);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+    res.status(result.status).json(JSON.parse(result.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // CV API: busca informações do pré-cadastro
 app.get('/api/cv/precadastro/:id', async (req, res) => {
   try {
-    const id = req.params.id;
+    const { base, token, email } = getCreds(req);
     const result = await httpsRequest({
-      hostname: CV_BASE,
-      path: `/api/v1/comercial/precadastro/${id}`,
-      method: 'GET',
-      headers: {
-        'email': CV_EMAIL,
-        'token': CV_TOKEN,
-        'Content-Type': 'application/json'
-      }
+      hostname: base, path: `/api/v1/comercial/precadastro/${req.params.id}`,
+      method: 'GET', headers: { 'email': email, 'token': token, 'Content-Type': 'application/json' }
     });
-    const data = JSON.parse(result.body);
-    res.status(result.status).json(data);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+    res.status(result.status).json(JSON.parse(result.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // CV API: busca documentos da reserva
 app.get('/api/cv/reserva/:id/documentos', async (req, res) => {
   try {
-    const reservaId = req.params.id;
+    const { base, token, email } = getCreds(req);
     const result = await httpsRequest({
-      hostname: CV_BASE,
-      path: `/api/v1/comercial/reservas/${reservaId}/documentos`,
-      method: 'GET',
-      headers: {
-        'email': CV_EMAIL,
-        'token': CV_TOKEN,
-        'Content-Type': 'application/json'
-      }
+      hostname: base, path: `/api/v1/comercial/reservas/${req.params.id}/documentos`,
+      method: 'GET', headers: { 'email': email, 'token': token, 'Content-Type': 'application/json' }
     });
-    const data = JSON.parse(result.body);
-    res.status(result.status).json(data);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+    res.status(result.status).json(JSON.parse(result.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // CV API: busca informações da reserva
 app.get('/api/cv/reserva/:id', async (req, res) => {
   try {
-    const reservaId = req.params.id;
+    const { base, token, email } = getCreds(req);
     const result = await httpsRequest({
-      hostname: CV_BASE,
-      path: `/api/v1/comercial/reservas/${reservaId}`,
-      method: 'GET',
-      headers: {
-        'email': CV_EMAIL,
-        'token': CV_TOKEN,
-        'Content-Type': 'application/json'
-      }
+      hostname: base, path: `/api/v1/comercial/reservas/${req.params.id}`,
+      method: 'GET', headers: { 'email': email, 'token': token, 'Content-Type': 'application/json' }
     });
-    const data = JSON.parse(result.body);
-    res.status(result.status).json(data);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// CV API: debug — testa todos os caminhos possíveis do repasse
-app.get('/api/cv/repasse/:id/debug', async (req, res) => {
-  const id = req.params.id;
-  const paths = [
-    `/api/v1/financeiro/repasses/${id}`,
-    `/api/v1/financeiro/repasses/${id}/documentos`,
-    `/api/v1/comercial/repasses/${id}`,
-    `/api/v1/comercial/repasses/${id}/documentos`,
-    `/api/v1/financeiro/repasse/${id}`,
-    `/api/v1/financeiro/repasse/${id}/documentos`,
-    `/api/v1/comercial/repasse/${id}`,
-    `/api/v1/comercial/repasse/${id}/documentos`,
-  ];
-  const results = {};
-  for (const p of paths) {
-    try {
-      const r = await httpsRequest({ hostname: CV_BASE, path: p, method: 'GET', headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' } });
-      results[p] = { status: r.status, preview: r.body.substring(0, 120) };
-    } catch (e) { results[p] = { error: e.message }; }
-  }
-  res.json(results);
+    res.status(result.status).json(JSON.parse(result.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // CV API: busca documentos do repasse
 app.get('/api/cv/repasse/:id/documentos', async (req, res) => {
   try {
+    const { base, token, email } = getCreds(req);
     const id = req.params.id;
-    const paths = [
-      `/api/v1/financeiro/repasses/${id}/documentos`,
-      `/api/v1/comercial/repasses/${id}/documentos`,
-      `/api/v1/financeiro/repasse/${id}/documentos`,
-      `/api/v1/comercial/repasse/${id}/documentos`,
-    ];
+    const paths = [`/api/v1/financeiro/repasses/${id}/documentos`, `/api/v1/comercial/repasses/${id}/documentos`];
     let result;
     for (const p of paths) {
-      result = await httpsRequest({ hostname: CV_BASE, path: p, method: 'GET', headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' } });
+      result = await httpsRequest({ hostname: base, path: p, method: 'GET', headers: { 'email': email, 'token': token, 'Content-Type': 'application/json' } });
       if (result.status !== 405 && result.status !== 404) break;
     }
-    const data = JSON.parse(result.body);
-    res.status(result.status).json(data);
+    res.status(result.status).json(JSON.parse(result.body));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // CV API: busca informações do repasse
 app.get('/api/cv/repasse/:id', async (req, res) => {
   try {
+    const { base, token, email } = getCreds(req);
     const id = req.params.id;
-    const paths = [
-      `/api/v1/financeiro/repasses/${id}`,
-      `/api/v1/comercial/repasses/${id}`,
-      `/api/v1/financeiro/repasse/${id}`,
-      `/api/v1/comercial/repasse/${id}`,
-    ];
+    const paths = [`/api/v1/financeiro/repasses/${id}`, `/api/v1/comercial/repasses/${id}`];
     let result;
     for (const p of paths) {
-      result = await httpsRequest({ hostname: CV_BASE, path: p, method: 'GET', headers: { 'email': CV_EMAIL, 'token': CV_TOKEN, 'Content-Type': 'application/json' } });
+      result = await httpsRequest({ hostname: base, path: p, method: 'GET', headers: { 'email': email, 'token': token, 'Content-Type': 'application/json' } });
       if (result.status !== 405 && result.status !== 404) break;
     }
-    const data = JSON.parse(result.body);
-    res.status(result.status).json(data);
+    res.status(result.status).json(JSON.parse(result.body));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -182,14 +134,16 @@ app.get('/api/cv/documento/arquivo', async (req, res) => {
     if (!url) return res.status(400).json({ error: 'URL não informada' });
 
     const urlObj = new URL(url);
+    const empresa = req.query.empresa === 'kapaz' ? 'kapaz' : 'manager';
+    const { token: tok, email: eml } = CV_EMPRESAS[empresa];
     const result = await new Promise((resolve, reject) => {
       const options = {
         hostname: urlObj.hostname,
         path: urlObj.pathname + urlObj.search,
         method: 'GET',
         headers: {
-          'email': CV_EMAIL,
-          'token': CV_TOKEN
+          'email': eml,
+          'token': tok
         }
       };
       const req2 = https.request(options, (resp) => {
@@ -324,96 +278,50 @@ startxref
 // CV API: salva relatório no pré-cadastro
 app.post('/api/cv/precadastro/:id/salvar-relatorio', async (req, res) => {
   try {
+    const { base, token, email } = getCreds(req);
     const precadastroId = req.params.id;
-    const { pdfBase64, fileName, periodo } = req.body;
+    const { pdfBase64, fileName } = req.body;
     const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
     const nome = fileName || `Analise da Renda pelo Validador - PreCadastro ${precadastroId} - ${dataHoje}.pdf`;
-
-    const payload = JSON.stringify({
-      idprecadastro: parseInt(precadastroId),
-      idtipo: 28, // OUTROS DOCUMENTOS
-      nome,
-      documento_base64: pdfBase64
-    });
-
+    const payload = JSON.stringify({ idprecadastro: parseInt(precadastroId), idtipo: 28, nome, documento_base64: pdfBase64 });
     const result = await httpsRequest({
-      hostname: CV_BASE,
-      path: '/api/v1/comercial/precadastro/documentos',
-      method: 'POST',
-      headers: {
-        'email': CV_EMAIL,
-        'token': CV_TOKEN,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload)
-      }
+      hostname: base, path: '/api/v1/comercial/precadastro/documentos', method: 'POST',
+      headers: { 'email': email, 'token': token, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
     }, payload);
-
     res.status(result.status).json({ ok: result.status < 300, raw: result.body });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // CV API: salva relatório na reserva
 app.post('/api/cv/reserva/:id/salvar-relatorio', async (req, res) => {
   try {
+    const { base, token, email } = getCreds(req);
     const reservaId = req.params.id;
-    const { pdfBase64, fileName, periodo } = req.body;
+    const { pdfBase64, fileName } = req.body;
     const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
     const nome = fileName || `Analise da Renda pelo Validador - Reserva ${reservaId} - ${dataHoje}.pdf`;
-
-    const payload = JSON.stringify({
-      idreserva: parseInt(reservaId),
-      idtipo: 28, // OUTROS DOCUMENTOS
-      nome,
-      documento_base64: pdfBase64
-    });
-
+    const payload = JSON.stringify({ idreserva: parseInt(reservaId), idtipo: 28, nome, documento_base64: pdfBase64 });
     const result = await httpsRequest({
-      hostname: CV_BASE,
-      path: '/api/v1/comercial/reservas/documentos',
-      method: 'POST',
-      headers: {
-        'email': CV_EMAIL,
-        'token': CV_TOKEN,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload)
-      }
+      hostname: base, path: '/api/v1/comercial/reservas/documentos', method: 'POST',
+      headers: { 'email': email, 'token': token, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
     }, payload);
-
     res.status(result.status).json({ ok: result.status < 300, raw: result.body });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // CV API: salva relatório no repasse
 app.post('/api/cv/repasse/:id/salvar-relatorio', async (req, res) => {
   try {
+    const { base, token, email } = getCreds(req);
     const repasseId = req.params.id;
-    const { pdfBase64, fileName, periodo } = req.body;
+    const { pdfBase64, fileName } = req.body;
     const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
     const nome = fileName || `Analise da Renda pelo Validador - Repasse ${repasseId} - ${dataHoje}.pdf`;
-
-    const payload = JSON.stringify({
-      idrepasse: parseInt(repasseId),
-      idtipo: 28, // OUTROS DOCUMENTOS
-      nome,
-      documento_base64: pdfBase64
-    });
-
+    const payload = JSON.stringify({ idrepasse: parseInt(repasseId), idtipo: 28, nome, documento_base64: pdfBase64 });
     const result = await httpsRequest({
-      hostname: CV_BASE,
-      path: '/api/v1/financeiro/repasses/documentos',
-      method: 'POST',
-      headers: {
-        'email': CV_EMAIL,
-        'token': CV_TOKEN,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload)
-      }
+      hostname: base, path: '/api/v1/financeiro/repasses/documentos', method: 'POST',
+      headers: { 'email': email, 'token': token, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
     }, payload);
-
     res.status(result.status).json({ ok: result.status < 300, raw: result.body });
   } catch (e) {
     res.status(500).json({ error: e.message });
