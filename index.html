@@ -643,8 +643,10 @@ async function buscarReserva(){
       const{doc,dlData}=r;
       const tipo=doc.tipo?.toLowerCase()||'';
       const nomeArq=doc.nome||doc.nome_arquivo||'documento';
+      const nomeArqLower=nomeArq.toLowerCase();
       const pessoa=doc.pessoa?.toLowerCase()||'titular';
-      if(tipo.includes('extrat')){
+      const isExtratoPorNome=/extrat|bancari|statement|neon|nubank|inter|bradesco|itau|caixa|santander|sicoob|sicredi|bb |banco do brasil/i.test(nomeArqLower);
+      if(tipo.includes('extrat')||isExtratoPorNome){
         extratoFiles.push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,pessoa});
       }else if(tipo.includes('simulac')||tipo.includes('simulaç')||nomeArq.toLowerCase().includes('simul')){
         if(!files['simulacao'])files['simulacao']=[];
@@ -818,9 +820,8 @@ async function analyze(){
     docNames['rg_conjuge']='RG/CPF/CNH — cônjuge';
     let pdfCount=0;
     const MAX_PDF_TOTAL=20;
-    // PDF texto comprimido: ~5-10KB/pág → 300KB ≈ 30-60 páginas por arquivo.
-    const MAX_BYTES_POR_PDF=300*1024;      // limite por arquivo individual
-    const MAX_PDF_BYTES=4000*1024;         // limite acumulado (até 9 extratos × 2 titulares + docs)
+    const MAX_BYTES_POR_PDF=2000*1024;     // até 2MB por arquivo (extratos longos tipo Neon 870KB)
+    const MAX_PDF_BYTES=15000*1024;        // até 15MB total acumulado
     let pdfBytesTotal=0;
     const pdfCountByType={};
     const contentParts=[];
