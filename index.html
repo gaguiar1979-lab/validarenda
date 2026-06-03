@@ -810,17 +810,17 @@ async function analyze(){
     });
     // Limite por tipo: extratos têm muitas páginas (10-20/arquivo), então enviamos poucos como binário
     // e completamos com label de texto. Anthropic aceita no máximo 100 páginas por chamada.
-    const MAX_POR_TIPO={extrato:2,extrato_conjuge:2,rendimento:1,simulacao:1,certidao:1,rg:1,rg_conjuge:1,docs_cv:2};
+    const MAX_POR_TIPO={extrato:3,extrato_conjuge:3,rendimento:2,simulacao:1,certidao:1,rg:1,rg_conjuge:1,docs_cv:2};
     const tiposBinario=new Set(['extrato','extrato_conjuge','rendimento','simulacao','certidao','rg','rg_conjuge','docs_cv']);
     const tiposBinarioExtra=t=>t.endsWith('_extrato')||t.endsWith('_rg');
     // Labels descritivos para cônjuge
     docNames['extrato_conjuge']='Extrato bancário — cônjuge';
     docNames['rg_conjuge']='RG/CPF/CNH — cônjuge';
     let pdfCount=0;
-    const MAX_PDF_TOTAL=5;
-    // PDF texto comprimido: ~5-10KB/pág → 300KB ≈ 30-60 páginas por arquivo. Total ~90 páginas máx.
+    const MAX_PDF_TOTAL=7;
+    // PDF texto comprimido: ~5-10KB/pág → 300KB ≈ 30-60 páginas por arquivo.
     const MAX_BYTES_POR_PDF=300*1024;      // limite por arquivo individual (~30-60 pág)
-    const MAX_PDF_BYTES=900*1024;          // limite acumulado total (3 arquivos × 300KB)
+    const MAX_PDF_BYTES=1400*1024;         // limite acumulado total (7 arquivos × 200KB)
     let pdfBytesTotal=0;
     const pdfCountByType={};
     const contentParts=[];
