@@ -819,11 +819,12 @@ async function analyze(){
     docNames['extrato_conjuge']='Extrato bancário — cônjuge';
     docNames['rg_conjuge']='RG/CPF/CNH — cônjuge';
     let pdfCount=0;
-    const MAX_PDF_TOTAL=20;
-    const MAX_BYTES_POR_PDF=2000*1024;     // até 2MB por arquivo (extratos longos tipo Neon 870KB)
-    const MAX_PDF_BYTES=15000*1024;        // até 15MB total acumulado
+    const MAX_PDF_TOTAL=50;               // limite muito alto — praticamente sem limite
+    const MAX_BYTES_POR_PDF=30*1024*1024; // 30MB por arquivo (limite da Anthropic)
+    const MAX_PDF_BYTES=100*1024*1024;    // 100MB total
     let pdfBytesTotal=0;
     const pdfCountByType={};
+    const arquivosNaoAnalisados=[];       // rastreia arquivos pulados e o motivo
     const contentParts=[];
     for(const [type,fileOrArr] of Object.entries(files)){
       const fileList=Array.isArray(fileOrArr)?fileOrArr:[fileOrArr];
@@ -837,15 +838,22 @@ async function analyze(){
           const tipoBase=type.endsWith('_extrato')?'extrato':type.endsWith('_rg')?'rg':type;
           const limiteAtingido=(pdfCountByType[tipoBase]||0)>=(MAX_POR_TIPO[tipoBase]||1);
           const pdfBytes=isPdf?Math.round((file.base64||'').length*0.75):0;
-          const arquivoOk=pdfBytes<=MAX_BYTES_POR_PDF; // arquivo individual não pode exceder ~15 páginas
+          const arquivoOk=pdfBytes<=MAX_BYTES_POR_PDF;
           const totalOk=pdfBytesTotal+pdfBytes<=MAX_PDF_BYTES;
+          const pdfValido=isPdf&&(file.base64||'').startsWith('JVBE');
           const podeEnviarBinario=(tiposBinario.has(type)||tiposBinarioExtra(type))&&pdfCount<MAX_PDF_TOTAL&&!limiteAtingido&&arquivoOk&&totalOk;
-          const pdfValido=isPdf&&(file.base64||'').startsWith('JVBE'); // %PDF- em base64
           if(podeEnviarBinario&&isPdf&&pdfValido){
             contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}});
             pdfCount++;pdfBytesTotal+=pdfBytes;pdfCountByType[tipoBase]=(pdfCountByType[tipoBase]||0)+1;
-          }else if(podeEnviarBinario&&isPdf&&!pdfValido){
-            console.warn(`Arquivo ignorado (não é PDF válido): ${file.name}`);
+          }else if(isPdf&&!pdfValido){
+            arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:'Arquivo corrompido ou não é um PDF válido'});
+            console.warn(`Arquivo ignorado (PDF inválido): ${file.name}`);
+          }else if(isPdf&&limiteAtingido){
+            arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Limite de ${MAX_POR_TIPO[tipoBase]} arquivos deste tipo atingido`});
+          }else if(isPdf&&!arquivoOk){
+            arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Arquivo muito grande (${Math.round(pdfBytes/1024)}KB) — limite por arquivo excedido`});
+          }else if(isPdf&&!totalOk){
+            arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:'Limite total de dados da análise atingido'});
           }else if(podeEnviarBinario&&isImage){
             const imgMime=file.contentType?.startsWith('image/')?file.contentType:`image/${ext==='jpg'?'jpeg':ext}`;
             contentParts.push({type:'image',source:{type:'base64',media_type:imgMime,data:file.base64}});
@@ -879,7 +887,12 @@ async function analyze(){
     const instrucaoConjuge=temExtratoConjugeAnalise
       ?'\n- EXTRATO DO CÔNJUGE: presente nos documentos. INCLUA a renda do cônjuge na análise familiar — some as fontes de renda de ambos. No campo "fontes", registre cada fonte com o nome do titular (titular ou cônjuge). A renda total analisada é a RENDA FAMILIAR COMBINADA.'
       :'\n- EXTRATO DO CÔNJUGE: não enviado. Analise apenas a renda do titular.';
-    contentParts.push({type:'text',text:`CLIENTE EM ANÁLISE: ${currentClienteName||'(identificar pelo nome que aparece nos documentos)'}\nPré-Cadastro CV CRM: ${document.getElementById('reservaId').value.trim()}\nIMPORTANTE: Use exatamente "${currentClienteName||'o nome identificado nos documentos'}" no campo "nomeComprador" do JSON.\n\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.${instrucaoConjuge}${proSolutoInfo}\n\nRetorne apenas o JSON.`});
+    const avisoNaoAnalisados=arquivosNaoAnalisados.length>0
+      ?`\n\nATENÇÃO — ARQUIVOS NÃO ANALISADOS (não lidos pela IA):\n${arquivosNaoAnalisados.map(a=>`- ${a.nome} (${a.tipo}): ${a.motivo}`).join('\n')}\nMencione esses arquivos no campo "documentosNaoAnalisados" do JSON.`
+      :'';
+    contentParts.push({type:'text',text:`CLIENTE EM ANÁLISE: ${currentClienteName||'(identificar pelo nome que aparece nos documentos)'}\nPré-Cadastro CV CRM: ${document.getElementById('reservaId').value.trim()}\nIMPORTANTE: Use exatamente "${currentClienteName||'o nome identificado nos documentos'}" no campo "nomeComprador" do JSON.\n\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.${instrucaoConjuge}${proSolutoInfo}${avisoNaoAnalisados}\n\nRetorne apenas o JSON.`});
+    // Guarda lista de arquivos não analisados para exibir no relatório
+    window._arquivosNaoAnalisados=arquivosNaoAnalisados;
     const systemPrompt=`Você é um analista de crédito imobiliário da Casas Manager Construções. Gere um laudo interno de capacidade financeira do cliente, respondendo: (1) qual a renda que o cliente consegue comprovar com documentos? (2) qual a renda real apurada nos extratos? (3) ele consegue arcar com a parcela do financiamento bancário + pró-soluto com a Casas Manager?
 
 REGRA FUNDAMENTAL — LEITURA DE CONTEÚDO:
@@ -1729,10 +1742,13 @@ function renderResults(r){
   const temAusentes=(r.documentosCadastroAusentes&&r.documentosCadastroAusentes.length>0);
   const temExtratosFalt=(r.extratosFaltantes&&r.extratosFaltantes.length>0);
   const temEncontrados=(r.documentosEncontrados&&r.documentosEncontrados.length>0);
-  const auditoriaHtml=(temAusentes||temExtratosFalt||temEncontrados)?`
+  const naoAnalisados=window._arquivosNaoAnalisados||[];
+  const temNaoAnalisados=naoAnalisados.length>0;
+  const auditoriaHtml=(temAusentes||temExtratosFalt||temEncontrados||temNaoAnalisados)?`
     <div style="grid-column:1/-1;border:2px solid #C0392B;border-radius:12px;overflow:hidden;margin-bottom:4px">
       <div style="background:#C0392B;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#fff">📋 Auditoria de Documentos</div>
       <div style="padding:14px 16px;background:#fff;display:flex;flex-direction:column;gap:10px">
+        ${temNaoAnalisados?`<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 12px"><div style="font-size:11px;font-weight:700;color:#7a5a00;margin-bottom:6px">⚠️ ARQUIVOS NÃO ANALISADOS — presentes no CV CRM mas não lidos pela IA:</div>${naoAnalisados.map(a=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #ffe69c;color:#7a5a00">• <strong>${a.nome}</strong> (${a.tipo}) — ${a.motivo}</div>`).join('')}<div style="font-size:11px;margin-top:6px;color:#856404">A análise pode estar incompleta. Faça upload manual desses arquivos para uma análise completa.</div></div>`:''}
         ${temAusentes?`<div><div style="font-size:11px;font-weight:700;color:#8b1a1a;margin-bottom:6px">🔴 Documentos do cadastro ausentes — solicitar ao cliente:</div>${r.documentosCadastroAusentes.map(d=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #fdecea;color:#7f1d1d">• ${d}</div>`).join('')}</div>`:''}
         ${temExtratosFalt?`<div><div style="font-size:11px;font-weight:700;color:#7a5a00;margin-bottom:6px">🏦 Contas bancárias identificadas cujos extratos não foram enviados:</div>${r.extratosFaltantes.map(e=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #fff8e8;color:#7a5a00">• <strong>${e.banco}</strong> — ${e.motivo}${e.valorMedioMensal>0?' (~'+fmt(e.valorMedioMensal)+'/mês em saídas)':''}</div>`).join('')}</div>`:''}
         ${temEncontrados?`<div><div style="font-size:11px;font-weight:700;color:#1C1E35;margin-bottom:6px">🔍 O que foi identificado dentro de cada arquivo:</div>${r.documentosEncontrados.map(d=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #eee;color:#333">• ${d}</div>`).join('')}</div>`:''}
