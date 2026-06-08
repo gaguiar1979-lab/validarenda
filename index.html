@@ -822,8 +822,8 @@ async function analyze(){
     const MAX_PDF_TOTAL=50;
     const MAX_BYTES_POR_PDF=30*1024*1024; // 30MB por arquivo
     const MAX_PDF_BYTES=100*1024*1024;    // 100MB total
-    const MAX_PAGES_TOTAL=90;            // Anthropic aceita no máx 100 páginas — margem de segurança
     const MAX_PAGES_POR_PDF=40;          // máx páginas por arquivo individual
+    const MAX_PAGES_PER_BATCH=85;        // máx páginas por lote (Anthropic suporta até 100)
     let pdfBytesTotal=0;
     let pdfPagesTotal=0;
     const pdfCountByType={};
@@ -845,7 +845,7 @@ async function analyze(){
           // (subestimar é perigoso — melhor sobrestimar e rejeitar do que estourar o limite da Anthropic)
           const pdfPagesEst=isPdf?Math.max(1,Math.ceil(pdfBytes/20000)):0;
           const arquivoOk=pdfBytes<=MAX_BYTES_POR_PDF && pdfPagesEst<=MAX_PAGES_POR_PDF;
-          const totalOk=pdfBytesTotal+pdfBytes<=MAX_PDF_BYTES && pdfPagesTotal+pdfPagesEst<=MAX_PAGES_TOTAL;
+          const totalOk=pdfBytesTotal+pdfBytes<=MAX_PDF_BYTES; // sem limite total de páginas — usamos múltiplos lotes
           const pdfValido=isPdf&&(file.base64||'').startsWith('JVBE');
           const podeEnviarBinario=(tiposBinario.has(type)||tiposBinarioExtra(type))&&pdfCount<MAX_PDF_TOTAL&&!limiteAtingido&&arquivoOk&&totalOk;
           if(podeEnviarBinario&&isPdf&&pdfValido){
@@ -858,8 +858,6 @@ async function analyze(){
             arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Limite de ${MAX_POR_TIPO[tipoBase]} arquivos deste tipo atingido — faça upload manual`});
           }else if(isPdf&&pdfPagesEst>MAX_PAGES_POR_PDF){
             arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Arquivo muito longo (~${pdfPagesEst} páginas estimadas, máx ${MAX_PAGES_POR_PDF}) — divida o extrato em períodos menores`});
-          }else if(isPdf&&pdfPagesTotal+pdfPagesEst>MAX_PAGES_TOTAL){
-            arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Limite de ${MAX_PAGES_TOTAL} páginas totais atingido (já enviadas ~${pdfPagesTotal} págs) — faça upload manual deste arquivo separadamente`});
           }else if(isPdf&&!totalOk){
             arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:'Limite total de dados atingido — faça upload manual deste arquivo'});
           }else if(podeEnviarBinario&&isImage){
@@ -1185,48 +1183,95 @@ Retorne SOMENTE este JSON sem markdown. REGRAS DE CONCISÃO OBRIGATÓRIAS:
 {"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"documentosEncontrados":["Arquivo RG: contém RG + certidão de casamento","Kit: contém extrato Jan-Mar/2025 + holerite"],"documentosCadastroAusentes":["Simulação de financiamento","Certidão de estado civil"],"rendaDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"1 frase"}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
 
 Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
-    // Usa streaming para evitar timeout no Railway — resposta flui em tempo real
-    const abortCtrl=new AbortController();
-    const abortTimer=setTimeout(()=>abortCtrl.abort(),120000); // 2 min máximo
-    let resp;
-    try{
-      resp=await fetch('/api/analyze-stream',{signal:abortCtrl.signal,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:32000,system:systemPrompt,messages:[{role:'user',content:contentParts}]}})});
-    }catch(fe){
-      clearTimeout(abortTimer);
-      throw new Error(fe.name==='AbortError'?'Tempo limite atingido (2 min). Tente novamente com menos documentos.':fe.message);
-    }
-    if(!resp.ok){clearTimeout(abortTimer);const err=await resp.json().catch(()=>({}));throw new Error(err.error?.message||`Erro HTTP ${resp.status}`);}
-    // Lê o stream SSE e acumula o texto gerado pela IA
-    const reader=resp.body.getReader();
-    const decoder=new TextDecoder();
-    let sseBuf='';let raw='';let fullBody='';
-    document.getElementById('progressLabel').textContent='Gerando laudo...';
-    try{
+    // === ANÁLISE COM ANTHROPIC — suporte automático a múltiplos lotes ===
+    // Helper: faz uma chamada streaming e retorna o texto completo gerado pela IA
+    const streamCall=async(cont,sysP,maxTok,timeoutMs)=>{
+      const ac=new AbortController();
+      const at=setTimeout(()=>ac.abort(),timeoutMs||180000);
+      let r2;
+      try{r2=await fetch('/api/analyze-stream',{signal:ac.signal,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:maxTok||8000,system:sysP,messages:[{role:'user',content:Array.isArray(cont)?cont:[{type:'text',text:cont}]}]}})});}
+      catch(fe){clearTimeout(at);throw new Error(fe.name==='AbortError'?'Tempo limite atingido. Tente novamente.':fe.message);}
+      if(!r2.ok){clearTimeout(at);const er=await r2.json().catch(()=>({}));throw new Error(er.error?.message||`Erro HTTP ${r2.status}`);}
+      const rd=r2.body.getReader();const dc=new TextDecoder();
+      let sb='',txt='',fb='';
       while(true){
-        const{done,value}=await reader.read();
-        if(done)break;
-        const chunk=decoder.decode(value,{stream:true});
-        fullBody+=chunk;
-        sseBuf+=chunk;
-        const lines=sseBuf.split('\n');
-        sseBuf=lines.pop();
-        for(const line of lines){
-          if(!line.startsWith('data: '))continue;
-          const jsonStr=line.slice(6).trim();
-          if(!jsonStr||jsonStr==='[DONE]')continue;
-          try{
-            const evt=JSON.parse(jsonStr);
-            if(evt.type==='content_block_delta'&&evt.delta?.type==='text_delta') raw+=evt.delta.text;
-            else if(evt.type==='error') throw new Error(evt.error?.message||'Erro da API Anthropic');
-          }catch(pe){if(pe.message&&!pe.message.includes('JSON'))throw pe;}
+        const{done,value}=await rd.read();if(done)break;
+        const ch=dc.decode(value,{stream:true});fb+=ch;sb+=ch;
+        const ln=sb.split('\n');sb=ln.pop();
+        for(const l of ln){
+          if(!l.startsWith('data: '))continue;
+          const js=l.slice(6).trim();if(!js||js==='[DONE]')continue;
+          try{const ev=JSON.parse(js);if(ev.type==='content_block_delta'&&ev.delta?.type==='text_delta')txt+=ev.delta.text;else if(ev.type==='error')throw new Error(ev.error?.message||'Erro da API');}
+          catch(pe){if(pe.message&&!pe.message.includes('JSON'))throw pe;}
         }
       }
-    }finally{clearTimeout(abortTimer);}
-    if(!raw){
-      console.error('RESPOSTA BRUTA DA API:',fullBody.substring(0,800));
-      // Tenta extrair mensagem de erro do corpo bruto (Anthropic pode retornar JSON de erro sem SSE)
-      try{const errObj=JSON.parse(fullBody);if(errObj.error?.message)throw new Error('Anthropic: '+errObj.error.message);}catch(pe){if(pe.message.startsWith('Anthropic:'))throw pe;}
-      throw new Error('A IA não retornou resposta. Detalhes no console (F12). Tente novamente.');
+      clearTimeout(at);
+      if(!txt){
+        console.error('RESPOSTA BRUTA:',fb.substring(0,800));
+        try{const eo=JSON.parse(fb);if(eo.error?.message)throw new Error('Anthropic: '+eo.error.message);}catch(pe){if(pe.message.startsWith('Anthropic:'))throw pe;}
+        throw new Error('A IA não retornou resposta. Detalhes no console (F12). Tente novamente.');
+      }
+      return txt;
+    };
+
+    // Assume controle do label de progresso (cancela o intervalo automático)
+    clearInterval(interval);
+    let raw='';
+
+    if(pdfPagesTotal<=MAX_PAGES_PER_BATCH){
+      // LOTE ÚNICO — chamada direta (comportamento padrão)
+      document.getElementById('progressLabel').textContent='Gerando laudo...';
+      raw=await streamCall(contentParts,systemPrompt,32000,180000);
+
+    }else{
+      // MÚLTIPLOS LOTES — extrai dados brutos de cada lote, depois sintetiza tudo
+      console.log(`📄 Total estimado: ~${pdfPagesTotal} páginas — dividindo em lotes de ${MAX_PAGES_PER_BATCH} págs`);
+
+      // 1. Separar o contexto do cliente (último item de texto) dos itens de documento
+      const ctxCliente=contentParts[contentParts.length-1];
+      const docItens=contentParts.slice(0,-1);
+
+      // 2. Dividir documentos em lotes de até MAX_PAGES_PER_BATCH páginas estimadas
+      const lotes=[];let loteAtual=[];let pgsLote=0;
+      for(const it of docItens){
+        if(it.type==='document'){
+          const byt=Math.round((it.source.data||'').length*0.75);
+          const pgs=Math.max(1,Math.ceil(byt/20000));
+          if(pgsLote+pgs>MAX_PAGES_PER_BATCH&&loteAtual.length>0){lotes.push(loteAtual);loteAtual=[];pgsLote=0;}
+          loteAtual.push(it);pgsLote+=pgs;
+        }else{loteAtual.push(it);}
+      }
+      if(loteAtual.length>0)lotes.push(loteAtual);
+      console.log(`📦 ${lotes.length} lote(s) criados`);
+
+      // 3. Extrair dados brutos de cada lote (chamadas rápidas — apenas extração, sem análise)
+      const sysExt=`Você é um extrator de dados financeiros. Leia os PDFs e extraia TODOS os dados brutos encontrados — sem análise, sem veredito. Retorne apenas JSON sem markdown.`;
+      const instrExt=`Extraia de TODOS os PDFs presentes:
+1. Todas as entradas de crédito nos extratos: mês, remetente, valor, banco
+2. Saídas fixas/recorrentes: destinatário, valor, frequência, tipo (empréstimo/cartão/aluguel/etc)
+3. Contracheques/holerites: competência, salário bruto, salário líquido, consignados (credor e valor de cada parcela)
+4. Simulação de financiamento: parcela mensal, valor imóvel, valor financiado, subsídio, renda declarada
+5. Certidão de estado civil: tipo (casamento/nascimento/solteiro), nome do cônjuge, nome dos filhos
+6. Lista dos documentos identificados nos arquivos
+
+Retorne JSON sem markdown:
+{"periodo":"","documentos":["Extrato Neon Jan-Mar/2025"],"entradas":[{"mes":"Jan/2025","remetente":"EMPRESA X","valor":0,"banco":"Nubank"}],"saidas_fixas":[{"destinatario":"BANCO Y","valor":0,"frequencia":"mensal","tipo":"emprestimo"}],"holerites":[{"competencia":"","salario_bruto":0,"salario_liquido":0,"consignados":[{"credor":"","valor":0}]}],"simulacao":{"parcelaFinanciamento":0,"valorImovel":0,"valorFinanciado":0,"subsidio":0,"rendaDeclarada":0},"certidao":{"tipo":"","conjuge":"","filhos":[]}}`;
+
+      const extrTxt=[];
+      for(let li=0;li<lotes.length;li++){
+        const docsNesteLote=lotes[li].filter(x=>x.type==='document');
+        const pgsNesteLote=docsNesteLote.reduce((s,x)=>s+Math.max(1,Math.ceil(Math.round((x.source.data||'').length*0.75)/20000)),0);
+        document.getElementById('progressLabel').textContent=`Lendo lote ${li+1} de ${lotes.length} (~${pgsNesteLote} páginas)...`;
+        const loteConteudo=[...lotes[li],{type:'text',text:instrExt}];
+        const extRaw=await streamCall(loteConteudo,sysExt,4000,120000);
+        extrTxt.push(`=== LOTE ${li+1} de ${lotes.length} ===\n${extRaw}`);
+        console.log(`✅ Lote ${li+1} extraído`);
+      }
+
+      // 4. Síntese final — texto apenas (sem PDFs, sem limite de páginas)
+      document.getElementById('progressLabel').textContent=`Consolidando análise final (${lotes.length} lotes)...`;
+      const msgSintese=`ATENÇÃO: Esta análise foi realizada em ${lotes.length} LOTES (total de ~${pdfPagesTotal} páginas estimadas de PDF). Os dados brutos extraídos de cada lote são:\n\n${extrTxt.join('\n\n')}\n\n${ctxCliente.text}\n\nUse os dados acima para gerar a análise completa conforme todas as regras do sistema. Retorne apenas o JSON.`;
+      raw=await streamCall(msgSintese,systemPrompt,32000,300000);
     }
     // Extrai JSON contando chaves — mais robusto que regex greedy
     function extractJSON(text){
