@@ -561,9 +561,23 @@ async function handleFilhoCertidao(input,id,num){
 async function buscarReserva(){
   const reservaId=document.getElementById('reservaId').value.trim();
   if(!reservaId){alert('Digite o número do cadastro.');return;}
-  // Limpa análise anterior
+  // Limpa TODO o estado do cliente anterior
   lastResult=null;
   currentClienteName=null;
+  window._arquivosNaoAnalisados=[];
+  // Limpa arquivos (CV e manuais)
+  Object.keys(files).forEach(k=>delete files[k]);
+  // Limpa membros (cônjuges e filhos detectados automaticamente)
+  members.length=0;
+  renderTags();
+  renderConjugeDocs();
+  // Limpa UI dos cards de upload: remove indicadores de arquivo selecionado
+  document.querySelectorAll('.upload-card').forEach(c=>{
+    c.classList.remove('has-file');
+    const fi=c.querySelector('input[type=file]');
+    if(fi){try{fi.value='';}catch(e){}}
+  });
+  document.querySelectorAll('.uc-file').forEach(el=>{el.innerHTML='';});
   const inline=document.getElementById('relatorioInline');
   const frame=document.getElementById('reportFrame');
   if(inline) inline.style.display='none';
