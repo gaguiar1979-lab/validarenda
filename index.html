@@ -1031,15 +1031,14 @@ CENÁRIO C — TRABALHADOR INFORMAL (apenas extrato, sem contracheque nem pró-l
 - tipo da fonte: "informal_extrato"
 - Declare no parecer: "Renda 100% informal — comprovação via extrato bancário"
 
-CENÁRIO D — DECLARAÇÃO DE IMPOSTO DE RENDA (DIRPF):
-Se houver Declaração de Imposto de Renda (DIRPF/IRPF) nos documentos, trate o valor declarado como RENDA FORMAL comprovável:
-- rendaComprovavel = total de rendimentos tributáveis declarados à Receita Federal ÷ 12 (renda mensal)
-- Considere apenas os rendimentos tributáveis (ex: "Rendimentos Tributáveis Recebidos de PJ pelo Titular", "Rendimentos de Atividade Rural", "Rendimentos do Trabalho sem Vínculo Empregatício")
-- NÃO inclua como renda: rendimentos isentos de caráter pontual (indenização trabalhista, 13º, FGTS, herança) — inclua apenas se forem recorrentes anuais
-- tipo da fonte: use o mais adequado conforme o campo da declaração (emprego_formal, prolabore, autonomo, aluguel, aposentadoria, conforme identificado)
-- Mencione no parecer que a renda foi comprovada via Declaração de IR e informe o ano-base da declaração
-- Adicione em ressalvas: "Renda comprovada pela DIRPF [ano-base]. Recomenda-se solicitar o recibo de entrega da declaração (número do recibo) e a consulta de restituição/situação na Receita para confirmar a entrega regular."
-- Se também houver extratos bancários: use-os para validar a consistência com o declarado (entradas regulares no extrato devem ser compatíveis com o valor declarado na DIRPF)
+DECLARAÇÃO DE IMPOSTO DE RENDA (DIRPF) — USO COMO REFERÊNCIA:
+Se houver DIRPF/IRPF nos documentos, use-a como documento COMPLEMENTAR e de REFERÊNCIA — ela NÃO constitui comprovação de renda formal por si só (renda formal = CLT com holerite ou pró-labore com recibo).
+- Extraia o total de rendimentos tributáveis declarados ÷ 12 como referência de renda mensal declarada
+- Use para VALIDAR e REFORÇAR a renda apurada nos extratos (autônomos, rentistas, informais)
+- Se a renda declarada na DIRPF for compatível com as entradas no extrato, mencione no parecer que "os rendimentos declarados no IR são consistentes com as movimentações bancárias"
+- Se divergir significativamente, registre em ressalvas
+- NÃO classifique a fonte como "emprego_formal" apenas porque há IR — o tipo de renda deve refletir a ORIGEM real (autonomo, aluguel, aposentadoria, etc.)
+- Mencione o ano-base da declaração e adicione em ressalvas a recomendação de solicitar o recibo de entrega
 
 CENÁRIO MISTO: se o comprador tem MAIS DE UM perfil (ex: CLT + renda extra informal):
 - rendaComprovavel = renda formal (valor do contracheque/pró-labore) + renda informal COMPLEMENTAR identificada no extrato
