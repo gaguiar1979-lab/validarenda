@@ -645,10 +645,13 @@ async function buscarReserva(){
       const nomeArq=doc.nome||doc.nome_arquivo||'documento';
       const nomeArqLower=nomeArq.toLowerCase();
       const pessoa=doc.pessoa?.toLowerCase()||'titular';
+      console.log(`CV doc: tipo="${tipo}" | nome="${nomeArqLower}"`);
       const isExtratoPorNome=/extrat|bancari|statement|neon|nubank|inter|bradesco|itau|caixa|santander|sicoob|sicredi|bb |banco do brasil/i.test(nomeArqLower);
+      const isSimulacaoPorNome=/simul|proposta.*(cr[eé]d|financ)|financ.*proposta|simula[cç]/i.test(nomeArqLower);
+      const isSimulacaoPorTipo=tipo.includes('simulac')||tipo.includes('simulaç')||tipo.includes('proposta')||tipo.includes('simula');
       if(tipo.includes('extrat')||isExtratoPorNome){
         extratoFiles.push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,pessoa});
-      }else if(tipo.includes('simulac')||tipo.includes('simulaç')||nomeArq.toLowerCase().includes('simul')){
+      }else if(isSimulacaoPorTipo||isSimulacaoPorNome){
         if(!files['simulacao'])files['simulacao']=[];
         files['simulacao'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq});
       }else if(tipo.includes('rg')||tipo.includes('cnh')){
@@ -695,6 +698,7 @@ async function buscarReserva(){
     const temExtratoPossivel=temExtrato||temDocsCv; // extrato pode estar em doc combinado
     const temRendimento=(files['rendimento']||[]).length>0;
     const temSim=(files['simulacao']||[]).length>0;
+    const temSimPossivel=temSim||temDocsCv;
     const temRG=!!(files['rg']||files['rg_conjuge']);
     const temCertidao=!!files['certidao'];
 
@@ -708,7 +712,7 @@ async function buscarReserva(){
        detalhe:temExtrato?`${(files['extrato']||[]).length} arquivo(s) — renda informal complementar será identificada`:temDocsCv?`Possível em documento combinado (${(files['docs_cv']||[]).length} arq.)`:temRendimento?'Não encontrado — análise prossegue com renda formal (extrato recomendado para identificar renda complementar)':'Nenhum encontrado',
        ok:temExtratoPossivel||temRendimento,obrigatorio:extratoObrigatorio},
       {icon:'💼',label:'Comprovante de rendimento',detalhe:temRendimento?`${(files['rendimento']||[]).length} arquivo(s)`:temDocsCv?'Possível em documento combinado':'Não encontrado',ok:temRendimento||temDocsCv,obrigatorio:true},
-      {icon:'🏦',label:'Simulação de financiamento',detalhe:temSim?'Encontrada':'Não encontrada',ok:temSim,obrigatorio:true},
+      {icon:'🏦',label:'Simulação de financiamento',detalhe:temSim?'Encontrada':temDocsCv?`Possível em documento combinado (${(files['docs_cv']||[]).length} arq.) — a IA extrairá os dados`:'Não encontrada',ok:temSimPossivel,obrigatorio:true},
       {icon:'🪪',label:'RG / CNH',detalhe:temRG?'Encontrado':'Não encontrado',ok:temRG,obrigatorio:false},
       {icon:'📋',label:'Certidão de estado civil',
        detalhe:temCertidao?'Encontrada — a IA identificará o tipo (casamento/nascimento) e dará o tratamento adequado':'Não encontrada',
