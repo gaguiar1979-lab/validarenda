@@ -810,6 +810,26 @@ const freqLabel={mensal:'Mensal',irregular:'Irregular',quinzenal:'Quinzenal',sem
 const freqBadge={mensal:'badge-gold',irregular:'badge-warn',quinzenal:'badge-navy',semanal:'badge-navy'};
 let filhoCount=0;
 
+// Extrai o número real de páginas do PDF lendo o campo /Count do cabeçalho.
+// Muito mais preciso que estimar pelo tamanho do arquivo.
+function contarPaginasPDF(base64){
+  if(!base64)return 1;
+  try{
+    // Decodifica os primeiros ~150KB do PDF — suficiente para encontrar o /Pages /Count
+    const amostra=atob(base64.substring(0,Math.min(base64.length,200000)));
+    let max=0;
+    const re=/\/Count\s+(\d+)/g;
+    let m;
+    while((m=re.exec(amostra))!==null){const n=parseInt(m[1]);if(n>max)max=n;}
+    if(max>0){console.log(`📄 PDF: ${max} páginas (lidas do /Count)`);return max;}
+  }catch(e){}
+  // Fallback: estimativa conservadora (~10KB por página de extrato bancário)
+  const bytes=Math.round(base64.length*0.75);
+  const est=Math.max(1,Math.ceil(bytes/10000));
+  console.log(`📄 PDF: ~${est} páginas (estimativa por tamanho, ${Math.round(bytes/1024)}KB)`);
+  return est;
+}
+
 async function analyze(){
   const temExtratoAnalise=(files.extrato&&(Array.isArray(files.extrato)?files.extrato.length>0:true))||(files.docs_cv&&files.docs_cv.length>0);
   const temRendimentoAnalise=(files.rendimento&&(Array.isArray(files.rendimento)?files.rendimento.length>0:true));
@@ -840,7 +860,7 @@ async function analyze(){
     const MAX_PDF_TOTAL=50;
     const MAX_BYTES_POR_PDF=30*1024*1024; // 30MB por arquivo
     const MAX_PDF_BYTES=100*1024*1024;    // 100MB total
-    const MAX_PAGES_POR_PDF=40;          // máx páginas por arquivo individual
+    const MAX_PAGES_POR_PDF=85;          // máx páginas por arquivo individual (com contagem real)
     const MAX_PAGES_PER_BATCH=85;        // máx páginas por lote (Anthropic suporta até 100)
     let pdfBytesTotal=0;
     let pdfPagesTotal=0;
@@ -859,9 +879,8 @@ async function analyze(){
           const tipoBase=type.endsWith('_extrato')?'extrato':type.endsWith('_rg')?'rg':type;
           const limiteAtingido=(pdfCountByType[tipoBase]||0)>=(MAX_POR_TIPO[tipoBase]||1);
           const pdfBytes=isPdf?Math.round((file.base64||'').length*0.75):0;
-          // Estima páginas de forma conservadora: ~20KB por página
-          // (subestimar é perigoso — melhor sobrestimar e rejeitar do que estourar o limite da Anthropic)
-          const pdfPagesEst=isPdf?Math.max(1,Math.ceil(pdfBytes/20000)):0;
+          // Lê o número real de páginas do PDF (via /Count no cabeçalho)
+          const pdfPagesEst=isPdf?contarPaginasPDF(file.base64||''):0;
           const arquivoOk=pdfBytes<=MAX_BYTES_POR_PDF && pdfPagesEst<=MAX_PAGES_POR_PDF;
           const totalOk=pdfBytesTotal+pdfBytes<=MAX_PDF_BYTES; // sem limite total de páginas — usamos múltiplos lotes
           const pdfValido=isPdf&&(file.base64||'').startsWith('JVBE');
@@ -875,7 +894,7 @@ async function analyze(){
           }else if(isPdf&&limiteAtingido){
             arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Limite de ${MAX_POR_TIPO[tipoBase]} arquivos deste tipo atingido — faça upload manual`});
           }else if(isPdf&&pdfPagesEst>MAX_PAGES_POR_PDF){
-            arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Arquivo muito longo (~${pdfPagesEst} páginas estimadas, máx ${MAX_PAGES_POR_PDF}) — divida o extrato em períodos menores`});
+            arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Arquivo com ${pdfPagesEst} páginas (máx ${MAX_PAGES_POR_PDF} por arquivo) — envie 1 mês por arquivo ou divida em partes menores`});
           }else if(isPdf&&!totalOk){
             arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:'Limite total de dados atingido — faça upload manual deste arquivo'});
           }else if(podeEnviarBinario&&isImage){
@@ -891,7 +910,15 @@ async function analyze(){
           if(isImage||isPdf){
             const b64=await toB64(file);
             if(isImage){contentParts.push({type:'image',source:{type:'base64',media_type:file.type,data:b64}});}
-            else if(b64.startsWith('JVBE')){contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}});}
+            else if(b64.startsWith('JVBE')){
+              const pgsManual=contarPaginasPDF(b64);
+              if(pgsManual>MAX_PAGES_POR_PDF){
+                arquivosNaoAnalisados.push({nome:file.name,tipo:docNames[type]||type,motivo:`Arquivo com ${pgsManual} páginas — máx ${MAX_PAGES_POR_PDF} por arquivo. Envie em arquivos menores (ex: 1 mês por arquivo).`});
+              }else{
+                contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}});
+                pdfPagesTotal+=pgsManual;
+              }
+            }
             else{console.warn(`PDF inválido ignorado: ${file.name}`);}
             contentParts.push({type:'text',text:`[Arquivo: ${docNames[type]||type} - ${file.name}]`});
           }else{
@@ -1262,8 +1289,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
       const lotes=[];let loteAtual=[];let pgsLote=0;
       for(const it of docItens){
         if(it.type==='document'){
-          const byt=Math.round((it.source.data||'').length*0.75);
-          const pgs=Math.max(1,Math.ceil(byt/20000));
+          const pgs=contarPaginasPDF(it.source.data||'');
           if(pgsLote+pgs>MAX_PAGES_PER_BATCH&&loteAtual.length>0){lotes.push(loteAtual);loteAtual=[];pgsLote=0;}
           loteAtual.push(it);pgsLote+=pgs;
         }else{loteAtual.push(it);}
@@ -1287,7 +1313,7 @@ Retorne JSON sem markdown:
       const extrTxt=[];
       for(let li=0;li<lotes.length;li++){
         const docsNesteLote=lotes[li].filter(x=>x.type==='document');
-        const pgsNesteLote=docsNesteLote.reduce((s,x)=>s+Math.max(1,Math.ceil(Math.round((x.source.data||'').length*0.75)/20000)),0);
+        const pgsNesteLote=docsNesteLote.reduce((s,x)=>s+contarPaginasPDF(x.source.data||''),0);
         document.getElementById('progressLabel').textContent=`Lendo lote ${li+1} de ${lotes.length} (~${pgsNesteLote} páginas)...`;
         const loteConteudo=[...lotes[li],{type:'text',text:instrExt}];
         const extRaw=await streamCall(loteConteudo,sysExt,4000,120000);
