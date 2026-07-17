@@ -174,19 +174,28 @@ app.post('/api/analyze', async (req, res) => {
     if (!payload) return res.status(400).json({ error: 'Payload não informado' });
 
     const payloadStr = JSON.stringify(payload);
-    const result = await httpsRequest({
-      hostname: 'api.anthropic.com',
-      path: '/v1/messages',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-        'Content-Length': Buffer.byteLength(payloadStr)
-      }
-    }, payloadStr);
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_KEY,
+      'anthropic-version': '2023-06-01',
+      'Content-Length': Buffer.byteLength(payloadStr)
+    };
 
-    const parsed = JSON.parse(result.body);
+    let result, parsed;
+    for (let tentativa = 1; tentativa <= 4; tentativa++) {
+      result = await httpsRequest({ hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST', headers }, payloadStr);
+      parsed = JSON.parse(result.body);
+      if (result.status === 529 || result.status === 429) {
+        if (tentativa < 4) {
+          const espera = tentativa * 30000;
+          console.warn(`Anthropic ${result.status} (tentativa ${tentativa}/4). Aguardando ${espera/1000}s...`);
+          await new Promise(r => setTimeout(r, espera));
+          continue;
+        }
+      }
+      break;
+    }
+
     res.status(result.status).json(parsed);
   } catch (e) {
     res.status(500).json({ error: e.message });
