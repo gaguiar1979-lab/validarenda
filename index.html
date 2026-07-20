@@ -1041,12 +1041,43 @@ PASSO 2 — RENDA COMPROVÁVEL (com documentos):
 Identifique o perfil do comprador pelos documentos presentes e aplique:
 
 CENÁRIO A — EMPREGADO CLT (há contracheque / holerite):
-- rendaComprovavel = salário LÍQUIDO do contracheque (valor efetivamente recebido após todos os descontos)
-- tipo da fonte: "emprego_formal"
-- Use o extrato para confirmar o crédito e identificar renda complementar informal regular
+
+LEITURA OBRIGATÓRIA DO CONTRACHEQUE — PROVENTOS (lado esquerdo / créditos):
+Leia TODAS as linhas de provento e some-as. Não leia apenas o salário base.
+
+Proventos que SEMPRE entram na rendaComprovavel (são renda formal verificável):
+- Salário base / Salário mensal
+- Adicional noturno
+- Adicional de insalubridade
+- Adicional de periculosidade
+- Horas extras (se aparecem em pelo menos 2 meses — registre a média)
+- Comissões (se regulares — registre a média dos meses presentes)
+- Gratificação / Função gratificada
+- 13º salário proporcional (se aparecer como provento regular, não eventual)
+- Ajuda de custo mensal / Adicional de função
+- Qualquer outro provento regular listado no contracheque
+
+Proventos que NÃO entram na rendaComprovavel (benefícios em espécie ou eventuais):
+- Vale transporte (é benefício, não renda — apenas cobre deslocamento)
+- Vale alimentação / Vale refeição (benefício em espécie)
+- Adiantamento de 13º (não é renda nova — é antecipação do 13º)
+- Verbas rescisórias (únicas, não recorrentes)
+- Abono único / Verba eventual sem regularidade
+
+→ rendaComprovavel = SOMA de todos os PROVENTOS REGULARES (campo "Total de Proventos" ou "Total de Vencimentos" do contracheque, excluindo benefícios em espécie como VT e VA)
+→ Se o contracheque mostra "Total de Proventos: R$X" use esse valor diretamente (menos VT/VA se inclusos)
+→ Este é o valor bruto antes dos descontos — é o que o banco usa para aprovação de financiamento
+
+Registre no array "fontes" CADA provento relevante separadamente:
+- remetente = nome do empregador
+- tipo = "emprego_formal" para salário base e adicionais contratuais
+- Adicione uma entrada separada para cada tipo de provento recorrente com mediaMensal de cada um
+- Exemplo: {remetente:"EMPRESA X", tipo:"emprego_formal", mediaMensal: 4000} para o salário base
+           {remetente:"EMPRESA X — Adicional Noturno", tipo:"emprego_formal", mediaMensal: 800}
+           {remetente:"EMPRESA X — Horas Extras", tipo:"emprego_formal", mediaMensal: 500}
 
 ANÁLISE OBRIGATÓRIA DO CONTRACHEQUE — LINHAS DE DESCONTO:
-Leia todas as linhas de desconto do contracheque e identifique empréstimos com desconto em folha (crédito consignado).
+Leia todas as linhas de desconto (lado direito / débitos) e identifique empréstimos com desconto em folha (crédito consignado).
 Exemplos de linhas que indicam consignado: "Empréstimo Consignado", "Consignado INSS", "Consig.", "Empréstimo Banco X", "Parcela Empréstimo", "CDC Consignado", "BMG Consignado", "Sicredi Consig.", "Crefisa", "BV Financeira", ou qualquer linha de desconto com nome de banco/financeira.
 
 NÃO confunda com descontos normais que NÃO são empréstimos:
@@ -1058,9 +1089,8 @@ NÃO confunda com descontos normais que NÃO são empréstimos:
 
 Para cada consignado identificado:
 - Adicione em "comprometimentos" com categoria "consignado", credor = nome da linha do contracheque, valorMedioMensal = valor descontado
-- Este valor JÁ está descontado do salário líquido, portanto NÃO some novamente ao totalComprometido — apenas registre para evidenciar o endividamento
-- Mencione no parecer: "Identificado desconto em folha de consignado com X instituição(ões), totalizando R$ Y/mês já deduzidos do salário líquido"
-- Se houver consignado E o salário líquido já é baixo, isso é fator de risco relevante — mencione nas ressalvas
+- O total de descontos (INSS + IRRF + consignados) reduz o salário líquido — mencione no parecer a diferença entre bruto e líquido
+- Se houver consignado E o salário líquido é baixo, isso é fator de risco relevante — mencione nas ressalvas
 
 CENÁRIO B — EMPRESÁRIO / SÓCIO (há recibo de pró-labore):
 - rendaComprovavel = média dos recibos de pró-labore
