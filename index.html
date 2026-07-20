@@ -1064,17 +1064,25 @@ Proventos que NÃO entram na rendaComprovavel (benefícios em espécie ou eventu
 - Verbas rescisórias (únicas, não recorrentes)
 - Abono único / Verba eventual sem regularidade
 
-→ rendaComprovavel = SOMA de todos os PROVENTOS REGULARES (campo "Total de Proventos" ou "Total de Vencimentos" do contracheque, excluindo benefícios em espécie como VT e VA)
-→ Se o contracheque mostra "Total de Proventos: R$X" use esse valor diretamente (menos VT/VA se inclusos)
-→ Este é o valor bruto antes dos descontos — é o que o banco usa para aprovação de financiamento
+MÚLTIPLOS CONTRACHEQUES (quando houver mais de um mês):
+- Leia CADA contracheque individualmente e some todos os proventos de cada um
+- Registre o total de proventos de cada mês separadamente em porMes
+- rendaComprovavel = MÉDIA do "Total de Proventos" entre todos os contracheques analisados
+- Exemplo: contracheque Mar/2026 = R$9.721 total proventos, contracheque Abr/2026 = R$10.700 → média = R$10.210,50
+- Se houver variação significativa entre meses (>20%), mencione nas ressalvas e use a média mesmo assim
 
-Registre no array "fontes" CADA provento relevante separadamente:
-- remetente = nome do empregador
-- tipo = "emprego_formal" para salário base e adicionais contratuais
-- Adicione uma entrada separada para cada tipo de provento recorrente com mediaMensal de cada um
-- Exemplo: {remetente:"EMPRESA X", tipo:"emprego_formal", mediaMensal: 4000} para o salário base
-           {remetente:"EMPRESA X — Adicional Noturno", tipo:"emprego_formal", mediaMensal: 800}
-           {remetente:"EMPRESA X — Horas Extras", tipo:"emprego_formal", mediaMensal: 500}
+→ rendaComprovavel = MÉDIA DO TOTAL DE PROVENTOS de todos os contracheques (excluindo VT e VA)
+→ Se o contracheque mostra "Total de Proventos: R$X" use esse valor de cada mês diretamente
+→ Este é o valor bruto antes dos descontos — é o critério do banco para aprovação de financiamento
+
+Registre no array "fontes" CADA tipo de provento separadamente com a média mensal:
+- remetente = nome do empregador + descrição do provento
+- tipo = "emprego_formal"
+- porMes = valor desse provento em cada contracheque analisado
+- mediaMensal = média desse provento nos meses disponíveis
+- Exemplo: {remetente:"EMPRESA X — Salário Base", tipo:"emprego_formal", mediaMensal: 4000, porMes:[{mes:"Mar/2026",valor:4000},{mes:"Abr/2026",valor:4000}]}
+           {remetente:"EMPRESA X — Adicional Noturno", tipo:"emprego_formal", mediaMensal: 850, porMes:[{mes:"Mar/2026",valor:800},{mes:"Abr/2026",valor:900}]}
+           {remetente:"EMPRESA X — Horas Extras", tipo:"emprego_formal", mediaMensal: 550, porMes:[{mes:"Mar/2026",valor:500},{mes:"Abr/2026",valor:600}]}
 
 ANÁLISE OBRIGATÓRIA DO CONTRACHEQUE — LINHAS DE DESCONTO:
 Leia todas as linhas de desconto (lado direito / débitos) e identifique empréstimos com desconto em folha (crédito consignado).
