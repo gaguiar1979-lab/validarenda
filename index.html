@@ -850,7 +850,7 @@ async function analyze(){
     });
     // Limite por tipo: extratos têm muitas páginas (10-20/arquivo), então enviamos poucos como binário
     // e completamos com label de texto. Anthropic aceita no máximo 100 páginas por chamada.
-    const MAX_POR_TIPO={extrato:9,extrato_conjuge:9,rendimento:2,simulacao:1,certidao:1,rg:1,rg_conjuge:1,docs_cv:2};
+    const MAX_POR_TIPO={extrato:9,extrato_conjuge:9,rendimento:5,simulacao:1,certidao:1,rg:1,rg_conjuge:1,docs_cv:5};
     const tiposBinario=new Set(['extrato','extrato_conjuge','rendimento','simulacao','certidao','rg','rg_conjuge','docs_cv']);
     const tiposBinarioExtra=t=>t.endsWith('_extrato')||t.endsWith('_rg');
     // Labels descritivos para cônjuge
@@ -1036,6 +1036,15 @@ ORIENTAÇÕES OBRIGATÓRIAS que devem aparecer em "ressalvas" quando aplicável:
    → Adicione SEMPRE em ressalvas: "Cliente CLT pode utilizar o FGTS como parte da entrada ou amortização, desde que: (1) não tenha financiamento imobiliário ativo em seu nome, (2) não tenha usado o FGTS como garantia em outra operação de crédito, e (3) não tenha realizado o Saque-Aniversário (saque emergencial). Vale verificar o saldo disponível com o cliente."
 
 - Não mencione o banco/financeira específico — trate como "financiamento bancário" ou "financiamento imobiliário"
+
+CTPS (CARTEIRA DE TRABALHO) — quando presente nos documentos:
+A CTPS é um documento de histórico de emprego, NÃO um comprovante de renda. Use-a para:
+- Confirmar o empregador atual e a data de admissão (campo "Data de Admissão")
+- Verificar histórico de empregos anteriores (tempo de serviço, rotatividade)
+- Identificar o salário registrado (salário contratual — pode diferir do salário líquido real por proventos)
+- Registre a data de admissão em "ressalvas" se for recente (<6 meses) como fator de risco
+- NÃO use o salário da CTPS como rendaComprovavel — use o contracheque para isso (salário real com proventos)
+- A CTPS confirma o vínculo formal; o contracheque confirma a renda real
 
 PASSO 2 — RENDA COMPROVÁVEL (com documentos):
 Identifique o perfil do comprador pelos documentos presentes e aplique:
