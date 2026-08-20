@@ -670,9 +670,13 @@ async function buscarReserva(){
         files['simulacao'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq});
       }else if(tipo.includes('rg')||tipo.includes('cnh')){
         const key=pessoa.includes('njuge')?'rg_conjuge':'rg';
-        files[key]={_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq};
-      }else if(tipo.includes('certid')||tipo.includes('civil')||tipo.includes('casamento')){
-        files['certidao']={_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq};
+        if(!files[key])files[key]=[];
+        if(!Array.isArray(files[key]))files[key]=[files[key]];
+        files[key].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq});
+      }else if(tipo.includes('certid')||tipo.includes('civil')||tipo.includes('casamento')||tipo.includes('nascimento')){
+        if(!files['certidao'])files['certidao']=[];
+        if(!Array.isArray(files['certidao']))files['certidao']=[files['certidao']];
+        files['certidao'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq});
       }else if(tipo.includes('rendimento')||tipo.includes('holerite')||tipo.includes('carteira de trabalho')||tipo.includes('prolabore')||tipo.includes('pró-labore')||tipo.includes('contracheque')||tipo.includes('contra cheque')||tipo.includes('imposto de renda')||tipo.includes('decore')||tipo.includes('declaracao')||tipo.includes('declaração')){
         if(!files['rendimento'])files['rendimento']=[];
         files['rendimento'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,tipoCV:doc.tipo,pessoa});
@@ -850,7 +854,7 @@ async function analyze(){
     });
     // Limite por tipo: extratos têm muitas páginas (10-20/arquivo), então enviamos poucos como binário
     // e completamos com label de texto. Anthropic aceita no máximo 100 páginas por chamada.
-    const MAX_POR_TIPO={extrato:9,extrato_conjuge:9,rendimento:5,simulacao:1,certidao:1,rg:1,rg_conjuge:1,docs_cv:5};
+    const MAX_POR_TIPO={extrato:9,extrato_conjuge:9,rendimento:5,simulacao:1,certidao:3,rg:2,rg_conjuge:2,docs_cv:5};
     const tiposBinario=new Set(['extrato','extrato_conjuge','rendimento','simulacao','certidao','rg','rg_conjuge','docs_cv']);
     const tiposBinarioExtra=t=>t.endsWith('_extrato')||t.endsWith('_rg');
     // Labels descritivos para cônjuge
