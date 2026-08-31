@@ -1306,12 +1306,13 @@ Retorne SOMENTE este JSON sem markdown. REGRAS DE CONCISÃO OBRIGATÓRIAS:
 Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
     // === ANÁLISE COM ANTHROPIC — suporte automático a múltiplos lotes ===
     // Helper: faz uma chamada streaming e retorna o texto completo gerado pela IA
-    const streamCall=async(cont,sysP,maxTok,timeoutMs)=>{
+    const streamCall=async(cont,sysP,maxTok,timeoutMs,model)=>{
       const ac=new AbortController();
-      const at=setTimeout(()=>ac.abort(),timeoutMs||180000);
+      const at=setTimeout(()=>ac.abort(),timeoutMs||360000);
       let r2;
-      try{r2=await fetch('/api/analyze-stream',{signal:ac.signal,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:maxTok||8000,system:sysP,messages:[{role:'user',content:Array.isArray(cont)?cont:[{type:'text',text:cont}]}]}})});}
-      catch(fe){clearTimeout(at);throw new Error(fe.name==='AbortError'?'Tempo limite atingido. Tente novamente.':fe.message);}
+      const mdl=model||'claude-opus-4-5';
+      try{r2=await fetch('/api/analyze-stream',{signal:ac.signal,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:mdl,max_tokens:maxTok||8000,system:sysP,messages:[{role:'user',content:Array.isArray(cont)?cont:[{type:'text',text:cont}]}]}})});}
+      catch(fe){clearTimeout(at);throw new Error(fe.name==='AbortError'?'Tempo limite atingido (análise demorou muito). Tente novamente ou reduza o número de documentos.':fe.message);}
       if(!r2.ok){clearTimeout(at);const er=await r2.json().catch(()=>({}));throw new Error(er.error?.message||`Erro HTTP ${r2.status}`);}
       const rd=r2.body.getReader();const dc=new TextDecoder();
       let sb='',txt='',fb='';
@@ -1342,7 +1343,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
     if(pdfPagesTotal<=MAX_PAGES_PER_BATCH){
       // LOTE ÚNICO — chamada direta (comportamento padrão)
       document.getElementById('progressLabel').textContent='Gerando laudo...';
-      raw=await streamCall(contentParts,systemPrompt,32000,180000);
+      raw=await streamCall(contentParts,systemPrompt,32000,360000);
 
     }else{
       // MÚLTIPLOS LOTES — extrai dados brutos de cada lote, depois sintetiza tudo
@@ -1383,7 +1384,7 @@ Retorne JSON sem markdown:
         const pgsNesteLote=docsNesteLote.reduce((s,x)=>s+contarPaginasPDF(x.source.data||''),0);
         document.getElementById('progressLabel').textContent=`Lendo lote ${li+1} de ${lotes.length} (~${pgsNesteLote} páginas)...`;
         const loteConteudo=[...lotes[li],{type:'text',text:instrExt}];
-        const extRaw=await streamCall(loteConteudo,sysExt,4000,120000);
+        const extRaw=await streamCall(loteConteudo,sysExt,4000,240000,'claude-haiku-4-5-20251001');
         extrTxt.push(`=== LOTE ${li+1} de ${lotes.length} ===\n${extRaw}`);
         console.log(`✅ Lote ${li+1} extraído`);
       }
@@ -1391,7 +1392,7 @@ Retorne JSON sem markdown:
       // 4. Síntese final — texto apenas (sem PDFs, sem limite de páginas)
       document.getElementById('progressLabel').textContent=`Consolidando análise final (${lotes.length} lotes)...`;
       const msgSintese=`ATENÇÃO: Esta análise foi realizada em ${lotes.length} LOTES (total de ~${pdfPagesTotal} páginas estimadas de PDF). Os dados brutos extraídos de cada lote são:\n\n${extrTxt.join('\n\n')}\n\n${ctxCliente.text}\n\nUse os dados acima para gerar a análise completa conforme todas as regras do sistema. Retorne apenas o JSON.`;
-      raw=await streamCall(msgSintese,systemPrompt,32000,300000);
+      raw=await streamCall(msgSintese,systemPrompt,32000,420000);
     }
     // Extrai JSON contando chaves — mais robusto que regex greedy
     function extractJSON(text){
