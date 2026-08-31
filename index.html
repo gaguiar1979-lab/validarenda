@@ -890,6 +890,9 @@ async function analyze(){
           const pdfValido=isPdf&&(file.base64||'').startsWith('JVBE');
           const podeEnviarBinario=(tiposBinario.has(type)||tiposBinarioExtra(type))&&pdfCount<MAX_PDF_TOTAL&&!limiteAtingido&&arquivoOk&&totalOk;
           if(podeEnviarBinario&&isPdf&&pdfValido){
+            // Adiciona rótulo antes do PDF para que a IA saiba o tipo e o dono do documento
+            const pessoaDoc=file.pessoa&&file.pessoa!=='titular'?`CÔNJUGE/CO-COMPRADOR`:'TITULAR';
+            contentParts.push({type:'text',text:`=== DOCUMENTO A SEGUIR: ${(label+pessoaLabel).toUpperCase()} | PERTENCE AO: ${pessoaDoc} | ARQUIVO: ${file.name} ===`});
             contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:file.base64}});
             pdfCount++;pdfBytesTotal+=pdfBytes;pdfPagesTotal+=pdfPagesEst;pdfCountByType[tipoBase]=(pdfCountByType[tipoBase]||0)+1;
           }else if(isPdf&&!pdfValido){
@@ -903,6 +906,8 @@ async function analyze(){
             arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:'Limite total de dados atingido — faça upload manual deste arquivo'});
           }else if(podeEnviarBinario&&isImage){
             const imgMime=file.contentType?.startsWith('image/')?file.contentType:`image/${ext==='jpg'?'jpeg':ext}`;
+            const pessoaDocImg=file.pessoa&&file.pessoa!=='titular'?`CÔNJUGE/CO-COMPRADOR`:'TITULAR';
+            contentParts.push({type:'text',text:`=== DOCUMENTO A SEGUIR: ${(label+pessoaLabel).toUpperCase()} | PERTENCE AO: ${pessoaDocImg} | ARQUIVO: ${file.name} ===`});
             contentParts.push({type:'image',source:{type:'base64',media_type:imgMime,data:file.base64}});
             pdfCount++;pdfCountByType[tipoBase]=(pdfCountByType[tipoBase]||0)+1;
           }
@@ -1118,11 +1123,21 @@ Leia todas as linhas de desconto (lado direito / débitos) e identifique emprés
 Exemplos de linhas que indicam consignado: "Empréstimo Consignado", "Consignado INSS", "Consig.", "Empréstimo Banco X", "Parcela Empréstimo", "CDC Consignado", "BMG Consignado", "Sicredi Consig.", "Crefisa", "BV Financeira", ou qualquer linha de desconto com nome de banco/financeira.
 
 NÃO confunda com descontos normais que NÃO são empréstimos:
-- INSS — desconto previdenciário obrigatório (não é empréstimo)
-- IRRF — imposto de renda retido (não é empréstimo)
-- Vale transporte, Vale refeição — benefícios (não são empréstimos)
+- INSS — desconto previdenciário obrigatório (não é empréstimo, NÃO entra em comprometimentos)
+- IRRF — imposto de renda retido (não é empréstimo, NÃO entra em comprometimentos)
+- Vale transporte, Vale refeição — benefícios (não são empréstimos, NÃO entram em comprometimentos)
 - Plano de saúde, seguro de vida — benefícios corporativos (registre em comprometimentos mas categoria "saude")
-- Sindicato, contribuição sindical — (não é empréstimo)
+- Sindicato, contribuição sindical — (não é empréstimo, NÃO entra em comprometimentos)
+- Adiantamento Quinzenal / Adiantamento de Salário — é antecipação do próprio salário, NÃO é dívida nem comprometimento. NUNCA coloque adiantamento em comprometimentos.
+- DSR, Horas Extras, Abono — são proventos ou compensações, não dívidas
+
+ATENÇÃO — SALDO DEVEDOR vs PARCELA MENSAL (erro crítico frequente):
+Ao ler extratos e contracheques, sempre verifique se o valor identificado é a PARCELA MENSAL ou o SALDO TOTAL da dívida.
+- Parcela mensal de financiamento de veículo típica: R$400 a R$2.000/mês
+- Parcela mensal de consignado típica: R$200 a R$1.500/mês
+- Se o valor identificado como "parcela" for maior que R$3.000/mês, provavelmente é o SALDO DEVEDOR total — NÃO use como comprometimento mensal
+- Busque a parcela real no contracheque (linha de desconto consignado) ou no extrato (débito recorrente mensal de mesmo valor)
+- Se não conseguir identificar a parcela real, estime com base no padrão de débitos recorrentes no extrato e registre em ressalvas
 
 Para cada consignado identificado:
 - Adicione em "comprometimentos" com categoria "consignado", credor = nome da linha do contracheque, valorMedioMensal = valor descontado
