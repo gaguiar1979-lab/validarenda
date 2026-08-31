@@ -996,9 +996,16 @@ CERTIDÃO NEGATIVA / SOLTEIRO:
 
 Se não houver certidão: analise com base nos familiares já informados no contexto abaixo.
 
+REGRA FUNDAMENTAL — ANALISAR TODA RENDA DOCUMENTADA:
+TODOS os documentos de renda presentes (contracheques, extratos, holerites, pró-labore) de TODAS as pessoas devem ser analisados e suas rendas somadas na rendaComprovavel. Nunca ignore um documento de renda porque o perfil do titular já foi definido por outro cenário.
+
 RENDA FAMILIAR COMBINADA — TITULAR + CÔNJUGE (documentos de ambos presentes):
-Se nos documentos houver arquivos EXPLICITAMENTE identificados como do cônjuge (ex: "Extrato bancário — cônjuge", "Comprovante de renda — cônjuge"), OBRIGATORIAMENTE:
-- Analise a renda do cônjuge SEPARADAMENTE usando os documentos dele/dela
+Se nos documentos houver arquivos identificados como do cônjuge (ex: "Extrato bancário — cônjuge", "Comprovante de renda — cônjuge"), OBRIGATORIAMENTE:
+- Analise a renda do cônjuge SEPARADAMENTE: aplique o cenário correto para os documentos DELE/DELA
+  → Se cônjuge tem contracheque/holerite: use CENÁRIO A (CLT) para o cônjuge
+  → Se cônjuge tem só extrato: use CENÁRIO C (informal) para o cônjuge
+  → Se cônjuge tem pró-labore: use CENÁRIO B para o cônjuge
+  → Se cônjuge tem contracheque E extrato: use CENÁRIO MISTO para o cônjuge
 - Some a renda do cônjuge à renda do titular → rendaComprovavel = renda titular + renda cônjuge
 - Preencha "compradores[]" com dois itens: titular (relacao:"titular") e cônjuge (relacao:"cônjuge"), cada um com sua rendaIndividual
 - Exclua de AMBOS os extratos quaisquer transferências entre titular e cônjuge (são movimentações internas, não renda)
