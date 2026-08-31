@@ -227,6 +227,10 @@ app.post('/api/analyze-stream', (req, res) => {
         'Content-Length': Buffer.byteLength(payloadStr)
       }
     }, (apiRes) => {
+      // Encaminha o status do Anthropic ao cliente (erros 4xx ficam visíveis)
+      if (apiRes.statusCode !== 200) {
+        res.status(apiRes.statusCode);
+      }
       apiRes.pipe(res);
     });
 
