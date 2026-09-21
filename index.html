@@ -677,7 +677,7 @@ async function buscarReserva(){
         if(!files['certidao'])files['certidao']=[];
         if(!Array.isArray(files['certidao']))files['certidao']=[files['certidao']];
         files['certidao'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq});
-      }else if(tipo.includes('rendimento')||tipo.includes('holerite')||tipo.includes('carteira de trabalho')||tipo.includes('prolabore')||tipo.includes('pró-labore')||tipo.includes('contracheque')||tipo.includes('contra cheque')||tipo.includes('imposto de renda')||tipo.includes('decore')||tipo.includes('declaracao')||tipo.includes('declaração')){
+      }else if(tipo.includes('rendimento')||tipo.includes('comprovante de renda')||tipo.includes('comprovante renda')||tipo.includes('holerite')||tipo.includes('carteira de trabalho')||tipo.includes('prolabore')||tipo.includes('pró-labore')||tipo.includes('contracheque')||tipo.includes('contra cheque')||tipo.includes('imposto de renda')||tipo.includes('decore')||tipo.includes('declaracao')||tipo.includes('declaração')||tipo.includes('demonstrativo de pagamento')||tipo.includes('demonstrativo pagamento')||tipo.includes('demonstrativo de salario')||tipo.includes('demonstrativo salario')){
         if(!files['rendimento'])files['rendimento']=[];
         files['rendimento'].push({_cvFile:true,base64:dlData.base64,contentType:dlData.contentType,name:nomeArq,tipoCV:doc.tipo,pessoa});
       }else{
