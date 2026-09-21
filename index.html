@@ -1250,6 +1250,20 @@ PASSO 3 — RENDA REAL (extratos - apenas entradas):
 - Todas as entradas, excluindo: familiares listados + APOSTAS (excluídas conforme regra acima) + resgates + transferências entre contas do próprio titular JÁ presentes na análise
 - Avalie regularidade por fonte: "regular" (±20% todo mês), "irregular" (variável mas presente), "esporadica" (ausente em alguns meses)
 
+DETALHAMENTO OBRIGATÓRIO DE FONTES NO EXTRATO:
+NUNCA agrupe entradas de remetentes diferentes em uma única fonte genérica como "Entradas diversas" ou "Transferências PJ".
+Para CADA remetente distinto que aparece no extrato com entradas recorrentes, crie uma entrada SEPARADA no array "fontes" com:
+- remetente: nome EXATO como aparece no extrato (ex: "DIRECT BH IMPORT E EXPORT LTDA", "REALME MARANGUAPE", "KAIO VITOR DE SOUZA TEIXEIRA")
+- tipo: classifique individualmente (emprego_formal, autonomo, aluguel, outros, etc.)
+- mediaMensal: média dos meses em que apareceu
+- porMes: valor de cada mês individualmente
+Agrupe SOMENTE entradas de valor muito baixo (<R$100) e esporádicas sem identificação clara. Todo remetente com entradas ≥R$200 em algum mês deve ter sua própria linha.
+
+PREENCHER ARRAY "apostas" OBRIGATORIAMENTE:
+Se houver qualquer entrada ou saída relacionada a apostas, preencha o array "apostas" com um objeto por mês:
+{"mes":"Jan/2025","entradas": <total recebido de apostas neste mês>,"saidas": <total enviado para apostas neste mês>,"saldo": <entradas - saídas>}
+Inclua TODOS os meses do período analisado. Se num mês não houver apostas, coloque 0 nos campos. Este array é OBRIGATÓRIO quando entradasBet > 0 ou saidasBet > 0.
+
 PASSO 3B — CONTAS DE MESMA TITULARIDADE SEM EXTRATO (obrigatório verificar):
 - Identifique transferências de SAÍDA recorrentes que indicam conta do próprio titular em outro banco
   (ex: TED/PIX com nome igual ao titular, ou descrição como "transf própria", "Nubank", "Inter", "C6", "XP", etc.)
@@ -2154,14 +2168,14 @@ function renderResults(r){
       </div>
     </div>
 
-    ${(r.apostas&&r.apostas.length&&r.entradasBet>0)?`
+    ${(r.entradasBet>0)?`
     <div style="margin-top:12px;background:var(--surface);border:1px solid #fca5a5;border-radius:10px;padding:14px 16px">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8b1a1a;margin-bottom:10px">🎰 Resumo Mensal de Apostas</div>
       <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Valores recebidos de e enviados para casas de apostas — excluídos da composição de renda</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:4px">
         <span>Mês</span><span style="text-align:right">Recebido</span><span style="text-align:right">Enviado</span><span style="text-align:right">Saldo</span>
       </div>
-      ${r.apostas.map(a=>{
+      ${(r.apostas&&r.apostas.length>0)?r.apostas.map(a=>{
         const saldo=a.saldo!==undefined?a.saldo:(a.entradas||0)-(a.saidas||0);
         const saldoColor=saldo>=0?'#1a7a3c':'#8b1a1a';
         return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
@@ -2170,7 +2184,7 @@ function renderResults(r){
           <span style="text-align:right;font-family:'DM Mono',monospace;color:#8b1a1a">${fmt(a.saidas||0)}</span>
           <span style="text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:${saldoColor}">${saldo>=0?'+':''}${fmt(Math.abs(saldo))}</span>
         </div>`;
-      }).join('')}
+      }).join(''):''}
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;padding:8px 0 0;font-size:12px;font-weight:700;border-top:2px solid var(--border);margin-top:4px">
         <span>TOTAL</span>
         <span style="text-align:right;font-family:'DM Mono',monospace">${fmt(r.entradasBet||0)}</span>
