@@ -1237,8 +1237,15 @@ ENTRADAS QUE NUNCA SÃO RENDA — EXCLUIR OBRIGATORIAMENTE DA COMPOSIÇÃO:
 - Descrições como: "Resgate", "Aplicação", "Poupança", "CDB", "RDB", "LCI", "LCA", "Tesouro", "Fundo", "Rendimento de aplicação"
 Esses valores representam PATRIMÔNIO do cliente sendo movimentado, não renda gerada. Incluí-los inflaria artificialmente a capacidade de pagamento. Registre em "excluidos" com motivo "resgate de aplicação/poupança — patrimônio, não renda".
 
+APOSTAS E JOGOS — REGRA ABSOLUTA:
+Entradas provenientes de casas de apostas ou plataformas de jogos (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet, BJB, BJB Entretenimento, MAX Gaming, NEXABET, Brazino, Realsbet, Esportes da Sorte, F12.bet, KTO, Betfair, 1xBet e similares) são COMPLETAMENTE PROIBIDAS de entrar em qualquer cálculo de renda.
+- NUNCA inclua valores de apostas em rendaComprovavel, rendaRealTotal, ou em qualquer fonte de renda
+- Some o total de entradas de apostas NO PERÍODO ANALISADO e preencha no campo "entradasBet" do JSON
+- Mencione OBRIGATORIAMENTE no parecer e na conclusão: "Foram identificadas entradas de R$X provenientes de casas de apostas, totalizando R$Y no período analisado. Esses valores foram integralmente excluídos da composição de renda por não representarem renda comprovável."
+- Se apostas representam a maior parte das entradas do extrato, sinalize como risco crítico e informe que o cliente não possui renda real demonstrável além do comprovante formal
+
 PASSO 3 — RENDA REAL (extratos - apenas entradas):
-- Todas as entradas, excluindo: familiares listados + apostas (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet e similares) + transferências entre contas do próprio titular JÁ presentes na análise
+- Todas as entradas, excluindo: familiares listados + APOSTAS (excluídas conforme regra acima) + resgates + transferências entre contas do próprio titular JÁ presentes na análise
 - Avalie regularidade por fonte: "regular" (±20% todo mês), "irregular" (variável mas presente), "esporadica" (ausente em alguns meses)
 
 PASSO 3B — CONTAS DE MESMA TITULARIDADE SEM EXTRATO (obrigatório verificar):
@@ -1442,7 +1449,9 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
       // 3. Extrair dados brutos de cada lote (chamadas rápidas — apenas extração, sem análise)
       const sysExt=`Você é um extrator de dados financeiros. Leia os PDFs e extraia TODOS os dados brutos encontrados — sem análise, sem veredito. Retorne apenas JSON sem markdown.`;
       const instrExt=`Extraia de TODOS os PDFs presentes:
-1. Todas as entradas de crédito nos extratos: mês, remetente, valor, banco
+1. Todas as entradas de crédito nos extratos: mês, remetente, valor, banco. SEPARE em dois grupos:
+   - "entradas": entradas legítimas (salário, pró-labore, freelas, aluguéis, pensão, aposentadoria, transferências de terceiros)
+   - "entradas_aposta": entradas de casas de apostas/jogos (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet, BJB, MAX Gaming, NEXABET, Brazino, Realsbet e similares). Estas NUNCA entram como renda.
 2. Saídas fixas/recorrentes: destinatário, valor, frequência, tipo (empréstimo/cartão/aluguel/etc)
 3. Contracheques/holerites: competência, salário bruto, salário líquido, consignados (credor e valor de cada parcela)
 4. Simulação de financiamento: parcela mensal, valor imóvel, valor financiado, subsídio, renda declarada
@@ -1450,7 +1459,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
 6. Lista dos documentos identificados nos arquivos
 
 Retorne JSON sem markdown:
-{"periodo":"","documentos":["Extrato Neon Jan-Mar/2025"],"entradas":[{"mes":"Jan/2025","remetente":"EMPRESA X","valor":0,"banco":"Nubank"}],"saidas_fixas":[{"destinatario":"BANCO Y","valor":0,"frequencia":"mensal","tipo":"emprestimo"}],"holerites":[{"competencia":"","salario_bruto":0,"salario_liquido":0,"consignados":[{"credor":"","valor":0}]}],"simulacao":{"parcelaFinanciamento":0,"valorImovel":0,"valorFinanciado":0,"subsidio":0,"rendaDeclarada":0},"certidao":{"tipo":"","conjuge":"","filhos":[]}}`;
+{"periodo":"","documentos":["Extrato Neon Jan-Mar/2025"],"entradas":[{"mes":"Jan/2025","remetente":"EMPRESA X","valor":0,"banco":"Nubank"}],"entradas_aposta":[{"mes":"Jan/2025","remetente":"Blaze","valor":0,"banco":"Nubank"}],"saidas_fixas":[{"destinatario":"BANCO Y","valor":0,"frequencia":"mensal","tipo":"emprestimo"}],"holerites":[{"competencia":"","salario_bruto":0,"salario_liquido":0,"consignados":[{"credor":"","valor":0}]}],"simulacao":{"parcelaFinanciamento":0,"valorImovel":0,"valorFinanciado":0,"subsidio":0,"rendaDeclarada":0},"certidao":{"tipo":"","conjuge":"","filhos":[]}}`;
 
       const extrTxt=[];
       for(let li=0;li<lotes.length;li++){
