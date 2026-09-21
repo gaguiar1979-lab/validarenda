@@ -1202,7 +1202,7 @@ CENÁRIO B — EMPRESÁRIO / SÓCIO (há recibo de pró-labore):
 
 CENÁRIO B — DISTRIBUIÇÃO DE LUCROS (pró-labore + extrato com entradas superiores):
 Se o cliente tem pró-labore E extrato bancário, analise o extrato separadamente:
-1. Some APENAS as entradas no extrato que NÃO sejam: salário/pró-labore já contabilizado, transferências da própria empresa para a conta pessoal (mesma CNPJ/razão social), transferências de familiares (filhos, pais, cônjuge, irmãos), saques, resgates de aplicações/poupança, apostas (Bet, Blaze, etc.)
+1. Some APENAS as entradas no extrato que NÃO sejam: salário/pró-labore já contabilizado, transferências da própria empresa para a conta pessoal (mesma CNPJ/razão social), transferências de familiares (filhos, pais, cônjuge, irmãos), saques, resgates de aplicações/poupança, apostas (Bet, Blaze, etc.), Fluxpay, Pagsmile, Pay4Fun, Astropay (intermediadoras de apostas)
 2. Se a média mensal dessas entradas restantes for SUPERIOR ao valor do pró-labore: classifique o excedente como "distribuição de lucros" — adicione como fonte separada com tipo "prolabore" e observação "Distribuição de lucros identificada no extrato bancário"
 3. rendaComprovavel do CENÁRIO B = pró-labore + média da distribuição de lucros identificada no extrato
 4. Declare no parecer: "Além do pró-labore de R$X, identificou-se distribuição de lucros média de R$Y/mês no extrato bancário, totalizando R$Z de renda comprovável"
@@ -1247,7 +1247,7 @@ Entradas provenientes de casas de apostas ou plataformas de jogos (Bet, Blaze, B
 - Se apostas representam a maior parte das entradas do extrato, sinalize como risco crítico e informe que o cliente não possui renda real demonstrável além do comprovante formal
 
 PASSO 3 — RENDA REAL (extratos - apenas entradas):
-- Todas as entradas, excluindo: familiares listados + APOSTAS (excluídas conforme regra acima) + resgates + transferências entre contas do próprio titular JÁ presentes na análise
+- Todas as entradas, excluindo: familiares listados + APOSTAS (excluídas conforme regra acima, incluindo intermediadoras Fluxpay, Pagsmile, Pay4Fun, Astropay) + resgates + transferências entre contas do próprio titular JÁ presentes na análise
 - Avalie regularidade por fonte: "regular" (±20% todo mês), "irregular" (variável mas presente), "esporadica" (ausente em alguns meses)
 
 DETALHAMENTO OBRIGATÓRIO DE FONTES NO EXTRATO:
@@ -1467,7 +1467,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
       const instrExt=`Extraia de TODOS os PDFs presentes:
 1. Todas as entradas de crédito nos extratos: mês, remetente, valor, banco. SEPARE em dois grupos:
    - "entradas": entradas legítimas (salário, pró-labore, freelas, aluguéis, pensão, aposentadoria, transferências de terceiros)
-   - "entradas_aposta": entradas de casas de apostas/jogos (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet, BJB, MAX Gaming, NEXABET, Brazino, Realsbet e similares). Estas NUNCA entram como renda.
+   - "entradas_aposta": entradas de casas de apostas/jogos (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet, BJB, BJB ENTRETENIMENTO, MAX Gaming, NEXABET, GANHA SORTE, Brazino, Realsbet, Fluxpay, FLUXPAY LTDA, Pagsmile, Pay4Fun, Astropay, ecoPayz, Jeton e similares). Estas NUNCA entram como renda. ATENÇÃO: Fluxpay e Pagsmile são intermediadoras de pagamento usadas EXCLUSIVAMENTE por casas de apostas — qualquer entrada vinda dessas empresas é aposta, não renda legítima.
 2. Saídas fixas/recorrentes: destinatário, valor, frequência, tipo (empréstimo/cartão/aluguel/etc). SEPARE também:
    - "saidas_aposta": saídas/transferências para casas de apostas (mesmas plataformas acima) — quanto o cliente ENVIOU para apostas por mês
 3. Contracheques/holerites: competência, salário bruto, salário líquido, consignados (credor e valor de cada parcela)
@@ -2168,30 +2168,47 @@ function renderResults(r){
       </div>
     </div>
 
-    ${(r.entradasBet>0)?`
+    ${(r.entradasBet>0||r.saidasBet>0)?`
     <div style="margin-top:12px;background:var(--surface);border:1px solid #fca5a5;border-radius:10px;padding:14px 16px">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8b1a1a;margin-bottom:10px">🎰 Resumo Mensal de Apostas</div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Valores recebidos de e enviados para casas de apostas — excluídos da composição de renda</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:4px">
-        <span>Mês</span><span style="text-align:right">Recebido</span><span style="text-align:right">Enviado</span><span style="text-align:right">Saldo</span>
-      </div>
-      ${(r.apostas&&r.apostas.length>0)?r.apostas.map(a=>{
-        const saldo=a.saldo!==undefined?a.saldo:(a.entradas||0)-(a.saidas||0);
-        const saldoColor=saldo>=0?'#1a7a3c':'#8b1a1a';
-        return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
-          <span style="color:var(--text2)">${a.mes}</span>
-          <span style="text-align:right;font-family:'DM Mono',monospace">${fmt(a.entradas||0)}</span>
-          <span style="text-align:right;font-family:'DM Mono',monospace;color:#8b1a1a">${fmt(a.saidas||0)}</span>
-          <span style="text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:${saldoColor}">${saldo>=0?'+':''}${fmt(Math.abs(saldo))}</span>
-        </div>`;
-      }).join(''):''}
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;padding:8px 0 0;font-size:12px;font-weight:700;border-top:2px solid var(--border);margin-top:4px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8b1a1a;margin-bottom:6px">🎰 Movimentação de Apostas no Período</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Entradas e saídas para casas de apostas — excluídas da composição de renda</div>
+      ${(()=>{
+        // Usa array apostas se disponível; se não, usa excluidos com relacao casa_apostas para montar linhas por nome
+        const temMensal=r.apostas&&r.apostas.filter(a=>a.mes&&(a.entradas||a.saidas)).length>0;
+        if(temMensal){
+          const rows=r.apostas.filter(a=>a.mes).map(a=>{
+            const saldo=a.saldo!==undefined?a.saldo:(a.entradas||0)-(a.saidas||0);
+            const cor=saldo>=0?'#1a7a3c':'#8b1a1a';
+            return `<div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:4px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+              <span style="color:var(--text2)">${a.mes}</span>
+              <span style="text-align:right;font-family:'DM Mono',monospace">${fmt(a.entradas||0)}</span>
+              <span style="text-align:right;font-family:'DM Mono',monospace;color:#8b1a1a">${fmt(a.saidas||0)}</span>
+              <span style="text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:${cor}">${saldo>=0?'+':''}${fmt(Math.abs(saldo))}</span>
+            </div>`;
+          }).join('');
+          return `<div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:4px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:4px">
+            <span>Mês</span><span style="text-align:right">Recebido</span><span style="text-align:right">Enviado</span><span style="text-align:right">Saldo</span>
+          </div>${rows}`;
+        } else {
+          // fallback: lista casas por nome a partir de excluidos
+          const casas=(r.excluidos||[]).filter(e=>e.relacao&&(e.relacao.includes('aposta')||e.relacao.includes('bet')));
+          if(casas.length){
+            return `<div style="font-size:11px;color:#8b1a1a;margin-bottom:6px;font-weight:600">Casas de apostas identificadas:</div>`+
+              casas.map(e=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
+                <span>${e.nome}</span>
+                <span style="font-family:'DM Mono',monospace;color:#8b1a1a">${fmt(e.valorTotal||0)} no período</span>
+              </div>`).join('');
+          }
+          return '';
+        }
+      })()}
+      <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:4px;padding:8px 0 0;font-size:12px;font-weight:700;border-top:2px solid var(--border);margin-top:4px">
         <span>TOTAL</span>
         <span style="text-align:right;font-family:'DM Mono',monospace">${fmt(r.entradasBet||0)}</span>
         <span style="text-align:right;font-family:'DM Mono',monospace;color:#8b1a1a">${fmt(r.saidasBet||0)}</span>
-        <span style="text-align:right;font-family:'DM Mono',monospace;color:${((r.entradasBet||0)-(r.saidasBet||0))>=0?'#1a7a3c':'#8b1a1a'}">${((r.entradasBet||0)-(r.saidasBet||0))>=0?'+':''}${fmt(Math.abs((r.entradasBet||0)-(r.saidasBet||0)))}</span>
+        <span style="text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:${((r.entradasBet||0)-(r.saidasBet||0))>=0?'#1a7a3c':'#8b1a1a'}">${((r.entradasBet||0)-(r.saidasBet||0))>=0?'+':''}${fmt(Math.abs((r.entradasBet||0)-(r.saidasBet||0)))}</span>
       </div>
-      <div style="margin-top:8px;font-size:11px;color:var(--text3)">Saldo positivo = recebeu mais do que enviou (ganhou). Saldo negativo = enviou mais do que recebeu (perdeu).</div>
+      <div style="margin-top:8px;font-size:11px;color:var(--text3)">Saldo positivo = recebeu mais do que enviou. Saldo negativo = perdeu dinheiro com apostas.</div>
     </div>`:''}
 
     ${(r.comprometimentos&&r.comprometimentos.length)?`
