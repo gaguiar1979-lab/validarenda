@@ -1,6 +1,7 @@
 const express = require('express');
 const https = require('https');
 const path = require('path');
+const { PDFDocument } = require('pdf-lib');
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -336,6 +337,37 @@ app.post('/api/cv/repasse/:id/salvar-relatorio', async (req, res) => {
       headers: { 'email': email, 'token': token, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
     }, payload);
     res.status(result.status).json({ ok: result.status < 300, raw: result.body });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Divide PDF grande em chunks de até PAGES_PER_CHUNK páginas
+app.post('/api/split-pdf', async (req, res) => {
+  try {
+    const { base64, pagesPerChunk } = req.body;
+    if (!base64) return res.status(400).json({ error: 'base64 não informado' });
+    const chunk = Math.min(Math.max(parseInt(pagesPerChunk) || 80, 10), 100);
+
+    const bytes = Buffer.from(base64, 'base64');
+    const srcDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const total = srcDoc.getPageCount();
+
+    const chunks = [];
+    for (let start = 0; start < total; start += chunk) {
+      const end = Math.min(start + chunk, total);
+      const newDoc = await PDFDocument.create();
+      const pages = await newDoc.copyPages(srcDoc, Array.from({ length: end - start }, (_, i) => start + i));
+      pages.forEach(p => newDoc.addPage(p));
+      const chunkBytes = await newDoc.save();
+      chunks.push({
+        base64: Buffer.from(chunkBytes).toString('base64'),
+        pages: end - start,
+        startPage: start + 1,
+        endPage: end
+      });
+    }
+    res.json({ total, chunks });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

@@ -901,7 +901,26 @@ async function analyze(){
           }else if(isPdf&&limiteAtingido){
             arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Limite de ${MAX_POR_TIPO[tipoBase]} arquivos deste tipo atingido — faça upload manual`});
           }else if(isPdf&&pdfPagesEst>MAX_PAGES_POR_PDF){
-            arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Arquivo com ${pdfPagesEst} páginas (máx ${MAX_PAGES_POR_PDF} por arquivo) — envie 1 mês por arquivo ou divida em partes menores`});
+            if(tipoBase==='extrato'||tipoBase==='extrato_conjuge'){
+              try{
+                const splitRes=await fetch('/api/split-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64:file.base64,pagesPerChunk:80})});
+                const splitData=await splitRes.json();
+                if(splitData.chunks&&splitData.chunks.length>0){
+                  for(let ci=0;ci<splitData.chunks.length;ci++){
+                    const ch=splitData.chunks[ci];
+                    const chLabel=`${label}${pessoaLabel} [parte ${ci+1}/${splitData.chunks.length}, págs ${ch.startPage}-${ch.endPage}]`;
+                    const pessoaDoc=file.pessoa&&file.pessoa!=='titular'?'CÔNJUGE/CO-COMPRADOR':'TITULAR';
+                    contentParts.push({type:'text',text:`=== DOCUMENTO A SEGUIR: ${chLabel.toUpperCase()} | PERTENCE AO: ${pessoaDoc} | ARQUIVO: ${file.name} (parte ${ci+1}) ===`});
+                    contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:ch.base64}});
+                    pdfPagesTotal+=ch.pages;
+                  }
+                  pdfCount++;pdfCountByType[tipoBase]=(pdfCountByType[tipoBase]||0)+1;
+                  console.log(`📄 Extrato grande dividido em ${splitData.chunks.length} partes (${splitData.total} págs): ${file.name}`);
+                }else{arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Não foi possível dividir o extrato de ${pdfPagesEst} páginas`});}
+              }catch(splitErr){arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Erro ao dividir extrato: ${splitErr.message}`});}
+            }else{
+              arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Arquivo com ${pdfPagesEst} páginas (máx ${MAX_PAGES_POR_PDF} por arquivo) — envie 1 mês por arquivo ou divida em partes menores`});
+            }
           }else if(isPdf&&!totalOk){
             arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:'Limite total de dados atingido — faça upload manual deste arquivo'});
           }else if(podeEnviarBinario&&isImage){
@@ -921,7 +940,21 @@ async function analyze(){
             if(isImage){contentParts.push({type:'image',source:{type:'base64',media_type:file.type,data:b64}});}
             else if(b64.startsWith('JVBE')){
               const pgsManual=contarPaginasPDF(b64);
-              if(pgsManual>MAX_PAGES_POR_PDF){
+              const tipoBaseManual=(type||'').toLowerCase().replace(/[^a-z_]/g,'');
+              if(pgsManual>MAX_PAGES_POR_PDF&&(tipoBaseManual==='extrato'||tipoBaseManual==='extrato_conjuge')){
+                try{
+                  const splitRes=await fetch('/api/split-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64:b64,pagesPerChunk:80})});
+                  const splitData=await splitRes.json();
+                  if(splitData.chunks&&splitData.chunks.length>0){
+                    for(let ci=0;ci<splitData.chunks.length;ci++){
+                      const ch=splitData.chunks[ci];
+                      contentParts.push({type:'text',text:`=== EXTRATO (parte ${ci+1}/${splitData.chunks.length}, págs ${ch.startPage}-${ch.endPage}) | ARQUIVO: ${file.name} ===`});
+                      contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:ch.base64}});
+                      pdfPagesTotal+=ch.pages;
+                    }
+                  }else{arquivosNaoAnalisados.push({nome:file.name,tipo:docNames[type]||type,motivo:`Não foi possível dividir o extrato de ${pgsManual} páginas`});}
+                }catch(e2){arquivosNaoAnalisados.push({nome:file.name,tipo:docNames[type]||type,motivo:`Erro ao dividir extrato: ${e2.message}`});}
+              }else if(pgsManual>MAX_PAGES_POR_PDF){
                 arquivosNaoAnalisados.push({nome:file.name,tipo:docNames[type]||type,motivo:`Arquivo com ${pgsManual} páginas — máx ${MAX_PAGES_POR_PDF} por arquivo. Envie em arquivos menores (ex: 1 mês por arquivo).`});
               }else{
                 contentParts.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}});
