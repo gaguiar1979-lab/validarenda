@@ -1661,6 +1661,31 @@ function _gerarHTML(r,w){
   const extratosHTML=(r.extratosFaltantes&&r.extratosFaltantes.length)
     ?r.extratosFaltantes.map(e=>`<tr><td><strong>${e.banco}</strong></td><td>${e.motivo}</td><td>~${fmtR(e.valorMedioMensal)}/mês</td></tr>`).join(''):'';
 
+  const apostasHTML=(()=>{
+    if(!(r.entradasBet>0||r.saidasBet>0)) return '';
+    const temMensal=r.apostas&&r.apostas.filter(a=>a.mes&&(a.entradas||a.saidas)).length>0;
+    let headerRow,dataRows;
+    if(temMensal){
+      headerRow=`<tr><th>Mês</th><th>Entradas (apostas)</th><th>Saídas (apostas)</th><th>Saldo</th></tr>`;
+      dataRows=r.apostas.filter(a=>a.mes&&(a.entradas||a.saidas)).map(a=>{
+        const s=(a.entradas||0)-(a.saidas||0);
+        return`<tr><td>${a.mes}</td><td>${fmtR(a.entradas)}</td><td>${fmtR(a.saidas)}</td><td style="color:${s>=0?'#1a7a3c':'#8b1a1a'}">${fmtR(s)}</td></tr>`;
+      }).join('');
+    }else{
+      const casas=(r.excluidos||[]).filter(e=>e.relacao&&(e.relacao.toLowerCase().includes('aposta')||e.relacao.toLowerCase().includes('bet')||e.relacao.toLowerCase().includes('casa')));
+      headerRow=`<tr><th>Casa de Apostas</th><th>Total Entradas</th><th>Total Saídas</th><th>Saldo</th></tr>`;
+      dataRows=casas.length?casas.map(e=>`<tr><td>${e.nome}</td><td>${fmtR(e.valorTotal)}</td><td>—</td><td>—</td></tr>`).join(''):'<tr><td colspan="4">Dados mensais não disponíveis</td></tr>';
+    }
+    const sT=(r.entradasBet||0)-(r.saidasBet||0);
+    return`<h2>🎰 Movimentação de Apostas — Excluída da Renda</h2>
+<div class="alerta">Valores de apostas e jogos são excluídos integralmente da renda comprovável. O cliente apostou durante o período analisado.</div>
+<table>
+  ${headerRow}
+  ${dataRows}
+  <tr style="background:#fdecea;font-weight:bold"><td>TOTAL</td><td>${fmtR(r.entradasBet)}</td><td>${fmtR(r.saidasBet)}</td><td style="color:${sT>=0?'#1a7a3c':'#8b1a1a'}">${fmtR(sT)}</td></tr>
+</table>`;
+  })();
+
   const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Laudo de Renda — Pré-Cadastro ${reservaNum}</title>
 <style>
@@ -1879,6 +1904,8 @@ ${r.ressalvas.map(rs=>`<div class="alerta">• ${rs}</div>`).join('')}`:''}
 
 <h2>Laudo Analítico</h2>
 <div class="parecer-box">${(r.conclusao||'').replace(/\n/g,'<br>')}</div>
+
+${apostasHTML}
 
 ${(r.excluidos&&r.excluidos.length)?`<h2>Transferências Excluídas da Renda (Familiares)</h2>
 <table>
