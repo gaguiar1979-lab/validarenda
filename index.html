@@ -1241,7 +1241,9 @@ APOSTAS E JOGOS — REGRA ABSOLUTA:
 Entradas provenientes de casas de apostas ou plataformas de jogos (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet, BJB, BJB Entretenimento, MAX Gaming, NEXABET, Brazino, Realsbet, Esportes da Sorte, F12.bet, KTO, Betfair, 1xBet e similares) são COMPLETAMENTE PROIBIDAS de entrar em qualquer cálculo de renda.
 - NUNCA inclua valores de apostas em rendaComprovavel, rendaRealTotal, ou em qualquer fonte de renda
 - Some o total de entradas de apostas NO PERÍODO ANALISADO e preencha no campo "entradasBet" do JSON
-- Mencione OBRIGATORIAMENTE no parecer e na conclusão: "Foram identificadas entradas de R$X provenientes de casas de apostas, totalizando R$Y no período analisado. Esses valores foram integralmente excluídos da composição de renda por não representarem renda comprovável."
+- Some o total de saídas/envios para apostas NO PERÍODO ANALISADO e preencha no campo "saidasBet" do JSON
+- Preencha o array "apostas" com um resumo por mês: {"mes":"Jan/2025","entradas":0.00,"saidas":0.00,"saldo":0.00} onde saldo = entradas - saídas (positivo = ganhou, negativo = perdeu)
+- Mencione OBRIGATORIAMENTE no parecer e na conclusão: total de entradas de apostas excluídas, total enviado para apostas, e saldo líquido (ganhou ou perdeu quanto no período)
 - Se apostas representam a maior parte das entradas do extrato, sinalize como risco crítico e informe que o cliente não possui renda real demonstrável além do comprovante formal
 
 PASSO 3 — RENDA REAL (extratos - apenas entradas):
@@ -1382,7 +1384,7 @@ Retorne SOMENTE este JSON sem markdown. REGRAS DE CONCISÃO OBRIGATÓRIAS:
 - porMes: inclua apenas os meses com valor > 0, máximo 6 meses
 - fatoresRisco: máximo 6 itens
 - indicadoresPositivos e indicadoresNegativos: máximo 3 itens cada:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"documentosEncontrados":["Arquivo RG: contém RG + certidão de casamento","Kit: contém extrato Jan-Mar/2025 + holerite"],"documentosCadastroAusentes":["Simulação de financiamento","Certidão de estado civil"],"rendaDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"1 frase"}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"documentosEncontrados":["Arquivo RG: contém RG + certidão de casamento","Kit: contém extrato Jan-Mar/2025 + holerite"],"documentosCadastroAusentes":["Simulação de financiamento","Certidão de estado civil"],"rendaDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"saidasBet":0.00,"apostas":[{"mes":"Jan/2025","entradas":0.00,"saidas":0.00,"saldo":0.00}],"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"1 frase"}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
 
 Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
     // === ANÁLISE COM ANTHROPIC — suporte automático a múltiplos lotes ===
@@ -1452,14 +1454,15 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
 1. Todas as entradas de crédito nos extratos: mês, remetente, valor, banco. SEPARE em dois grupos:
    - "entradas": entradas legítimas (salário, pró-labore, freelas, aluguéis, pensão, aposentadoria, transferências de terceiros)
    - "entradas_aposta": entradas de casas de apostas/jogos (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet, BJB, MAX Gaming, NEXABET, Brazino, Realsbet e similares). Estas NUNCA entram como renda.
-2. Saídas fixas/recorrentes: destinatário, valor, frequência, tipo (empréstimo/cartão/aluguel/etc)
+2. Saídas fixas/recorrentes: destinatário, valor, frequência, tipo (empréstimo/cartão/aluguel/etc). SEPARE também:
+   - "saidas_aposta": saídas/transferências para casas de apostas (mesmas plataformas acima) — quanto o cliente ENVIOU para apostas por mês
 3. Contracheques/holerites: competência, salário bruto, salário líquido, consignados (credor e valor de cada parcela)
 4. Simulação de financiamento: parcela mensal, valor imóvel, valor financiado, subsídio, renda declarada
 5. Certidão de estado civil: tipo (casamento/nascimento/solteiro), nome do cônjuge, nome dos filhos
 6. Lista dos documentos identificados nos arquivos
 
 Retorne JSON sem markdown:
-{"periodo":"","documentos":["Extrato Neon Jan-Mar/2025"],"entradas":[{"mes":"Jan/2025","remetente":"EMPRESA X","valor":0,"banco":"Nubank"}],"entradas_aposta":[{"mes":"Jan/2025","remetente":"Blaze","valor":0,"banco":"Nubank"}],"saidas_fixas":[{"destinatario":"BANCO Y","valor":0,"frequencia":"mensal","tipo":"emprestimo"}],"holerites":[{"competencia":"","salario_bruto":0,"salario_liquido":0,"consignados":[{"credor":"","valor":0}]}],"simulacao":{"parcelaFinanciamento":0,"valorImovel":0,"valorFinanciado":0,"subsidio":0,"rendaDeclarada":0},"certidao":{"tipo":"","conjuge":"","filhos":[]}}`;
+{"periodo":"","documentos":["Extrato Neon Jan-Mar/2025"],"entradas":[{"mes":"Jan/2025","remetente":"EMPRESA X","valor":0,"banco":"Nubank"}],"entradas_aposta":[{"mes":"Jan/2025","remetente":"Blaze","valor":0,"banco":"Nubank"}],"saidas_aposta":[{"mes":"Jan/2025","destinatario":"Blaze","valor":0,"banco":"Nubank"}],"saidas_fixas":[{"destinatario":"BANCO Y","valor":0,"frequencia":"mensal","tipo":"emprestimo"}],"holerites":[{"competencia":"","salario_bruto":0,"salario_liquido":0,"consignados":[{"credor":"","valor":0}]}],"simulacao":{"parcelaFinanciamento":0,"valorImovel":0,"valorFinanciado":0,"subsidio":0,"rendaDeclarada":0},"certidao":{"tipo":"","conjuge":"","filhos":[]}}`;
 
       const extrTxt=[];
       for(let li=0;li<lotes.length;li++){
@@ -2147,9 +2150,36 @@ function renderResults(r){
         ${(r.custoVidaEstimado>0)?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Custo de vida estimado</span><span style="color:#7a5a00">− ${fmt(r.custoVidaEstimado)}</span></div>`:''}
         ${r.parcelaFinanciamento>0?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text2)">Parcela financiamento</span><span style="color:#8b1a1a">− ${fmt(r.parcelaFinanciamento)}</span></div>`:''}
         <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding-top:8px;border-top:2px solid var(--border);margin-top:4px"><span>Margem pró-soluto</span><strong style="color:${(r.margemProSoluto||0)>500?'#1a7a3c':(r.margemProSoluto||0)>0?'#7a5a00':'#8b1a1a'}">${fmt(r.margemProSoluto||0)}/mês</strong></div>
-        ${r.entradasBet>0?`<div style="margin-top:8px;padding:6px 10px;background:#fdecea;border-radius:6px;font-size:11px;color:#8b1a1a">🎰 ${fmt(r.entradasBet)} em apostas excluídos da renda</div>`:''}
+        ${r.entradasBet>0?`<div style="margin-top:8px;padding:6px 10px;background:#fdecea;border-radius:6px;font-size:11px;color:#8b1a1a">⚠️ ${fmt(r.entradasBet)} recebidos de apostas excluídos da renda | ${fmt(r.saidasBet||0)} enviados para apostas</div>`:''}
       </div>
     </div>
+
+    ${(r.apostas&&r.apostas.length&&r.entradasBet>0)?`
+    <div style="margin-top:12px;background:var(--surface);border:1px solid #fca5a5;border-radius:10px;padding:14px 16px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8b1a1a;margin-bottom:10px">🎰 Resumo Mensal de Apostas</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Valores recebidos de e enviados para casas de apostas — excluídos da composição de renda</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:4px">
+        <span>Mês</span><span style="text-align:right">Recebido</span><span style="text-align:right">Enviado</span><span style="text-align:right">Saldo</span>
+      </div>
+      ${r.apostas.map(a=>{
+        const saldo=a.saldo!==undefined?a.saldo:(a.entradas||0)-(a.saidas||0);
+        const saldoColor=saldo>=0?'#1a7a3c':'#8b1a1a';
+        return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+          <span style="color:var(--text2)">${a.mes}</span>
+          <span style="text-align:right;font-family:'DM Mono',monospace">${fmt(a.entradas||0)}</span>
+          <span style="text-align:right;font-family:'DM Mono',monospace;color:#8b1a1a">${fmt(a.saidas||0)}</span>
+          <span style="text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:${saldoColor}">${saldo>=0?'+':''}${fmt(Math.abs(saldo))}</span>
+        </div>`;
+      }).join('')}
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;padding:8px 0 0;font-size:12px;font-weight:700;border-top:2px solid var(--border);margin-top:4px">
+        <span>TOTAL</span>
+        <span style="text-align:right;font-family:'DM Mono',monospace">${fmt(r.entradasBet||0)}</span>
+        <span style="text-align:right;font-family:'DM Mono',monospace;color:#8b1a1a">${fmt(r.saidasBet||0)}</span>
+        <span style="text-align:right;font-family:'DM Mono',monospace;color:${((r.entradasBet||0)-(r.saidasBet||0))>=0?'#1a7a3c':'#8b1a1a'}">${((r.entradasBet||0)-(r.saidasBet||0))>=0?'+':''}${fmt(Math.abs((r.entradasBet||0)-(r.saidasBet||0)))}</span>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--text3)">Saldo positivo = recebeu mais do que enviou (ganhou). Saldo negativo = enviou mais do que recebeu (perdeu).</div>
+    </div>`:''}
+
     ${(r.comprometimentos&&r.comprometimentos.length)?`
     <div style="margin-top:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8b1a1a;margin-bottom:10px">🔴 Comprometimentos Financeiros com Terceiros</div>
