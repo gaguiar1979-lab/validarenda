@@ -1149,6 +1149,14 @@ CENÁRIO B — EMPRESÁRIO / SÓCIO (há recibo de pró-labore):
 - tipo da fonte: "prolabore"
 - Use o extrato para confirmar e identificar renda complementar
 
+CENÁRIO B — DISTRIBUIÇÃO DE LUCROS (pró-labore + extrato com entradas superiores):
+Se o cliente tem pró-labore E extrato bancário, analise o extrato separadamente:
+1. Some APENAS as entradas no extrato que NÃO sejam: salário/pró-labore já contabilizado, transferências da própria empresa para a conta pessoal (mesma CNPJ/razão social), transferências de familiares (filhos, pais, cônjuge, irmãos), saques, resgates de aplicações/poupança, apostas (Bet, Blaze, etc.)
+2. Se a média mensal dessas entradas restantes for SUPERIOR ao valor do pró-labore: classifique o excedente como "distribuição de lucros" — adicione como fonte separada com tipo "prolabore" e observação "Distribuição de lucros identificada no extrato bancário"
+3. rendaComprovavel do CENÁRIO B = pró-labore + média da distribuição de lucros identificada no extrato
+4. Declare no parecer: "Além do pró-labore de R$X, identificou-se distribuição de lucros média de R$Y/mês no extrato bancário, totalizando R$Z de renda comprovável"
+Atenção: NÃO some transferências da empresa para a conta pessoal se o pró-labore já cobre esse valor — evite dupla contagem.
+
 CENÁRIO C — TRABALHADOR INFORMAL (apenas extrato, sem contracheque nem pró-labore):
 - rendaComprovavel = média mensal de TODAS as entradas regulares identificadas no extrato, excluindo familiares e apostas
 - tipo da fonte: "informal_extrato"
