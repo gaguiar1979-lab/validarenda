@@ -864,8 +864,8 @@ async function analyze(){
     const MAX_PDF_TOTAL=50;
     const MAX_BYTES_POR_PDF=30*1024*1024; // 30MB por arquivo
     const MAX_PDF_BYTES=100*1024*1024;    // 100MB total
-    const MAX_PAGES_POR_PDF=85;          // máx páginas por arquivo individual (com contagem real)
-    const MAX_PAGES_PER_BATCH=85;        // máx páginas por lote (Anthropic suporta até 100)
+    const MAX_PAGES_POR_PDF=35;          // máx páginas por arquivo individual (~35 págs = ~87k tokens, seguro)
+    const MAX_PAGES_PER_BATCH=35;        // máx páginas por lote (limite Anthropic 200k tokens)
     let pdfBytesTotal=0;
     let pdfPagesTotal=0;
     const pdfCountByType={};
@@ -903,7 +903,7 @@ async function analyze(){
           }else if(isPdf&&pdfPagesEst>MAX_PAGES_POR_PDF){
             if(tipoBase==='extrato'||tipoBase==='extrato_conjuge'){
               try{
-                const splitRes=await fetch('/api/split-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64:file.base64,pagesPerChunk:80})});
+                const splitRes=await fetch('/api/split-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64:file.base64,pagesPerChunk:35})});
                 const splitData=await splitRes.json();
                 if(splitData.chunks&&splitData.chunks.length>0){
                   for(let ci=0;ci<splitData.chunks.length;ci++){
@@ -943,7 +943,7 @@ async function analyze(){
               const tipoBaseManual=(type||'').toLowerCase().replace(/[^a-z_]/g,'');
               if(pgsManual>MAX_PAGES_POR_PDF&&(tipoBaseManual==='extrato'||tipoBaseManual==='extrato_conjuge')){
                 try{
-                  const splitRes=await fetch('/api/split-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64:b64,pagesPerChunk:80})});
+                  const splitRes=await fetch('/api/split-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64:b64,pagesPerChunk:35})});
                   const splitData=await splitRes.json();
                   if(splitData.chunks&&splitData.chunks.length>0){
                     for(let ci=0;ci<splitData.chunks.length;ci++){
