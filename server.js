@@ -217,6 +217,12 @@ app.post('/api/analyze-stream', (req, res) => {
     res.setHeader('X-Accel-Buffering', 'no');
     res.setHeader('Connection', 'keep-alive');
 
+    // Ping imediato para manter conexão ativa enquanto Anthropic processa o payload
+    res.write(': aguardando Anthropic\n\n');
+    const keepAlive = setInterval(() => {
+      if (!res.writableEnded) res.write(': ping\n\n');
+    }, 20000);
+
     const apiReq = https.request({
       hostname: 'api.anthropic.com',
       path: '/v1/messages',
@@ -228,16 +234,13 @@ app.post('/api/analyze-stream', (req, res) => {
         'Content-Length': Buffer.byteLength(payloadStr)
       }
     }, (apiRes) => {
-      // Encaminha o status do Anthropic ao cliente (erros 4xx ficam visíveis)
-      if (apiRes.statusCode !== 200) {
-        res.status(apiRes.statusCode);
-      }
+      clearInterval(keepAlive);
       apiRes.pipe(res);
     });
 
     apiReq.on('error', (e) => {
-      if (!res.headersSent) res.status(500).json({ error: e.message });
-      else res.end();
+      clearInterval(keepAlive);
+      if (!res.writableEnded) res.end();
     });
 
     apiReq.write(payloadStr);
