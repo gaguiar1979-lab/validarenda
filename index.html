@@ -901,7 +901,7 @@ async function analyze(){
           }else if(isPdf&&limiteAtingido){
             arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Limite de ${MAX_POR_TIPO[tipoBase]} arquivos deste tipo atingido — faça upload manual`});
           }else if(isPdf&&pdfPagesEst>MAX_PAGES_POR_PDF){
-            if(tipoBase==='extrato'||tipoBase==='extrato_conjuge'){
+            if(tipoBase==='extrato'||tipoBase==='extrato_conjuge'||tipoBase==='docs_cv'){
               try{
                 const splitRes=await fetch('/api/split-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64:file.base64,pagesPerChunk:35})});
                 const splitData=await splitRes.json();
@@ -915,11 +915,11 @@ async function analyze(){
                     pdfPagesTotal+=ch.pages;
                   }
                   pdfCount++;pdfCountByType[tipoBase]=(pdfCountByType[tipoBase]||0)+1;
-                  console.log(`📄 Extrato grande dividido em ${splitData.chunks.length} partes (${splitData.total} págs): ${file.name}`);
-                }else{arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Não foi possível dividir o extrato de ${pdfPagesEst} páginas`});}
-              }catch(splitErr){arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Erro ao dividir extrato: ${splitErr.message}`});}
+                  console.log(`📄 PDF grande dividido em ${splitData.chunks.length} partes (${splitData.total} págs): ${file.name}`);
+                }else{arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Não foi possível dividir o arquivo de ${pdfPagesEst} páginas`});}
+              }catch(splitErr){arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Erro ao dividir arquivo: ${splitErr.message}`});}
             }else{
-              arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Arquivo com ${pdfPagesEst} páginas (máx ${MAX_PAGES_POR_PDF} por arquivo) — envie 1 mês por arquivo ou divida em partes menores`});
+              arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:`Arquivo com ${pdfPagesEst} páginas (máx ${MAX_PAGES_POR_PDF} por arquivo) — envie em arquivos menores`});
             }
           }else if(isPdf&&!totalOk){
             arquivosNaoAnalisados.push({nome:file.name,tipo:label,motivo:'Limite total de dados atingido — faça upload manual deste arquivo'});
