@@ -1237,6 +1237,23 @@ ENTRADAS QUE NUNCA SÃO RENDA — EXCLUIR OBRIGATORIAMENTE DA COMPOSIÇÃO:
 - Descrições como: "Resgate", "Aplicação", "Poupança", "CDB", "RDB", "LCI", "LCA", "Tesouro", "Fundo", "Rendimento de aplicação"
 Esses valores representam PATRIMÔNIO do cliente sendo movimentado, não renda gerada. Incluí-los inflaria artificialmente a capacidade de pagamento. Registre em "excluidos" com motivo "resgate de aplicação/poupança — patrimônio, não renda".
 
+BENEFÍCIOS SOCIAIS DO GOVERNO — REGRA ABSOLUTA (CEF NÃO APROVA):
+Entradas provenientes de programas de benefícios sociais pagos pela Caixa Econômica Federal ou pelo Governo Federal são COMPLETAMENTE EXCLUÍDAS da renda comprovável. Receber qualquer benefício social IMPEDE a aprovação de crédito pela CEF, pois o governo interpreta que a pessoa é vulnerável financeiramente e incapaz de arcar com parcelas de financiamento.
+Benefícios a identificar e excluir:
+- BOLSA FAMÍLIA (e "CAIXA/BOLSA FAMILIA", "BOLSA FAMILIA CEF", "PROGR BOLSA FAMILIA")
+- BOLSA GÁS (e "GAS DE COZINHA", "BENEFICIO GAS", "CAIXA/BOLSA GAS")
+- AUXÍLIO BRASIL (e "AUXILIO BRASIL", "CAIXA AUXILIO BRASIL")
+- AUXÍLIO EMERGENCIAL (COVID)
+- BPC / LOAS (Benefício de Prestação Continuada ao idoso ou à pessoa com deficiência)
+- PETI (Programa de Erradicação do Trabalho Infantil)
+- Qualquer entrada com remetente "CAIXA BENEFICIO", "GOV FEDERAL BENEFICIO", "MINISTERIO DA CIDADANIA", "BRASIL UNIDO" ou similar indicando transferência de benefício governamental
+Regras obrigatórias:
+- NUNCA inclua esses valores em rendaComprovavel, rendaRealTotal ou em qualquer fonte de renda
+- Registre em "excluidos" com relacao="beneficio_social" e motivo detalhado
+- Preencha o campo "temBeneficioSocial": true no JSON
+- Indique no "parecer" e na "conclusao": "ATENÇÃO: Cliente é beneficiário de [nome do benefício]. A CEF NÃO APROVA crédito para beneficiários de programas sociais."
+- Classifique como risco CRÍTICO — mesmo que o cliente tenha outras fontes de renda
+
 APOSTAS E JOGOS — REGRA ABSOLUTA:
 Entradas provenientes de casas de apostas ou plataformas de jogos (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet, BJB, BJB Entretenimento, MAX Gaming, NEXABET, Brazino, Realsbet, Esportes da Sorte, F12.bet, KTO, Betfair, 1xBet, D TUDO, JOQUEI CLUBE, D TUDO JOQUEI CLUBE LTDA e similares) são COMPLETAMENTE PROIBIDAS de entrar em qualquer cálculo de renda.
 - NUNCA inclua valores de apostas em rendaComprovavel, rendaRealTotal, ou em qualquer fonte de renda
@@ -1467,6 +1484,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
       const instrExt=`Extraia de TODOS os PDFs presentes:
 1. Todas as entradas de crédito nos extratos: mês, remetente, valor, banco. SEPARE em dois grupos:
    - "entradas": entradas legítimas (salário, pró-labore, freelas, aluguéis, pensão, aposentadoria, transferências de terceiros)
+   - "entradas_beneficio_social": entradas de benefícios governamentais (Bolsa Família, Bolsa Gás, Auxílio Brasil, Auxílio Emergencial, BPC/LOAS, PETI, ou qualquer entrada com remetente "CAIXA BENEFICIO", "GOV FEDERAL BENEFICIO", "MINISTERIO DA CIDADANIA", "PROGR BOLSA FAMILIA", "CAIXA/BOLSA GAS" e similares). Estas NUNCA entram como renda comprovável. IMPORTANTE: a presença de qualquer benefício social impede aprovação de crédito pela CEF.
    - "entradas_aposta": entradas de casas de apostas/jogos (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet, BJB, BJB ENTRETENIMENTO, MAX Gaming, NEXABET, GANHA SORTE, Brazino, Realsbet, Fluxpay, FLUXPAY LTDA, Pagsmile, Pay4Fun, Astropay, ecoPayz, Jeton, D TUDO, JOQUEI CLUBE, D TUDO JOQUEI CLUBE LTDA e similares). Estas NUNCA entram como renda. ATENÇÃO: Fluxpay e Pagsmile são intermediadoras de pagamento usadas EXCLUSIVAMENTE por casas de apostas — qualquer entrada vinda dessas empresas é aposta, não renda legítima.
 2. Saídas fixas/recorrentes: destinatário, valor, frequência, tipo (empréstimo/cartão/aluguel/etc). SEPARE também:
    - "saidas_aposta": saídas/transferências para casas de apostas (mesmas plataformas acima) — quanto o cliente ENVIOU para apostas por mês
@@ -1476,7 +1494,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
 6. Lista dos documentos identificados nos arquivos
 
 Retorne JSON sem markdown:
-{"periodo":"","documentos":["Extrato Neon Jan-Mar/2025"],"entradas":[{"mes":"Jan/2025","remetente":"EMPRESA X","valor":0,"banco":"Nubank"}],"entradas_aposta":[{"mes":"Jan/2025","remetente":"Blaze","valor":0,"banco":"Nubank"}],"saidas_aposta":[{"mes":"Jan/2025","destinatario":"Blaze","valor":0,"banco":"Nubank"}],"saidas_fixas":[{"destinatario":"BANCO Y","valor":0,"frequencia":"mensal","tipo":"emprestimo"}],"holerites":[{"competencia":"","salario_bruto":0,"salario_liquido":0,"consignados":[{"credor":"","valor":0}]}],"simulacao":{"parcelaFinanciamento":0,"valorImovel":0,"valorFinanciado":0,"subsidio":0,"rendaDeclarada":0},"certidao":{"tipo":"","conjuge":"","filhos":[]}}`;
+{"periodo":"","documentos":["Extrato Neon Jan-Mar/2025"],"entradas":[{"mes":"Jan/2025","remetente":"EMPRESA X","valor":0,"banco":"Nubank"}],"entradas_beneficio_social":[{"mes":"Jan/2025","remetente":"PROGR BOLSA FAMILIA","valor":0,"banco":"Caixa"}],"entradas_aposta":[{"mes":"Jan/2025","remetente":"Blaze","valor":0,"banco":"Nubank"}],"saidas_aposta":[{"mes":"Jan/2025","destinatario":"Blaze","valor":0,"banco":"Nubank"}],"saidas_fixas":[{"destinatario":"BANCO Y","valor":0,"frequencia":"mensal","tipo":"emprestimo"}],"holerites":[{"competencia":"","salario_bruto":0,"salario_liquido":0,"consignados":[{"credor":"","valor":0}]}],"simulacao":{"parcelaFinanciamento":0,"valorImovel":0,"valorFinanciado":0,"subsidio":0,"rendaDeclarada":0},"certidao":{"tipo":"","conjuge":"","filhos":[]}}`;
 
       const extrTxt=[];
       for(let li=0;li<lotes.length;li++){
@@ -1491,7 +1509,7 @@ Retorne JSON sem markdown:
 
       // 4. Síntese final — texto apenas (sem PDFs, sem limite de páginas)
       document.getElementById('progressLabel').textContent=`Consolidando análise final (${lotes.length} lotes)...`;
-      const msgSintese=`ATENÇÃO: Esta análise foi realizada em ${lotes.length} LOTES (total de ~${pdfPagesTotal} páginas estimadas de PDF). Os dados brutos extraídos de cada lote são:\n\n${extrTxt.join('\n\n')}\n\n${ctxCliente.text}\n\n===INSTRUÇÕES CRÍTICAS — LEIA ANTES DE GERAR O JSON===\n\nCAMPO "fontes" — OBRIGATÓRIO PREENCHER:\nSe há QUALQUER entrada no array "entradas" dos dados extraídos acima, você DEVE criar entradas no array "fontes". O array "fontes" NUNCA pode ser retornado vazio quando existem créditos nos extratos.\nPara CADA remetente com entradas >= R$200 em qualquer mês: crie um objeto separado em "fontes" com o nome EXATO do remetente, tipo, mediaMensal e porMes.\nProibido agrupar remetentes diferentes. Proibido retornar "fontes":[].\n\nCAMPO "apostas" — OBRIGATÓRIO se entradasBet > 0:\nPreencha o array "apostas" com um objeto por mês: {mes, entradas, saidas, saldo}. Inclua todos os meses do período, mesmo os sem apostas (zeros).\n\nCAMPO "conclusao" — OBRIGATÓRIO PREENCHER:\nEscreva SEMPRE 2 parágrafos: 1) renda total apurada, capacidade real de pagamento, composição das fontes; 2) veredito de risco e recomendação final para aprovação. Proibido retornar "conclusao":"" ou "conclusao":null.\n\nRetorne apenas o JSON completo.`;
+      const msgSintese=`ATENÇÃO: Esta análise foi realizada em ${lotes.length} LOTES (total de ~${pdfPagesTotal} páginas estimadas de PDF). Os dados brutos extraídos de cada lote são:\n\n${extrTxt.join('\n\n')}\n\n${ctxCliente.text}\n\n===INSTRUÇÕES CRÍTICAS — LEIA ANTES DE GERAR O JSON===\n\nCAMPO "fontes" — OBRIGATÓRIO PREENCHER:\nSe há QUALQUER entrada no array "entradas" dos dados extraídos acima, você DEVE criar entradas no array "fontes". O array "fontes" NUNCA pode ser retornado vazio quando existem créditos nos extratos.\nPara CADA remetente com entradas >= R$200 em qualquer mês: crie um objeto separado em "fontes" com o nome EXATO do remetente, tipo, mediaMensal e porMes.\nProibido agrupar remetentes diferentes. Proibido retornar "fontes":[].\n\nCAMPO "apostas" — OBRIGATÓRIO se entradasBet > 0:\nPreencha o array "apostas" com um objeto por mês: {mes, entradas, saidas, saldo}. Inclua todos os meses do período, mesmo os sem apostas (zeros).\n\nBENEFÍCIOS SOCIAIS — REGRA CRÍTICA:\nSe nos dados extraídos houver qualquer entrada em "entradas_beneficio_social" (Bolsa Família, Bolsa Gás, Auxílio Brasil, BPC/LOAS, etc.):\n- NÃO inclua esses valores na rendaComprovavel nem em nenhuma fonte\n- Adicione ao array "excluidos" com relacao="beneficio_social"\n- Defina "temBeneficioSocial": true no JSON de saída\n- No "parecer" e na "conclusao" escreva OBRIGATORIAMENTE: "ATENÇÃO: Cliente é beneficiário de [nome do benefício]. A CEF NÃO APROVA crédito para beneficiários de programas sociais, independentemente da renda de outras fontes."\n- Classifique o risco como CRÍTICO\n\nCAMPO "conclusao" — OBRIGATÓRIO PREENCHER:\nEscreva SEMPRE 2 parágrafos: 1) renda total apurada, capacidade real de pagamento, composição das fontes; 2) veredito de risco e recomendação final para aprovação. Proibido retornar "conclusao":"" ou "conclusao":null.\n\nRetorne apenas o JSON completo.`;
       raw=await streamCall(msgSintese,systemPrompt,32000,420000);
     }
     // Extrai JSON contando chaves — mais robusto que regex greedy
