@@ -184,10 +184,61 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   .page{padding:0}
 }
 @media(max-width:600px){
-  .page{padding:1.5rem 1rem 3rem}
-  .topbar{padding:0 1rem}
-  .brand-banner{padding:1.5rem 1rem}
+  /* Layout */
+  .page{padding:1.25rem .75rem 3rem}
+  body{font-size:14px}
+
+  /* Topbar */
+  .topbar{padding:0 .75rem;height:auto;min-height:56px;flex-wrap:wrap;gap:8px;padding-top:8px;padding-bottom:8px}
+  .topbar-logo{height:32px}
+  .topbar-divider{display:none}
+  .topbar-sub{display:none}
+  .topbar-links{display:none}
+  .topbar-spacer{display:none}
+  .topbar-info{flex:1}
+  #btnEmpresa_manager,#btnEmpresa_kapaz{padding:5px 10px;font-size:11px}
+
+  /* Busca CV */
+  .cv-search-card{padding:1.1rem}
   .cv-search-row{flex-direction:column}
+  .cv-search-row button{width:100%}
+
+  /* Upload */
+  .upload-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .uc-icon{font-size:22px}
+  .uc-label{font-size:12px}
+
+  /* Familiares */
+  .add-row{flex-direction:column;gap:6px}
+  .add-row input{min-width:unset;width:100%}
+  .add-row select{width:100%}
+  .add-row .btn-add{width:100%}
+
+  /* Métricas */
+  .metrics{grid-template-columns:repeat(2,1fr);gap:8px}
+  .metric-value{font-size:18px}
+
+  /* Tabela de fontes */
+  .income-table{font-size:12px}
+  .income-table th,.income-table td{padding:8px 4px}
+
+  /* Botões de ação */
+  .btn-print,.btn-save{width:100%;margin-left:0;justify-content:center;padding:10px 14px}
+
+  /* Documentos */
+  .doc-grid{grid-template-columns:repeat(2,1fr)}
+
+  /* Resultado (iframe) */
+  #relatorioInline{min-height:600px}
+
+  /* Botão analisar */
+  .btn-analyze{font-size:14px;padding:13px}
+
+  /* Brand banner */
+  .brand-banner{padding:1.25rem .75rem}
+  .brand-banner img{height:54px}
+  .brand-banner h2{font-size:18px}
+  .brand-banner .brand-links{gap:12px;flex-wrap:wrap;justify-content:center}
 }
 </style>
 </head>
