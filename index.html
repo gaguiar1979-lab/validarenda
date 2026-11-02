@@ -683,24 +683,33 @@ async function buscarReserva(){
       status.innerHTML='<span style="color:var(--gold2)">⚠️ Nenhum documento encontrado neste pré-cadastro.</span>';
       btn.disabled=false;return;
     }
-    status.innerHTML=`<span style="color:var(--gold2)">⏳ ${docs.length} documento(s) encontrado(s). Baixando em paralelo...</span>`;
+    let dlCount=0;
+    const updateDlStatus=()=>{status.innerHTML=`<span style="color:var(--gold2)">⏳ Baixando documentos… ${dlCount}/${docs.length}</span>`;};
+    updateDlStatus();
 
     // Busca dados do cliente (nome) no CV CRM em paralelo com os downloads
     const endpointInfo=origemBusca==='reserva'?`/api/cv/reserva/${reservaId}?empresa=${empresaAtiva}`:origemBusca==='repasse'?`/api/cv/repasse/${reservaId}?empresa=${empresaAtiva}`:`/api/cv/precadastro/${reservaId}?empresa=${empresaAtiva}`;
     const clienteInfoPromise=fetch(endpointInfo)
       .then(r=>r.ok?r.json():null).catch(()=>null);
 
-    // Download de todos os documentos em paralelo (muito mais rápido que sequencial)
-    const dlResults=await Promise.all(docs.map(async doc=>{
-      try{
-        const urlDoc=doc.link||doc.url_arquivo||doc.arquivo_url||doc.path;
-        if(!urlDoc)return null;
-        const dlResp=await fetch(`/api/cv/documento/arquivo?url=${encodeURIComponent(urlDoc)}&empresa=${empresaAtiva}`);
-        const dlData=await dlResp.json();
-        if(!dlData.base64)return null;
-        return{doc,dlData};
-      }catch(e){console.error(e);return null;}
-    }));
+    // Download com concorrência limitada a 5 simultâneos + progresso em tempo real
+    const CONCURRENCY=5;
+    const dlResults=[];
+    for(let i=0;i<docs.length;i+=CONCURRENCY){
+      const batch=docs.slice(i,i+CONCURRENCY);
+      const batchResults=await Promise.all(batch.map(async doc=>{
+        try{
+          const urlDoc=doc.link||doc.url_arquivo||doc.arquivo_url||doc.path;
+          if(!urlDoc){dlCount++;updateDlStatus();return null;}
+          const dlResp=await fetch(`/api/cv/documento/arquivo?url=${encodeURIComponent(urlDoc)}&empresa=${empresaAtiva}`);
+          const dlData=await dlResp.json();
+          dlCount++;updateDlStatus();
+          if(!dlData.base64)return null;
+          return{doc,dlData};
+        }catch(e){console.error(e);dlCount++;updateDlStatus();return null;}
+      }));
+      dlResults.push(...batchResults);
+    }
 
     let baixados=0;
     const extratoFiles=[];
