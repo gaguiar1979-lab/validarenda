@@ -1410,6 +1410,13 @@ Comportamento financeiro:
 - Transferências recorrentes não justificadas > R$500/mês: -10
 - Extratos de contas suspeitas não apresentados: -15
 
+Resultado CEF / SIRIC:
+- NÃO penalize o score por resultado "Condicionada" do SIRIC quando há parcela liberada. "Condicionada" significa aprovação parcial — o banco avaliou o cliente e aprovou crédito até aquele valor de parcela. Isso é sinal POSITIVO de que o cliente tem capacidade de pagamento reconhecida pela CEF.
+- A frase "margem insuficiente" no SIRIC Condicionada se refere ao teto solicitado (que excedeu a capacidade), não à falta de capacidade do cliente. Nunca interprete "Condicionada com parcela liberada" como reprovação ou risco.
+- Se a parcela liberada pela CEF no Condicionada for SUFICIENTE para a operação pretendida: registre como indicador positivo.
+- Se a parcela liberada for INSUFICIENTE para a operação: registre como ponto de atenção, mas não como fator crítico.
+- Reprovação efetiva no SIRIC (sem parcela liberada, ou mensagem de não aprovado): aí sim registre como risco relevante.
+
 Documentação:
 - Análise com documentação incompleta (falta extrato, comprovante): -10
 - Menos de 3 meses de extrato analisado: -5
