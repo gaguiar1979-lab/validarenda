@@ -1114,7 +1114,9 @@ async function analyze(){
     const avisoNaoAnalisados=arquivosNaoAnalisados.length>0
       ?`\n\nATENÇÃO — ARQUIVOS NÃO ANALISADOS (não lidos pela IA):\n${arquivosNaoAnalisados.map(a=>`- ${a.nome} (${a.tipo}): ${a.motivo}`).join('\n')}\nMencione esses arquivos no campo "documentosNaoAnalisados" do JSON.`
       :'';
-    contentParts.push({type:'text',text:`CLIENTE EM ANÁLISE: ${currentClienteName||'(identificar pelo nome que aparece nos documentos)'}\nPré-Cadastro CV CRM: ${document.getElementById('reservaId').value.trim()}\nIMPORTANTE: Use exatamente "${currentClienteName||'o nome identificado nos documentos'}" no campo "nomeComprador" do JSON.\n\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): excluir transferências entre titular e cônjuge\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.${instrucaoConjuge}${proSolutoInfo}${avisoNaoAnalisados}\n\nRetorne apenas o JSON.`});
+    const semConjuge=conjugesList==='nenhum';
+    const avisoSolteiro=semConjuge?'\n⚠️ CLIENTE SOLTEIRO / SEM CÔNJUGE DECLARADO: NÃO existe cônjuge. NUNCA exclua renda como "transferência entre cônjuges". NUNCA infira cônjuge por similaridade de sobrenome. Renda de terceiros não identificados como familiares vai em "fontes", não em "excluidos".':'';
+    contentParts.push({type:'text',text:`CLIENTE EM ANÁLISE: ${currentClienteName||'(identificar pelo nome que aparece nos documentos)'}\nPré-Cadastro CV CRM: ${document.getElementById('reservaId').value.trim()}\nIMPORTANTE: Use exatamente "${currentClienteName||'o nome identificado nos documentos'}" no campo "nomeComprador" do JSON.\n\nFamiliares:\n${memberList}\n\nRegras:\n- Cônjuges (${conjugesList}): ${semConjuge?'NENHUM — cliente sem cônjuge declarado':'excluir transferências entre titular e cônjuge'}\n- Filhos/outros (${filhosList}): buscar nome no extrato e excluir\n- BET/APOSTAS: identificar e excluir TOTALMENTE (Sportingbet, Blaze, Betano, Bet365, pixbet, vaidebet, estrela bet e similares). NÃO podem compor renda familiar.${avisoSolteiro}${instrucaoConjuge}${proSolutoInfo}${avisoNaoAnalisados}\n\nRetorne apenas o JSON.`});
     // Guarda lista de arquivos não analisados para exibir no relatório
     window._arquivosNaoAnalisados=arquivosNaoAnalisados;
     const systemPrompt=`Você é um analista de crédito imobiliário da Casas Manager Construções. Gere um laudo interno de capacidade financeira do cliente, respondendo: (1) qual a renda que o cliente consegue comprovar com documentos? (2) qual a renda real apurada nos extratos? (3) ele consegue arcar com a parcela do financiamento bancário + pró-soluto com a Casas Manager?
@@ -1162,6 +1164,12 @@ CERTIDÃO DE NASCIMENTO:
 
 CERTIDÃO NEGATIVA / SOLTEIRO:
 - Nenhuma exclusão de familiar necessária além dos já listados
+- REGRA CRÍTICA: SE o estado civil é SOLTEIRO, NUNCA crie ou infira um cônjuge.
+  → NUNCA use relação "cônjuge", "familiar cônjuge", "pai cônjuge", "mãe cônjuge" ou qualquer variação
+  → NUNCA exclua renda como "transferência entre cônjuges"
+  → Uma empresa (LTDA, EIRELI, ME, S.A.) JAMAIS pode ter relação de parentesco
+  → Pessoas com sobrenome parecido ao titular podem ser pai, mãe, irmão ou cliente — não cônjuge
+  → Inferir cônjuge sem certidão de casamento é proibido
 
 Se não houver certidão: analise com base nos familiares já informados no contexto abaixo.
 
@@ -1389,6 +1397,20 @@ ENTRADAS QUE NUNCA SÃO RENDA — EXCLUIR OBRIGATORIAMENTE DA COMPOSIÇÃO:
 - Transferências de conta investimento para conta corrente do próprio titular
 - Descrições como: "Resgate", "Aplicação", "Poupança", "CDB", "RDB", "LCI", "LCA", "Tesouro", "Fundo", "Rendimento de aplicação"
 Esses valores representam PATRIMÔNIO do cliente sendo movimentado, não renda gerada. Incluí-los inflaria artificialmente a capacidade de pagamento. Registre em "excluidos" com motivo "resgate de aplicação/poupança — patrimônio, não renda".
+
+REGRA FUNDAMENTAL SOBRE O ARRAY "excluidos":
+O campo "excluidos" destina-se EXCLUSIVAMENTE a:
+  1. Familiares CONFIRMADOS por certidão (cônjuge com certidão de casamento; filho com certidão de nascimento) ou explicitamente declarados pelo operador no contexto
+  2. Benefícios sociais do governo (Bolsa Família, BPC, etc.)
+  3. Resgates de aplicações/poupança (patrimônio)
+  4. Apostas e jogos
+
+NUNCA coloque em "excluidos" uma pessoa apenas porque a renda é informal ou "não comprovável formalmente".
+Renda de pessoa física ou jurídica NÃO identificada como familiar deve ir em "fontes" com comprovavel:false e tipo "autonomo" ou "informal_extrato".
+Exemplo ERRADO: excluir JOSE ERIVANDO porque "renda não comprovável formalmente"
+Exemplo CERTO: criar fonte {remetente:"JOSE ERIVANDO...", tipo:"autonomo", comprovavel:false, mediaMensal:...}
+
+No campo "relacao" de excluidos, use APENAS: "cônjuge" (somente com certidão de casamento), "filho", "pai_mae", "irmao", "familiar", "beneficio_social", "resgate", "aposta". Nunca use relação de parentesco para uma empresa (LTDA, ME, EIRELI, S.A. etc.).
 
 BENEFÍCIOS SOCIAIS DO GOVERNO — REGRA ABSOLUTA (CEF NÃO APROVA):
 Entradas provenientes de programas de benefícios sociais pagos pela Caixa Econômica Federal ou pelo Governo Federal são COMPLETAMENTE EXCLUÍDAS da renda comprovável. Receber qualquer benefício social IMPEDE a aprovação de crédito pela CEF, pois o governo interpreta que a pessoa é vulnerável financeiramente e incapaz de arcar com parcelas de financiamento.
