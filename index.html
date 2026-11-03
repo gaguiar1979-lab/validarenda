@@ -2041,7 +2041,10 @@ ${(()=>{
   const compPerm=compList.filter(c=>!c.temporario&&c.categoria!=='aluguel');
   const compAlug=compList.filter(c=>c.temporario||c.categoria==='aluguel');
   const totalAlug=compAlug.reduce((s,c)=>s+(c.valorMedioMensal||0),0);
-  const totalPerm=compPerm.reduce((s,c)=>s+(c.valorMedioMensal||0),0);
+  // Soma cada item individualmente — mesmo valor exibido nos sub-rows
+  const totalPerm=compPerm.reduce((s,c)=>s+(parseFloat(c.valorMedioMensal)||0),0);
+  console.log('[DEBUG comprometimentos] compPerm:', JSON.stringify(compPerm));
+  console.log('[DEBUG comprometimentos] totalPerm calculado:', totalPerm, '| r.totalComprometido:', r.totalComprometido);
   // Recalcula margem usando só comprometimentos permanentes (aluguel some com entrega do imóvel)
   const livreReal=Math.max(0,liq-totalPerm);
   const margemFinalReal=livreReal-totalParc;
@@ -2070,13 +2073,61 @@ ${(()=>{
   const empSetDebug = window._lastEmpSet || [];
   const debugBanner = empSetDebug.length
     ? `<div style="background:#eef6ff;border:1px solid #b3d1f7;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#1a3a6b">
-        <strong>📋 Contracheques detectados pelo sistema:</strong>
+        <strong>📋 Contracheques detectados:</strong>
         ${empSetDebug.map(h=>`<div style="margin-top:4px">↳ <strong>${h.emp||'Empregador'}</strong> — Bruto: <strong style="color:#0d5c1a">R$ ${(h.bruto||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong> | Líquido base (sem consignados): R$ ${(h.liq||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>`).join('')}
       </div>`
     : `<div style="background:#fff8e1;border:1px solid #f0c040;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#7a5a00">
-        ⚠️ <strong>Nenhum contracheque detectado pelo haiku.</strong> Os valores de renda vieram dos depósitos no extrato (valores líquidos). Se havia contracheques nos documentos, verifique se foram enviados corretamente.
+        ⚠️ <strong>Nenhum contracheque detectado.</strong> Os valores de renda vieram dos depósitos no extrato (valores líquidos). Se havia contracheques nos documentos, verifique se foram enviados corretamente.
       </div>`;
-  return `${debugBanner}<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px">
+  // Cruzamento: renda declarada na simulação × identificada nos documentos
+  const rendaDecl = r.rendaDeclarada||0;
+  const rendaRealDecl = r.rendaRealDeclarada||0;
+  const rendaIdent = r.rendaComprovavel||0;
+  const deltaDecl = rendaIdent - rendaDecl;
+  const deltaRealDecl = rendaIdent - rendaRealDecl;
+  const cruzamentoBanner = (rendaDecl>0||rendaRealDecl>0) ? (()=>{
+    const pctDecl = rendaDecl>0 ? (rendaIdent/rendaDecl*100) : null;
+    const pctRealDecl = rendaRealDecl>0 ? (rendaIdent/rendaRealDecl*100) : null;
+    const corDelta = d => d>=0 ? '#1a7a3c' : '#C0392B';
+    const fmtDelta = d => (d>=0?'+':'')+d.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const comprometDecl = rendaDecl>0 ? (totalParc/rendaDecl*100) : null;
+    const comprometIdent = rendaIdent>0 ? (totalParc/rendaIdent*100) : null;
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px">
+      <div style="background:#2D3060;color:#fff;padding:10px 14px;font-size:12px;font-weight:700;letter-spacing:.05em">CRUZAMENTO: RENDA DECLARADA × IDENTIFICADA NOS DOCUMENTOS</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tr style="background:#f8f9fa">
+          <td style="padding:8px 12px;color:#555;border-bottom:1px solid #eee">Renda declarada na simulação</td>
+          <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700;border-bottom:1px solid #eee">${fmtR(rendaDecl)}</td>
+          <td style="padding:8px 12px;font-size:10px;color:#888;border-bottom:1px solid #eee">conforme simulação de financiamento</td>
+        </tr>
+        ${rendaRealDecl>0&&rendaRealDecl!==rendaDecl?`<tr style="background:#f8f9fa">
+          <td style="padding:8px 12px;color:#555;border-bottom:1px solid #eee">Renda real declarada na simulação</td>
+          <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700;border-bottom:1px solid #eee">${fmtR(rendaRealDecl)}</td>
+          <td style="padding:8px 12px;font-size:10px;color:#888;border-bottom:1px solid #eee">campo "renda real" da simulação</td>
+        </tr>`:''}
+        <tr style="background:#fff">
+          <td style="padding:8px 12px;color:#333;font-weight:700;border-bottom:1px solid #eee">Renda identificada nos documentos</td>
+          <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:800;color:#1a3a6b;border-bottom:1px solid #eee">${fmtR(rendaIdent)}</td>
+          <td style="padding:8px 12px;font-size:10px;color:#888;border-bottom:1px solid #eee">contracheques + extratos analisados</td>
+        </tr>
+        ${rendaDecl>0?`<tr style="background:${deltaDecl<0?'#fdecea':'#f0faf4'}">
+          <td style="padding:8px 12px;color:#555;border-bottom:1px solid #eee">Diferença (identificada − declarada)</td>
+          <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:${corDelta(deltaDecl)};border-bottom:1px solid #eee">${fmtDelta(deltaDecl)} ${pctDecl!==null?`<span style="font-size:10px;color:#888">(${pctDecl.toFixed(0)}% da declarada)</span>`:''}</td>
+          <td style="padding:8px 12px;font-size:10px;color:${deltaDecl<0?'#C0392B':'#1a7a3c'};border-bottom:1px solid #eee">${deltaDecl<0?'⚠️ Renda comprovada ABAIXO da declarada':'✅ Renda comprovada CONFIRMA a declarada'}</td>
+        </tr>`:''}
+        ${comprometDecl!==null&&comprometIdent!==null?`<tr style="background:#f8f9fa">
+          <td style="padding:8px 12px;color:#555">Comprometimento das parcelas (5+6)</td>
+          <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;border-bottom:1px solid #eee">
+            <span style="color:#888;font-size:11px">s/ docs: </span><strong style="color:${comprometDecl>50?'#C0392B':'#333'}">${comprometDecl.toFixed(1)}%</strong>
+            <span style="color:#888;margin:0 6px">→</span>
+            <span style="color:#888;font-size:11px">c/ docs: </span><strong style="color:${comprometIdent>50?'#C0392B':'#1a7a3c'}">${comprometIdent.toFixed(1)}%</strong>
+          </td>
+          <td style="padding:8px 12px;font-size:10px;color:#888">limite: 50% da renda</td>
+        </tr>`:''}
+      </table>
+    </div>`;
+  })() : '';
+  return `${debugBanner}${cruzamentoBanner}<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px">
   <div style="background:var(--navy);color:#fff;padding:10px 14px;font-size:12px;font-weight:700;letter-spacing:.05em">CASCATA DE RENDA — CAPACIDADE DE PAGAMENTO</div>
   <table style="width:100%;border-collapse:collapse">
     <colgroup><col style="width:32px"><col><col style="width:130px"><col style="width:120px"></colgroup>
