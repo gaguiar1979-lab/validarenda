@@ -1304,9 +1304,8 @@ MÚLTIPLOS CONTRACHEQUES (quando houver mais de um mês):
 - Exemplo: contracheque Mar/2026 = R$9.721 total proventos, contracheque Abr/2026 = R$10.700 → média = R$10.210,50
 - Se houver variação significativa entre meses (>20%), mencione nas ressalvas e use a média mesmo assim
 
-→ rendaComprovavel = MÉDIA DO TOTAL DE PROVENTOS de todos os contracheques (excluindo VT e VA)
-→ Se o contracheque mostra "Total de Proventos: R$X" use esse valor de cada mês diretamente
-→ Este é o valor bruto antes dos descontos — é o critério do banco para aprovação de financiamento
+→ rendaComprovavel = MÉDIA DO TOTAL DE PROVENTOS de todos os contracheques (excluindo VT e VA) — BRUTO, critério do banco para aprovação
+→ rendaLiquida = MÉDIA DO SALÁRIO LÍQUIDO dos contracheques + entradas complementares de terceiros no extrato (freelas, aluguéis, etc.) — é a renda que o cliente efetivamente recebe e usa para pagar contas
 
 Registre no array "fontes" CADA tipo de provento separadamente com a média mensal:
 - remetente = nome do empregador + descrição do provento
@@ -1372,10 +1371,11 @@ Se houver DIRPF/IRPF nos documentos, use-a como documento COMPLEMENTAR e de REFE
 
 CENÁRIO MISTO: se o comprador tem MAIS DE UM perfil (ex: CLT + renda extra informal):
 - rendaComprovavel = BRUTO do contracheque (total de proventos) + renda informal COMPLEMENTAR identificada no extrato
+- rendaLiquida = LÍQUIDO do contracheque (salário líquido após INSS e IRRF) + renda informal COMPLEMENTAR (mesmos valores extras de terceiros)
 - Renda informal complementar = entradas regulares no extrato de TERCEIROS (pessoas físicas ou jurídicas DIFERENTES do empregador) que NÃO sejam: o salário já contabilizado, transferências de familiares, apostas
 - Exemplos de renda complementar válida: depósitos de clientes de freela, aluguel recebido de inquilino, cachê de show, trabalho autônomo, renda de segunda atividade
 - NUNCA some o salário duas vezes (extrato + contracheque)
-- NUNCA use o depósito do empregador no extrato como renda — ele é o salário LÍQUIDO. Use apenas o contracheque BRUTO para a renda CLT.
+- NUNCA use o depósito do empregador no extrato como renda — ele é o salário LÍQUIDO. Use apenas o contracheque BRUTO para rendaComprovavel e o salário líquido do contracheque para rendaLiquida.
 - Classifique cada fonte com seu tipo correto e deixe claro no parecer que parte da renda é informal e não comprovável formalmente
 
 Aposentadoria/pensão = integral. Aluguel com contrato = integral.
@@ -1474,8 +1474,10 @@ PASSO 4B — TRANSFERÊNCIAS QUE PRECISAM DE JUSTIFICATIVA DO CLIENTE:
 
 PASSO 5 — VEREDITO (use o parcelaProSoluto informado se disponível):
 
-REGRA DOS 40% (comprometimento máximo de renda):
-- Calcule: percentualComprometido = (parcelaFinanciamento + parcelaProSoluto) / rendaComprovavel × 100
+REGRA DOS 50% (comprometimento máximo da renda líquida):
+O cliente efetivamente recebe o salário líquido (após INSS e IRRF). É com esse valor que ele paga suas contas. A capacidade de pagamento do pró-soluto deve ser avaliada sobre a renda que ele DE FATO recebe — não o bruto que fica com o governo.
+- Calcule: percentualComprometido = (parcelaFinanciamento + parcelaProSoluto) / rendaLiquida × 100
+- Se rendaLiquida = 0 (cliente sem CLT / sem contracheque), use rendaComprovavel como fallback
 - Registre esse percentual no campo "percentualComprometido" do JSON
 - Até 40%: dentro do limite aceitável
 - Entre 40% e 50%: atenção — comprometimento elevado, registre em ressalvas
@@ -1572,7 +1574,7 @@ Retorne SOMENTE este JSON sem markdown. REGRAS DE CONCISÃO OBRIGATÓRIAS:
 - porMes: inclua apenas os meses com valor > 0, máximo 6 meses
 - fatoresRisco: máximo 6 itens
 - indicadoresPositivos e indicadoresNegativos: máximo 3 itens cada:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"documentosEncontrados":["Arquivo RG: contém RG + certidão de casamento","Kit: contém extrato Jan-Mar/2025 + holerite"],"documentosCadastroAusentes":["Simulação de financiamento","Certidão de estado civil"],"rendaDeclarada":0.00,"rendaRealDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"saidasBet":0.00,"apostas":[{"mes":"Jan/2025","entradas":0.00,"saidas":0.00,"saldo":0.00}],"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"1 frase"}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"documentosEncontrados":["Arquivo RG: contém RG + certidão de casamento","Kit: contém extrato Jan-Mar/2025 + holerite"],"documentosCadastroAusentes":["Simulação de financiamento","Certidão de estado civil"],"rendaDeclarada":0.00,"rendaRealDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaLiquida":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"saidasBet":0.00,"apostas":[{"mes":"Jan/2025","entradas":0.00,"saidas":0.00,"saldo":0.00}],"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"1 frase"}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
 
 Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
     // === ANÁLISE COM ANTHROPIC — suporte automático a múltiplos lotes ===
@@ -1945,27 +1947,53 @@ function _gerarHTML(r,w){
   </div>
 </div>
 
-<div class="resumo-grid">
-  <div class="resumo-box gold">
-    <div class="resumo-label">Renda Comprovável</div>
-    <div class="resumo-valor">${fmtR(r.rendaComprovavel)}</div>
-    ${r.rendaDeclarada>0?`<div class="resumo-sub">Declarada: ${fmtR(r.rendaDeclarada)}</div>`:''}
-  </div>
-  <div class="resumo-box">
-    <div class="resumo-label">Parcela Financiamento</div>
-    <div class="resumo-valor">${r.parcelaFinanciamento>0?fmtR(r.parcelaFinanciamento)+'/mês':'—'}</div>
-  </div>
-  <div class="resumo-box gold">
-    <div class="resumo-label">Renda Real (extratos)</div>
-    <div class="resumo-valor">${fmtR(r.rendaRealTotal)}</div>
-    ${r.totalComprometido>0?`<div class="resumo-sub">Comprometido: ${fmtR(r.totalComprometido)}</div>`:''}
-  </div>
-  <div class="resumo-box">
-    <div class="resumo-label">Renda Disponível Líquida</div>
-    <div class="resumo-valor">${fmtR(r.rendaDisponivelReal)}</div>
-    <div class="resumo-sub">Após comprometimentos</div>
-  </div>
-</div>
+${(()=>{
+  const bruto=r.rendaComprovavel||0;
+  const liq=r.rendaLiquida||r.rendaRealTotal||0;
+  const comp=r.totalComprometido||0;
+  const livre=Math.max(0,liq-comp);
+  const parcBanco=r.parcelaFinanciamento||0;
+  const parcConst=r.parcelaProSoluto||0;
+  const totalParc=parcBanco+parcConst;
+  const margemFinal=livre-totalParc;
+  const pct=liq>0?(totalParc/liq*100):0;
+  const pctCor=pct>50?'#C0392B':pct>40?'#7a5a00':'#1a7a3c';
+  const pctIcon=pct>50?'⛔':pct>40?'⚠️':'✅';
+  const margemCor=margemFinal>500?'#1a7a3c':margemFinal>0?'#7a5a00':'#C0392B';
+  const row=(n,label,val,bg,bold,sub)=>`
+    <tr style="background:${bg||'transparent'}">
+      <td style="padding:8px 10px;font-size:11px;color:#666;white-space:nowrap;border-bottom:1px solid #eee">${n}</td>
+      <td style="padding:8px 10px;font-size:12px;color:#333;border-bottom:1px solid #eee">${label}</td>
+      <td style="padding:8px 10px;font-size:${bold?'15px':'13px'};font-weight:${bold?'800':'600'};color:${bold||'#333'};text-align:right;font-family:'DM Mono',monospace;white-space:nowrap;border-bottom:1px solid #eee">${val}</td>
+      ${sub?`<td style="padding:8px 10px;font-size:10px;color:#888;border-bottom:1px solid #eee">${sub}</td>`:'<td style="border-bottom:1px solid #eee"></td>'}
+    </tr>`;
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px">
+  <div style="background:var(--navy);color:#fff;padding:10px 14px;font-size:12px;font-weight:700;letter-spacing:.05em">CASCATA DE RENDA — CAPACIDADE DE PAGAMENTO</div>
+  <table style="width:100%;border-collapse:collapse">
+    <colgroup><col style="width:32px"><col><col style="width:130px"><col style="width:120px"></colgroup>
+    ${row('1','Rendimento Bruto (contracheque)',fmtR(bruto),'#f8f9fa',false,'base para aprovação bancária')}
+    ${row('2','Rendimento Líquido (após INSS/IRRF)',fmtR(liq),'#fff',false,'renda que o cliente recebe')}
+    ${row('3','(−) Comprometimentos mensais',fmtR(comp),'#fff5f5',false,'plano saúde, colégio, consignados...')}
+    ${row('4 = 2−3','Renda livre p/ novos compromissos',fmtR(livre),'#fffbe6','#333','')}
+    ${row('5','(−) Parcela banco',parcBanco>0?fmtR(parcBanco)+'/mês':'—','#fff',false,'da simulação de financiamento')}
+    ${row('6','(−) Parcela pró-soluto construtora',parcConst>0?fmtR(parcConst)+'/mês':'—','#fff',false,'da simulação de financiamento')}
+    <tr style="background:${margemFinal>=0?'#f0faf4':'#fdf0f0'}">
+      <td style="padding:10px 10px;font-size:11px;color:#666;white-space:nowrap"><strong>7</strong></td>
+      <td style="padding:10px 10px;font-size:13px;font-weight:700;color:#333">Margem para outras despesas</td>
+      <td style="padding:10px 10px;font-size:17px;font-weight:900;color:${margemCor};text-align:right;font-family:'DM Mono',monospace">${fmtR(margemFinal)}<span style="font-size:11px">/mês</span></td>
+      <td style="padding:10px 10px;font-size:10px;color:#888">${margemFinal>=0?'margem disponível':'margem negativa'}</td>
+    </tr>
+    <tr style="background:${pct>50?'#fdecea':pct>40?'#fff7ed':'#f0faf4'}">
+      <td colspan="2" style="padding:8px 10px;font-size:11px;color:#555">
+        ${pctIcon} <strong>Comprometimento das parcelas sobre renda líquida (5+6) ÷ 2</strong>
+        <span style="font-size:10px;color:#888;margin-left:6px">${pct>50?'CRÍTICO — acima do limite de 50%':pct>40?'ELEVADO — entre 40% e 50%':'DENTRO DO LIMITE (≤ 40%)'}</span>
+      </td>
+      <td style="padding:8px 10px;font-size:16px;font-weight:900;color:${pctCor};text-align:right;font-family:'DM Mono',monospace">${pct.toFixed(1)}%</td>
+      <td style="padding:8px 10px;font-size:10px;color:#888">limite: 50% da renda liq.</td>
+    </tr>
+  </table>
+</div>`;
+})()}
 
 ${(()=>{
   const risco=r.risco||{};
