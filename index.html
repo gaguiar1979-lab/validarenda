@@ -1415,6 +1415,8 @@ Entradas provenientes de casas de apostas ou plataformas de jogos (Bet, Blaze, B
 - Preencha o array "apostas" com um resumo por mês: {"mes":"Jan/2025","entradas":0.00,"saidas":0.00,"saldo":0.00} onde saldo = entradas - saídas (positivo = ganhou, negativo = perdeu)
 - Mencione OBRIGATORIAMENTE no parecer e na conclusão: total de entradas de apostas excluídas, total enviado para apostas, e saldo líquido (ganhou ou perdeu quanto no período)
 - Se apostas representam a maior parte das entradas do extrato, sinalize como risco crítico e informe que o cliente não possui renda real demonstrável além do comprovante formal
+- ATENÇÃO IMPORTANTE: CloudWalk IP LTDA / InfinityPay (CNPJ 61.474.814) NÃO é casa de apostas — é maquininha de cartão InfinityPay. Qualquer entrada dessa empresa é renda de prestação de serviço. NUNCA classificar como aposta.
+- Preencha o array "fontesBet" com as plataformas/fontes de apostas identificadas, agrupadas por nome: [{"plataforma":"Betano","totalEntradas":0.00,"totalSaidas":0.00}]. Inclua apenas quando entradasBet > 0 ou saidasBet > 0.
 
 PASSO 3 — RENDA REAL (extratos - apenas entradas):
 - Todas as entradas, excluindo: familiares listados + APOSTAS (excluídas conforme regra acima, incluindo intermediadoras Fluxpay, Pagsmile, Pay4Fun, Astropay) + resgates + transferências entre contas do próprio titular JÁ presentes na análise
@@ -1577,7 +1579,7 @@ Retorne SOMENTE este JSON sem markdown. REGRAS DE CONCISÃO OBRIGATÓRIAS:
 - porMes: inclua apenas os meses com valor > 0, máximo 6 meses
 - fatoresRisco: máximo 6 itens
 - indicadoresPositivos e indicadoresNegativos: máximo 3 itens cada:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"documentosEncontrados":["Arquivo RG: contém RG + certidão de casamento","Kit: contém extrato Jan-Mar/2025 + holerite"],"documentosCadastroAusentes":["Simulação de financiamento","Certidão de estado civil"],"rendaDeclarada":0.00,"rendaRealDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaLiquida":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"saidasBet":0.00,"apostas":[{"mes":"Jan/2025","entradas":0.00,"saidas":0.00,"saldo":0.00}],"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00,"temporario":false}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"valorMedioMensal":0.00,"motivo":"1 frase","porMes":[{"mes":"Jan/2025","valor":0.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"documentosEncontrados":["Arquivo RG: contém RG + certidão de casamento","Kit: contém extrato Jan-Mar/2025 + holerite"],"documentosCadastroAusentes":["Simulação de financiamento","Certidão de estado civil"],"rendaDeclarada":0.00,"rendaRealDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaLiquida":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"saidasBet":0.00,"apostas":[{"mes":"Jan/2025","entradas":0.00,"saidas":0.00,"saldo":0.00}],"fontesBet":[{"plataforma":"Betano","totalEntradas":0.00,"totalSaidas":0.00}],"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00,"temporario":false}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"valorMedioMensal":0.00,"motivo":"1 frase","porMes":[{"mes":"Jan/2025","valor":0.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
 
 Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
     // === ANÁLISE COM ANTHROPIC — suporte automático a múltiplos lotes ===
@@ -1647,7 +1649,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
 1. Todas as entradas de crédito nos extratos: mês, remetente, valor, banco. SEPARE em dois grupos:
    - "entradas": entradas legítimas (salário, pró-labore, freelas, aluguéis, pensão, aposentadoria, transferências de terceiros)
    - "entradas_beneficio_social": entradas de benefícios governamentais (Bolsa Família, Bolsa Gás, Auxílio Brasil, Auxílio Emergencial, BPC/LOAS, PETI, ou qualquer entrada com remetente "CAIXA BENEFICIO", "GOV FEDERAL BENEFICIO", "MINISTERIO DA CIDADANIA", "PROGR BOLSA FAMILIA", "CAIXA/BOLSA GAS" e similares). Estas NUNCA entram como renda comprovável. IMPORTANTE: a presença de qualquer benefício social impede aprovação de crédito pela CEF.
-   - "entradas_aposta": entradas de casas de apostas/jogos (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet, BJB, BJB ENTRETENIMENTO, MAX Gaming, NEXABET, GANHA SORTE, Brazino, Realsbet, Fluxpay, FLUXPAY LTDA, Pagsmile, Pay4Fun, Astropay, ecoPayz, Jeton, D TUDO, JOQUEI CLUBE, D TUDO JOQUEI CLUBE LTDA e similares). Estas NUNCA entram como renda. ATENÇÃO: Fluxpay e Pagsmile são intermediadoras de pagamento usadas EXCLUSIVAMENTE por casas de apostas — qualquer entrada vinda dessas empresas é aposta, não renda legítima.
+   - "entradas_aposta": entradas de casas de apostas/jogos (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet, BJB, BJB ENTRETENIMENTO, MAX Gaming, NEXABET, GANHA SORTE, Brazino, Realsbet, Fluxpay, FLUXPAY LTDA, Pagsmile, Pay4Fun, Astropay, ecoPayz, Jeton, D TUDO, JOQUEI CLUBE, D TUDO JOQUEI CLUBE LTDA e similares). Estas NUNCA entram como renda. ATENÇÃO: Fluxpay e Pagsmile são intermediadoras de pagamento usadas EXCLUSIVAMENTE por casas de apostas — qualquer entrada vinda dessas empresas é aposta, não renda legítima. EXCEÇÃO EXPLÍCITA: CloudWalk IP LTDA / InfinityPay (CNPJ 61.474.814) NÃO é aposta — é maquininha de cartão. Classificar como renda de prestação de serviço.
 2. Saídas fixas/recorrentes: destinatário, valor, frequência, tipo (empréstimo/cartão/aluguel/etc). SEPARE também:
    - "saidas_aposta": saídas/transferências para casas de apostas (mesmas plataformas acima) — quanto o cliente ENVIOU para apostas por mês
 3. Contracheques/holerites: leia TODAS as linhas de descontos e separe em dois grupos:
@@ -1979,13 +1981,20 @@ function _gerarHTML(r,w){
       dataRows=casas.length?casas.map(e=>`<tr><td>${e.nome}</td><td>${fmtR(e.valorTotal)}</td><td>—</td><td>—</td></tr>`).join(''):'<tr><td colspan="4">Dados mensais não disponíveis</td></tr>';
     }
     const sT=(r.entradasBet||0)-(r.saidasBet||0);
+    const fontesRows=(r.fontesBet&&r.fontesBet.length)
+      ?`<h3>Por Plataforma / Fonte</h3><table>
+  <tr><th>Plataforma</th><th>Total Recebido</th><th>Total Enviado</th></tr>
+  ${r.fontesBet.map(f=>`<tr><td>${f.plataforma||f.remetente||'—'}</td><td>${fmtR(f.totalEntradas||0)}</td><td>${fmtR(f.totalSaidas||0)}</td></tr>`).join('')}
+</table>`:
+      `<p style="font-size:11px;color:#666;margin-top:8px">Detalhamento por plataforma não disponível nesta análise.</p>`;
     return`<h2>🎰 Movimentação de Apostas — Excluída da Renda</h2>
 <div class="alerta">Valores de apostas e jogos são excluídos integralmente da renda comprovável. O cliente apostou durante o período analisado.</div>
 <table>
   ${headerRow}
   ${dataRows}
   <tr style="background:#fdecea;font-weight:bold"><td>TOTAL</td><td>${fmtR(r.entradasBet)}</td><td>${fmtR(r.saidasBet)}</td><td style="color:${sT>=0?'#1a7a3c':'#8b1a1a'}">${fmtR(sT)}</td></tr>
-</table>`;
+</table>
+${fontesRows}`;
   })();
 
   const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
@@ -2872,6 +2881,15 @@ function renderResults(r){
         <span style="text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:${((r.entradasBet||0)-(r.saidasBet||0))>=0?'#1a7a3c':'#8b1a1a'}">${((r.entradasBet||0)-(r.saidasBet||0))>=0?'+':''}${fmt(Math.abs((r.entradasBet||0)-(r.saidasBet||0)))}</span>
       </div>
       <div style="margin-top:8px;font-size:11px;color:var(--text3)">Saldo positivo = recebeu mais do que enviou. Saldo negativo = perdeu dinheiro com apostas.</div>
+      ${(r.fontesBet&&r.fontesBet.length)?`
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8b1a1a;margin-bottom:6px">Por plataforma / fonte de aposta</div>
+        ${r.fontesBet.map(f=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
+          <span style="color:var(--text1);font-weight:600">${f.plataforma||f.remetente||'—'}</span>
+          <span style="font-family:'DM Mono',monospace;color:#8b1a1a">recebido: ${fmt(f.totalEntradas||0)} | enviado: ${fmt(f.totalSaidas||0)}</span>
+        </div>`).join('')}
+        <div style="margin-top:6px;font-size:10px;color:var(--text3)">Fonte identificada pela IA com base no nome do remetente/destinatário no extrato.</div>
+      </div>`:''}
     </div>`:''}
 
     ${(r.comprometimentos&&r.comprometimentos.length)?`
