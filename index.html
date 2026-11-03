@@ -1305,7 +1305,10 @@ MÚLTIPLOS CONTRACHEQUES (quando houver mais de um mês):
 - Se houver variação significativa entre meses (>20%), mencione nas ressalvas e use a média mesmo assim
 
 → rendaComprovavel = MÉDIA DO TOTAL DE PROVENTOS de todos os contracheques (excluindo VT e VA) — BRUTO, critério do banco para aprovação
-→ rendaLiquida = MÉDIA DO SALÁRIO LÍQUIDO dos contracheques + entradas complementares de terceiros no extrato (freelas, aluguéis, etc.) — é a renda que o cliente efetivamente recebe e usa para pagar contas
+→ rendaLiquida = MÉDIA DO salario_liquido_base dos contracheques + entradas complementares de terceiros no extrato
+   IMPORTANTE: salario_liquido_base = salario_bruto − deduções legais (INSS, IRRF, VT, VA, sindicato) — NÃO desconta os consignados, pois eles entram em "comprometimentos" (linha 3).
+   Se salario_liquido_base não vier no JSON extraído: calcule como salario_liquido + soma dos consignados (adiciona de volta o que foi descontado em folha pelos empréstimos).
+   NUNCA use salario_liquido direto como rendaLiquida quando há consignados — isso causaria dupla contagem.
 
 Registre no array "fontes" CADA tipo de provento separadamente com a média mensal:
 - remetente = nome do empregador + descrição do provento
@@ -1647,7 +1650,10 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
    - "entradas_aposta": entradas de casas de apostas/jogos (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet, BJB, BJB ENTRETENIMENTO, MAX Gaming, NEXABET, GANHA SORTE, Brazino, Realsbet, Fluxpay, FLUXPAY LTDA, Pagsmile, Pay4Fun, Astropay, ecoPayz, Jeton, D TUDO, JOQUEI CLUBE, D TUDO JOQUEI CLUBE LTDA e similares). Estas NUNCA entram como renda. ATENÇÃO: Fluxpay e Pagsmile são intermediadoras de pagamento usadas EXCLUSIVAMENTE por casas de apostas — qualquer entrada vinda dessas empresas é aposta, não renda legítima.
 2. Saídas fixas/recorrentes: destinatário, valor, frequência, tipo (empréstimo/cartão/aluguel/etc). SEPARE também:
    - "saidas_aposta": saídas/transferências para casas de apostas (mesmas plataformas acima) — quanto o cliente ENVIOU para apostas por mês
-3. Contracheques/holerites: competência, total de proventos (salário bruto — soma de todos os proventos do lado esquerdo/créditos), salário líquido (valor a receber após descontos), nome do empregador, consignados (credor e valor de cada parcela). O "total de proventos" é a renda comprovável CLT — NÃO o salário líquido.
+3. Contracheques/holerites: leia TODAS as linhas de descontos e separe em dois grupos:
+   - DEDUÇÕES LEGAIS (reduzem bruto→líquido mas NÃO são dívidas): INSS, IRRF, Vale Transporte, Vale Refeição/Alimentação, Sindicato, contribuição sindical, adiantamento de salário
+   - CONSIGNADOS (são dívidas com desconto em folha): qualquer linha com nome de banco/financeira, "Empréstimo Consignado", "Consig.", "Crefisa", "BMG", "Sicredi Consig.", "BV Financeira", etc.
+   Extraia: competência, empregador, salario_bruto (total de proventos — lado esquerdo/créditos), salario_liquido (valor a receber — após TODAS as deduções incluindo consignados), total_deducoes_legais (INSS+IRRF+VT+VA+sindicato), consignados (credor e valor de cada parcela). O salario_liquido_base = salario_bruto - total_deducoes_legais (sem os consignados) deve ser calculado e registrado.
 4. Simulação de financiamento / Proposta de Fluxo de Pagamento: extraia TODOS os campos abaixo se presentes:
    - "Parcela banco" ou "Parcela financiamento" → parcelaFinanciamento
    - "Parcela construtora" ou "Parcela pró-soluto" → parcelaProSoluto
@@ -1660,7 +1666,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
 6. Lista dos documentos identificados nos arquivos
 
 Retorne JSON sem markdown:
-{"periodo":"","documentos":["Extrato Neon Jan-Mar/2025"],"entradas":[{"mes":"Jan/2025","remetente":"EMPRESA X","valor":0,"banco":"Nubank"}],"entradas_beneficio_social":[{"mes":"Jan/2025","remetente":"PROGR BOLSA FAMILIA","valor":0,"banco":"Caixa"}],"entradas_aposta":[{"mes":"Jan/2025","remetente":"Blaze","valor":0,"banco":"Nubank"}],"saidas_aposta":[{"mes":"Jan/2025","destinatario":"Blaze","valor":0,"banco":"Nubank"}],"saidas_fixas":[{"destinatario":"BANCO Y","valor":0,"frequencia":"mensal","tipo":"emprestimo"}],"holerites":[{"competencia":"","empregador":"","salario_bruto":0,"salario_liquido":0,"consignados":[{"credor":"","valor":0}]}],"simulacao":{"parcelaFinanciamento":0,"parcelaProSoluto":0,"valorImovel":0,"valorFinanciado":0,"subsidio":0,"rendaDeclarada":0,"rendaRealDeclarada":0},"certidao":{"tipo":"","conjuge":"","filhos":[]}}`;
+{"periodo":"","documentos":["Extrato Neon Jan-Mar/2025"],"entradas":[{"mes":"Jan/2025","remetente":"EMPRESA X","valor":0,"banco":"Nubank"}],"entradas_beneficio_social":[{"mes":"Jan/2025","remetente":"PROGR BOLSA FAMILIA","valor":0,"banco":"Caixa"}],"entradas_aposta":[{"mes":"Jan/2025","remetente":"Blaze","valor":0,"banco":"Nubank"}],"saidas_aposta":[{"mes":"Jan/2025","destinatario":"Blaze","valor":0,"banco":"Nubank"}],"saidas_fixas":[{"destinatario":"BANCO Y","valor":0,"frequencia":"mensal","tipo":"emprestimo"}],"holerites":[{"competencia":"","empregador":"","salario_bruto":0,"salario_liquido":0,"salario_liquido_base":0,"total_deducoes_legais":0,"consignados":[{"credor":"","valor":0}]}],"simulacao":{"parcelaFinanciamento":0,"parcelaProSoluto":0,"valorImovel":0,"valorFinanciado":0,"subsidio":0,"rendaDeclarada":0,"rendaRealDeclarada":0},"certidao":{"tipo":"","conjuge":"","filhos":[]}}`;
 
       const extrTxt=[];
       for(let li=0;li<lotes.length;li++){
@@ -1691,8 +1697,12 @@ Retorne JSON sem markdown:
         try{loteJson=JSON.parse(loteText.slice(jStart));}catch(e){}
         if(loteJson&&Array.isArray(loteJson.holerites)){
           loteJson.holerites.forEach(h=>{
-            if((h.salario_bruto||0)>0&&!empSet.find(x=>x.bruto===h.salario_bruto))
-              empSet.push({emp:h.empregador||'Empregador',bruto:h.salario_bruto,liq:h.salario_liquido||0});
+            if((h.salario_bruto||0)>0&&!empSet.find(x=>x.bruto===h.salario_bruto)){
+              // salario_liquido_base = bruto sem consignados (apenas deduções legais descontadas)
+              const totalConsig=(h.consignados||[]).reduce((s,c)=>s+(c.valor||0),0);
+              const liqBase=h.salario_liquido_base||(h.salario_liquido||0)+totalConsig;
+              empSet.push({emp:h.empregador||'Empregador',bruto:h.salario_bruto,liq:liqBase,liqFinal:h.salario_liquido||0});
+            }
           });
         } else {
           // fallback regex simples para bruto/liquido/empregador (sem depender de aninhamento)
@@ -1707,7 +1717,7 @@ Retorne JSON sem markdown:
         }
       });
       const holeritesTxt=empSet.length
-        ?'CONTRACHEQUES ENCONTRADOS (use salario_bruto para rendaComprovavel e salario_liquido para rendaLiquida deste empregador):\n'+empSet.map(h=>`- ${h.emp||'Empregador'}: bruto=${h.bruto}, liquido=${h.liq}`).join('\n')
+        ?'CONTRACHEQUES ENCONTRADOS:\n'+empSet.map(h=>`- ${h.emp||'Empregador'}: salario_bruto=${h.bruto}, salario_liquido_base=${h.liq} (sem consignados — use para rendaLiquida), salario_liquido_final=${h.liqFinal||h.liq} (após consignados — NÃO usar como rendaLiquida)`).join('\n')
         :'(nenhum contracheque identificado — use extratos para toda a renda)';
       const empregadoresComHolerite=new Set(empSet.map(h=>(h.emp||'').toLowerCase()));
       const remListados=[...remSet.entries()].filter(([,n])=>n>=1).map(([r,n])=>`- ${r} (${n} ocorrência${n>1?'s':''})`).join('\n');
