@@ -1701,8 +1701,9 @@ Retorne JSON sem markdown:
             if((h.salario_bruto||0)<=0) return;
             const totalConsig=(h.consignados||[]).reduce((s,c)=>s+(c.valor||0),0);
             const liqBase=h.salario_liquido_base||(h.salario_liquido||0)+totalConsig;
-            const empKey=(h.empregador||'Empregador').trim().toUpperCase();
-            if(!empMap.has(empKey)) empMap.set(empKey,{emp:h.empregador||'Empregador',meses:[]});
+            const empNome=h.empregador&&h.empregador.trim()&&h.empregador.trim().toLowerCase()!=='empregador'?h.empregador.trim():'';
+            const empKey=(empNome||'FONTE_NAO_IDENTIFICADA').toUpperCase();
+            if(!empMap.has(empKey)) empMap.set(empKey,{emp:empNome||'Fonte não identificada',meses:[]});
             const entry=empMap.get(empKey);
             // evita duplicar exata mesma competência
             const comp=h.competencia||'';
@@ -1719,8 +1720,9 @@ Retorne JSON sem markdown:
           brutRx.forEach((bm,i)=>{
             const bruto=parseFloat(bm[1]);
             if(bruto<=0) return;
-            const empNome=empRx[i]?empRx[i][1]:'Empregador';
-            const empKey=empNome.trim().toUpperCase();
+            const empNomeBruto=empRx[i]?empRx[i][1].trim():'';
+            const empNome=empNomeBruto&&empNomeBruto.toLowerCase()!=='empregador'?empNomeBruto:'Fonte não identificada';
+            const empKey=(empNomeBruto||'FONTE_NAO_IDENTIFICADA').toUpperCase();
             const comp=compRx[i]?compRx[i][1]:'';
             if(!empMap.has(empKey)) empMap.set(empKey,{emp:empNome,meses:[]});
             const entry=empMap.get(empKey);
@@ -2104,8 +2106,12 @@ ${(()=>{
           const mesesHtml=(h.meses||[]).map(m=>`<span style="background:#dce8fa;border-radius:3px;padding:1px 5px;margin-right:4px;font-family:'DM Mono',monospace">${m.competencia||'?'}: R$ ${(m.bruto||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>`).join('');
           const mediaBruto=(h.bruto||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
           const mediaLiq=(h.liq||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+          const empNomeExib = h.emp&&h.emp!=='Empregador'&&h.emp!=='EMPREGADOR' ? h.emp : null;
           return `<div style="margin-top:6px;border-top:1px solid #c8dff7;padding-top:5px">
-            <strong>${h.emp||'Empregador'}</strong>
+            ${empNomeExib
+              ? `<strong>${empNomeExib}</strong>`
+              : `<em style="color:#b45309">⚠️ Empregador não identificado nos documentos</em>`
+            }
             <div style="margin-top:3px">${mesesHtml}</div>
             <div style="margin-top:3px;color:#0d5c1a">Média bruto: <strong>R$ ${mediaBruto}</strong> &nbsp;|&nbsp; Média líquido base (s/consignados): R$ ${mediaLiq}</div>
           </div>`;
