@@ -22,6 +22,27 @@
 }
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.6}
 
+/* ESCLARECIMENTOS CARD */
+#esclarecimentosCard{display:none;margin-top:1.5rem}
+.escl-card{background:var(--surface);border:2px solid var(--gold);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow)}
+.escl-header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);padding:16px 20px;color:#fff}
+.escl-header h3{font-size:14px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.escl-header p{font-size:12px;opacity:.65;line-height:1.5}
+.escl-body{padding:16px 20px 4px}
+.escl-item{background:var(--gold-light);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px}
+.escl-item-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.escl-item-meta{font-size:11px;color:var(--text3);margin-bottom:6px}
+.escl-item-obs{font-size:12px;color:var(--text2);background:var(--surface2);border-radius:6px;padding:6px 10px;margin-bottom:8px;border-left:3px solid var(--gold)}
+.escl-item textarea{width:100%;padding:10px 12px;font-size:13px;font-family:'DM Sans',sans-serif;border:1.5px solid var(--border2);border-radius:8px;resize:vertical;min-height:56px;color:var(--navy);background:#fff;outline:none;line-height:1.5;box-sizing:border-box}
+.escl-item textarea:focus{border-color:var(--gold)}
+.escl-item textarea::placeholder{color:var(--text3)}
+.escl-footer{padding:12px 20px 20px;display:flex;align-items:center;gap:12px}
+.btn-refinar{flex:1;padding:13px 20px;font-size:13px;font-weight:700;background:var(--gold);color:var(--navy);border:none;border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.02em;transition:background .15s}
+.btn-refinar:hover{background:var(--gold2)}
+.btn-refinar:disabled{opacity:.5;cursor:not-allowed}
+.escl-skip{font-size:12px;color:var(--text3);text-decoration:underline;cursor:pointer;background:none;border:none;font-family:'DM Sans',sans-serif;padding:0}
+.escl-skip:hover{color:var(--text2)}
+
 /* TOPBAR */
 .topbar{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);border-bottom:3px solid var(--gold);color:#fff;padding:0 2rem;height:64px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(28,30,53,.35)}
 .topbar-logo{height:40px;object-fit:contain}
@@ -425,6 +446,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div id="printFrame" style="display:none"></div>
 </div>
 
+</div>
+
+<!-- ESCLARECIMENTOS -->
+<div id="esclarecimentosCard" class="page" style="padding-top:0;padding-bottom:0">
+  <div class="escl-card">
+    <div class="escl-header">
+      <h3>💬 Depósitos que precisam de contexto</h3>
+      <p>O sistema identificou depósitos sem classificação clara. Preencha o que souber — a análise será refinada com esse contexto para um laudo mais preciso.</p>
+    </div>
+    <div class="escl-body" id="esclBody"></div>
+    <div class="escl-footer">
+      <button class="btn-refinar" id="btnRefinar" onclick="refinarAnalise()">🔄 Refinar análise com esclarecimentos</button>
+      <button class="escl-skip" onclick="document.getElementById('esclarecimentosCard').style.display='none'">Pular</button>
+    </div>
+  </div>
 </div>
 
 <!-- FOOTER -->
@@ -862,6 +898,41 @@ function toB64(file){
     r.readAsDataURL(file);
   });
 }
+async function _callAPI(content, systemPrompt, maxTokens, timeoutMs, model) {
+  const ac = new AbortController();
+  const at = setTimeout(() => ac.abort(), timeoutMs || 360000);
+  let r2;
+  const mdl = model || 'claude-opus-4-5';
+  try {
+    r2 = await fetch('/api/analyze-stream', {
+      signal: ac.signal, method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({payload: {model: mdl, max_tokens: maxTokens || 8000, system: systemPrompt,
+        messages: [{role: 'user', content: Array.isArray(content) ? content : [{type: 'text', text: content}]}]}})
+    });
+  } catch (fe) {
+    clearTimeout(at);
+    throw new Error(fe.name === 'AbortError' ? 'Tempo limite atingido. Tente novamente.' : fe.message);
+  }
+  if (!r2.ok) { clearTimeout(at); const er = await r2.json().catch(() => ({})); throw new Error(er.error?.message || `Erro HTTP ${r2.status}`); }
+  const rd = r2.body.getReader(); const dc = new TextDecoder();
+  let sb = '', txt = '', fb = '';
+  while (true) {
+    const {done, value} = await rd.read(); if (done) break;
+    const ch = dc.decode(value, {stream: true}); fb += ch; sb += ch;
+    const ln = sb.split('\n'); sb = ln.pop();
+    for (const l of ln) {
+      if (!l.startsWith('data: ')) continue;
+      const js = l.slice(6).trim(); if (!js || js === '[DONE]') continue;
+      try { const ev = JSON.parse(js); if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') txt += ev.delta.text; else if (ev.type === 'error') throw new Error(ev.error?.message || 'Erro da API'); }
+      catch (pe) { if (pe.message && !pe.message.includes('JSON')) throw pe; }
+    }
+  }
+  clearTimeout(at);
+  if (!txt) { try { const eo = JSON.parse(fb); if (eo.error?.message) throw new Error('Anthropic: ' + eo.error.message); } catch (pe) { if (pe.message.startsWith('Anthropic:')) throw pe; } throw new Error('A IA não retornou resposta. Tente novamente.'); }
+  return txt;
+}
+
 function showToast(msg){
   const t=document.createElement('div');
   t.style.cssText='position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--navy);border-bottom:3px solid var(--gold);color:#fff;padding:12px 20px;border-radius:var(--radius-lg);font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:90vw;text-align:center';
@@ -1140,8 +1211,18 @@ Extraia da simulação os seguintes campos — NÃO confunda valor do imóvel co
 - valorFinanciado = valor que o banco está financiando (geralmente 70-80% do imóvel)
 - subsidio = valor de subsídio do programa habitacional, se houver (ex: MCMV, subsídio habitacional). Se presente, registre separadamente e informe que reduz o valor efetivo da entrada.
 - entrada = valor de entrada que o cliente precisa desembolsar (valorImovel - valorFinanciado - subsidio)
-- parcelaFinanciamento = prestação mensal do financiamento bancário
-- rendaDeclarada = renda declarada pelo cliente na simulação (se informada)
+- parcelaFinanciamento = prestação mensal do financiamento bancário ("Parcela banco" na Proposta de Fluxo)
+- parcelaProSoluto = prestação mensal pós-chaves com a construtora ("Parcela construtora" ou "Parcela pró-soluto")
+- rendaDeclarada = renda declarada formalmente pelo cliente na simulação
+- rendaRealDeclarada = campo "Renda real" da simulação — renda estimada pelo viabilizador incluindo informais
+
+CONFRONTO OBRIGATÓRIO — SIMULADOR × DOCUMENTOS:
+Quando há simulação de financiamento (parcelaFinanciamento > 0):
+1. Compare a renda declarada/real do simulador com a renda comprovada pelos extratos:
+   - Se rendaComprovavel < rendaDeclarada × 0.80 (mais de 20% abaixo): defina divergenciaRenda=true e adicione em ressalvas: "ATENÇÃO: Renda comprovada (R$X) é inferior à declarada na simulação (R$Y) em [Z]%. O comprometimento real de renda é de [%] — acima/abaixo do viabilizado."
+   - Se rendaComprovavel >= rendaDeclarada × 0.80: defina divergenciaRenda=false
+2. Calcule SEMPRE o comprometimento real: (parcelaFinanciamento + parcelaProSoluto) / rendaComprovavel × 100
+3. Registre parcelaProSoluto do simulador no campo parcelaProSoluto do JSON — é a parcela que o cliente paga à construtora pós-chaves
 
 ORIENTAÇÕES OBRIGATÓRIAS que devem aparecer em "ressalvas" quando aplicável:
 
@@ -1482,7 +1563,7 @@ Retorne SOMENTE este JSON sem markdown. REGRAS DE CONCISÃO OBRIGATÓRIAS:
 - porMes: inclua apenas os meses com valor > 0, máximo 6 meses
 - fatoresRisco: máximo 6 itens
 - indicadoresPositivos e indicadoresNegativos: máximo 3 itens cada:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"documentosEncontrados":["Arquivo RG: contém RG + certidão de casamento","Kit: contém extrato Jan-Mar/2025 + holerite"],"documentosCadastroAusentes":["Simulação de financiamento","Certidão de estado civil"],"rendaDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"saidasBet":0.00,"apostas":[{"mes":"Jan/2025","entradas":0.00,"saidas":0.00,"saldo":0.00}],"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"1 frase"}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"documentosEncontrados":["Arquivo RG: contém RG + certidão de casamento","Kit: contém extrato Jan-Mar/2025 + holerite"],"documentosCadastroAusentes":["Simulação de financiamento","Certidão de estado civil"],"rendaDeclarada":0.00,"rendaRealDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"saidasBet":0.00,"apostas":[{"mes":"Jan/2025","entradas":0.00,"saidas":0.00,"saldo":0.00}],"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"1 frase"}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
 
 Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
     // === ANÁLISE COM ANTHROPIC — suporte automático a múltiplos lotes ===
@@ -1556,12 +1637,19 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
 2. Saídas fixas/recorrentes: destinatário, valor, frequência, tipo (empréstimo/cartão/aluguel/etc). SEPARE também:
    - "saidas_aposta": saídas/transferências para casas de apostas (mesmas plataformas acima) — quanto o cliente ENVIOU para apostas por mês
 3. Contracheques/holerites: competência, salário bruto, salário líquido, consignados (credor e valor de cada parcela)
-4. Simulação de financiamento: parcela mensal, valor imóvel, valor financiado, subsídio, renda declarada
+4. Simulação de financiamento / Proposta de Fluxo de Pagamento: extraia TODOS os campos abaixo se presentes:
+   - "Parcela banco" ou "Parcela financiamento" → parcelaFinanciamento
+   - "Parcela construtora" ou "Parcela pró-soluto" → parcelaProSoluto
+   - "Valor do imóvel" → valorImovel
+   - "Financiamento" ou "Valor financiado" → valorFinanciado
+   - "Subsídio" → subsidio
+   - "Renda declarada" → rendaDeclarada
+   - "Renda real" → rendaRealDeclarada (campo separado da renda declarada)
 5. Certidão de estado civil: tipo (casamento/nascimento/solteiro), nome do cônjuge, nome dos filhos
 6. Lista dos documentos identificados nos arquivos
 
 Retorne JSON sem markdown:
-{"periodo":"","documentos":["Extrato Neon Jan-Mar/2025"],"entradas":[{"mes":"Jan/2025","remetente":"EMPRESA X","valor":0,"banco":"Nubank"}],"entradas_beneficio_social":[{"mes":"Jan/2025","remetente":"PROGR BOLSA FAMILIA","valor":0,"banco":"Caixa"}],"entradas_aposta":[{"mes":"Jan/2025","remetente":"Blaze","valor":0,"banco":"Nubank"}],"saidas_aposta":[{"mes":"Jan/2025","destinatario":"Blaze","valor":0,"banco":"Nubank"}],"saidas_fixas":[{"destinatario":"BANCO Y","valor":0,"frequencia":"mensal","tipo":"emprestimo"}],"holerites":[{"competencia":"","salario_bruto":0,"salario_liquido":0,"consignados":[{"credor":"","valor":0}]}],"simulacao":{"parcelaFinanciamento":0,"valorImovel":0,"valorFinanciado":0,"subsidio":0,"rendaDeclarada":0},"certidao":{"tipo":"","conjuge":"","filhos":[]}}`;
+{"periodo":"","documentos":["Extrato Neon Jan-Mar/2025"],"entradas":[{"mes":"Jan/2025","remetente":"EMPRESA X","valor":0,"banco":"Nubank"}],"entradas_beneficio_social":[{"mes":"Jan/2025","remetente":"PROGR BOLSA FAMILIA","valor":0,"banco":"Caixa"}],"entradas_aposta":[{"mes":"Jan/2025","remetente":"Blaze","valor":0,"banco":"Nubank"}],"saidas_aposta":[{"mes":"Jan/2025","destinatario":"Blaze","valor":0,"banco":"Nubank"}],"saidas_fixas":[{"destinatario":"BANCO Y","valor":0,"frequencia":"mensal","tipo":"emprestimo"}],"holerites":[{"competencia":"","salario_bruto":0,"salario_liquido":0,"consignados":[{"credor":"","valor":0}]}],"simulacao":{"parcelaFinanciamento":0,"parcelaProSoluto":0,"valorImovel":0,"valorFinanciado":0,"subsidio":0,"rendaDeclarada":0,"rendaRealDeclarada":0},"certidao":{"tipo":"","conjuge":"","filhos":[]}}`;
 
       const extrTxt=[];
       for(let li=0;li<lotes.length;li++){
@@ -1656,6 +1744,7 @@ Retorne JSON sem markdown:
       parsed.ressalvas.unshift('⚠️ ATENÇÃO: O sistema identificou renda (R$ '+parsed.rendaComprovavel.toLocaleString('pt-BR',{minimumFractionDigits:2})+') mas não conseguiu listar as fontes individualmente. Isso ocorre quando há muitos documentos. Recomenda-se refazer a análise reduzindo o número de extratos, ou analisar os extratos em grupos separados.');
     }
     renderResults(parsed);
+    renderEsclarecimentos(parsed);
   }catch(e){
     console.error('ERRO ANÁLISE:',e);
     clearInterval(interval);
@@ -2261,6 +2350,70 @@ function renderResults(r){
       }).join('');
     })()}
 
+    ${(r.parcelaFinanciamento>0)?(()=>{
+      const parcBanco=r.parcelaFinanciamento||0;
+      const parcConst=r.parcelaProSoluto||0;
+      const totalParc=parcBanco+parcConst;
+      const rendaComp=r.rendaComprovavel||0;
+      const rendaReal=r.rendaRealTotal||0;
+      const rendaDecl=r.rendaDeclarada||0;
+      const rendaRealDecl=r.rendaRealDeclarada||0;
+      const comprometReal=rendaComp>0?((totalParc/rendaComp)*100):0;
+      const difPct=rendaDecl>0?((rendaComp-rendaDecl)/rendaDecl*100):0;
+      const comprometColor=comprometReal>50?'#C0392B':comprometReal>40?'#B8952A':'#1a7a3c';
+      const difColor=difPct<-20?'#C0392B':difPct<-10?'#B8952A':'#1a7a3c';
+      const difIcon=difPct<-20?'⛔':difPct<-10?'⚠️':'✅';
+      const margem=rendaReal-(r.totalComprometido||0)-(r.custoVidaEstimado||0)-parcBanco-parcConst;
+      const margemColor=margem>500?'#1a7a3c':margem>0?'#B8952A':'#C0392B';
+      return `<div style="grid-column:1/-1;background:var(--navy);border-radius:12px;padding:18px 20px;margin-top:4px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.45);margin-bottom:14px">🔎 Confronto — Simulador × Apurado nos Documentos</div>
+        <div style="display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr;gap:0;align-items:stretch">
+          <!-- Coluna 1: Dados do Simulador -->
+          <div style="padding-right:20px">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gold2);margin-bottom:10px">📄 Simulador</div>
+            ${rendaDecl>0?`<div style="margin-bottom:6px"><div style="font-size:10px;color:rgba(255,255,255,.4)">Renda declarada</div><div style="font-size:15px;font-weight:700;color:#fff;font-family:'DM Mono',monospace">${fmt(rendaDecl)}</div></div>`:''}
+            ${rendaRealDecl>0?`<div style="margin-bottom:10px"><div style="font-size:10px;color:rgba(255,255,255,.4)">Renda real (estimada)</div><div style="font-size:14px;font-weight:700;color:#C9A84C;font-family:'DM Mono',monospace">${fmt(rendaRealDecl)}</div></div>`:''}
+            <div style="padding-top:10px;border-top:1px solid rgba(255,255,255,.1)">
+              <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:6px">Parcelas</div>
+              ${parcBanco>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.7);margin-bottom:4px"><span>🏦 Banco (financ.)</span><span style="font-family:'DM Mono',monospace">${fmt(parcBanco)}/mês</span></div>`:''}
+              ${parcConst>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.7);margin-bottom:4px"><span>🏗️ Construtora (pró-soluto)</span><span style="font-family:'DM Mono',monospace">${fmt(parcConst)}/mês</span></div>`:''}
+              <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#C9A84C;margin-top:4px;padding-top:6px;border-top:1px solid rgba(255,255,255,.1)"><span>Total parcelas</span><span style="font-family:'DM Mono',monospace">${fmt(totalParc)}/mês</span></div>
+            </div>
+          </div>
+          <!-- Divisor -->
+          <div style="background:rgba(255,255,255,.1);margin:0 4px"></div>
+          <!-- Coluna 2: Apurado -->
+          <div style="padding:0 20px">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gold2);margin-bottom:10px">📊 Apurado nos Documentos</div>
+            <div style="margin-bottom:6px"><div style="font-size:10px;color:rgba(255,255,255,.4)">Renda comprovável</div><div style="font-size:15px;font-weight:700;color:#C9A84C;font-family:'DM Mono',monospace">${fmt(rendaComp)}</div></div>
+            <div style="margin-bottom:10px"><div style="font-size:10px;color:rgba(255,255,255,.4)">Renda real (extratos)</div><div style="font-size:14px;font-weight:700;color:#fff;font-family:'DM Mono',monospace">${fmt(rendaReal)}</div></div>
+            ${rendaDecl>0?`<div style="padding:8px 10px;border-radius:8px;background:rgba(${difPct<-20?'192,57,43':difPct<-10?'184,149,42':'26,122,60'},.2);border:1px solid rgba(${difPct<-20?'192,57,43':difPct<-10?'184,149,42':'26,122,60'},.4)">
+              <div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:2px">Renda comp. vs. declarada</div>
+              <div style="font-size:14px;font-weight:800;color:${difColor}">${difIcon} ${difPct>=0?'+':''}${difPct.toFixed(1)}%</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px">${difPct<-20?'Renda comprovada muito abaixo da declarada':difPct<-10?'Renda comprovada abaixo da declarada':'Consistente com o declarado'}</div>
+            </div>`:''}
+          </div>
+          <!-- Divisor -->
+          <div style="background:rgba(255,255,255,.1);margin:0 4px"></div>
+          <!-- Coluna 3: Comprometimento Real -->
+          <div style="padding-left:20px">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gold2);margin-bottom:10px">📐 Comprometimento Real</div>
+            <div style="margin-bottom:10px">
+              <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px">(Banco + Construtora) / Renda Comp.</div>
+              <div style="font-size:22px;font-weight:900;color:${comprometColor};font-family:'DM Mono',monospace">${comprometReal.toFixed(1)}%</div>
+              <div style="font-size:10px;font-weight:700;color:${comprometColor};margin-top:2px">${comprometReal>50?'⛔ CRÍTICO — acima de 50%':comprometReal>40?'⚠️ ELEVADO — entre 40–50%':'✅ OK — dentro de 40%'}</div>
+            </div>
+            <div style="background:rgba(255,255,255,.1);border-radius:999px;height:6px;margin-bottom:10px;overflow:hidden"><div style="height:100%;width:${Math.min(comprometReal,100)}%;background:${comprometColor};border-radius:999px"></div></div>
+            <div style="padding-top:8px;border-top:1px solid rgba(255,255,255,.1)">
+              <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px">Margem pós-parcelas</div>
+              <div style="font-size:17px;font-weight:800;color:${margemColor};font-family:'DM Mono',monospace">${fmt(margem)}/mês</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px">${margem>500?'✅ Margem confortável':margem>0?'⚠️ Margem apertada':'⛔ Margem negativa'}</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    })():''}
+
     <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-bottom:10px">📋 Renda Comprovável</div>
@@ -2401,6 +2554,126 @@ function renderResults(r){
   _gerarHTML(r, null);
 
   document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function renderEsclarecimentos(r) {
+  const card = document.getElementById('esclarecimentosCard');
+  const body = document.getElementById('esclBody');
+  const itens = [];
+
+  // Entradas não comprováveis ou classificadas como informal/autonomo/outros
+  (r.fontes || []).forEach(f => {
+    if ((!f.comprovavel || ['autonomo', 'informal_extrato', 'outros'].includes(f.tipo)) && (f.mediaMensal || 0) >= 200) {
+      itens.push({
+        id: 'f_' + (f.remetente || '').replace(/\W+/g, '_').slice(0, 30),
+        icone: '💰',
+        nome: f.remetente || 'Remetente desconhecido',
+        meta: '~' + fmt(f.mediaMensal) + '/mês · ' + (f.frequencia || 'mensal'),
+        obs: 'Renda classificada como "' + (f.tipo || 'outros') + '" — não totalmente comprovável. O que é esse depósito?',
+        placeholder: 'Ex: cachê de shows, trabalho autônomo, aluguel de imóvel próprio, renda de MEI...'
+      });
+    }
+  });
+
+  // Transferências recorrentes que precisam de explicação
+  (r.transferenciasAtencao || []).forEach((t, i) => {
+    if ((t.valorMedioMensal || 0) >= 200) {
+      itens.push({
+        id: 't_' + i + '_' + (t.beneficiario || '').replace(/\W+/g, '_').slice(0, 30),
+        icone: '📤',
+        nome: t.beneficiario || 'Destinatário não identificado',
+        meta: '~' + fmt(t.valorMedioMensal) + '/mês · ' + (t.frequencia || 'recorrente'),
+        obs: t.observacao || 'Transferência recorrente sem identificação clara.',
+        placeholder: 'Ex: aluguel que some com a compra, conta própria, ajuda a familiar, pagamento informal...'
+      });
+    }
+  });
+
+  if (!itens.length) { card.style.display = 'none'; return; }
+
+  body.innerHTML = itens.map(item => `
+    <div class="escl-item">
+      <div class="escl-item-title">${item.icone} ${item.nome}</div>
+      <div class="escl-item-meta">${item.meta}</div>
+      <div class="escl-item-obs">${item.obs}</div>
+      <textarea id="escl_${item.id}" placeholder="${item.placeholder}" rows="2"></textarea>
+    </div>
+  `).join('');
+
+  // Salva os ids para coleta depois
+  card._esclItens = itens;
+  card.style.display = 'block';
+  setTimeout(() => card.scrollIntoView({behavior: 'smooth', block: 'nearest'}), 400);
+}
+
+async function refinarAnalise() {
+  const r = lastResult;
+  if (!r) return;
+
+  const card = document.getElementById('esclarecimentosCard');
+  const itens = card._esclItens || [];
+  const escl = itens
+    .map(item => ({ nome: item.nome, icone: item.icone, valor: (document.getElementById('escl_' + item.id) || {}).value || '' }))
+    .filter(e => e.valor.trim());
+
+  if (!escl.length) { showToast('Preencha ao menos um esclarecimento.'); return; }
+
+  const btn = document.getElementById('btnRefinar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Refinando análise...';
+
+  try {
+    const esclTexto = escl.map(e => `- [${e.nome}]: ${e.valor.trim()}`).join('\n');
+
+    const sys = `Você é um analista de crédito imobiliário da Casas Manager Construções. Revise o laudo JSON abaixo incorporando os esclarecimentos da equipe comercial. Retorne apenas o JSON completo atualizado, sem markdown.`;
+
+    const msg = `A equipe comercial forneceu esclarecimentos sobre depósitos e transferências do laudo abaixo.
+
+ESCLARECIMENTOS (alta prioridade — incorpore na análise):
+${esclTexto}
+
+LAUDO ANTERIOR (JSON):
+${JSON.stringify(r)}
+
+INSTRUÇÕES DE REVISÃO:
+1. Para cada esclarecimento de ENTRADA (💰): se indicar renda legítima e recorrente (autônomo, cachê, freela, aluguel), marque comprovavel:true e inclua o valor na rendaComprovavel.
+2. Para cada esclarecimento de SAÍDA (📤): se indicar comprometimento temporário (aluguel que some com a compra, conta própria, familiar), remova ou ajuste em comprometimentos.
+3. Recalcule: rendaComprovavel, rendaRealTotal, totalComprometido, percentualComprometido, margemProSoluto, saldoAposProSoluto, veredito.
+4. Atualize parecer e conclusao para refletir os esclarecimentos.
+5. Adicione em ressalvas: "✅ Análise refinada com esclarecimentos da equipe comercial."
+Mantenha exatamente a mesma estrutura JSON. Retorne apenas o JSON.`;
+
+    const raw = await _callAPI(msg, sys, 32000, 420000);
+
+    // Parse
+    let js2 = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+    const s = js2.indexOf('{');
+    if (s !== -1) {
+      let dep = 0, inS = false, esc2 = false;
+      for (let i = s; i < js2.length; i++) {
+        const c = js2[i];
+        if (esc2) { esc2 = false; continue; }
+        if (c === '\\' && inS) { esc2 = true; continue; }
+        if (c === '"') { inS = !inS; continue; }
+        if (inS) continue;
+        if (c === '{') dep++;
+        else if (c === '}') { dep--; if (dep === 0) { js2 = js2.slice(s, i + 1); break; } }
+      }
+    }
+    let parsed2;
+    try { parsed2 = JSON.parse(js2); }
+    catch (e) { parsed2 = JSON.parse(js2.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\r\n]/g, ' ')); }
+
+    renderResults(parsed2);
+    card.style.display = 'none';
+    showToast('✅ Análise refinada com sucesso!');
+  } catch (e) {
+    console.error('Erro ao refinar:', e);
+    showToast('❌ Erro ao refinar: ' + e.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔄 Refinar análise com esclarecimentos';
 }
 </script>
 </body>
