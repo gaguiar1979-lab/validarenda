@@ -1569,14 +1569,23 @@ Retorne JSON sem markdown:
         const pgsNesteLote=docsNesteLote.reduce((s,x)=>s+contarPaginasPDF(x.source.data||''),0);
         document.getElementById('progressLabel').textContent=`Lendo lote ${li+1} de ${lotes.length} (~${pgsNesteLote} páginas)...`;
         const loteConteudo=[...lotes[li],{type:'text',text:instrExt}];
-        const extRaw=await streamCall(loteConteudo,sysExt,4000,240000,'claude-haiku-4-5-20251001');
+        const extRaw=await streamCall(loteConteudo,sysExt,8000,240000,'claude-haiku-4-5-20251001');
         extrTxt.push(`=== LOTE ${li+1} de ${lotes.length} ===\n${extRaw}`);
         console.log(`✅ Lote ${li+1} extraído`);
       }
 
       // 4. Síntese final — texto apenas (sem PDFs, sem limite de páginas)
       document.getElementById('progressLabel').textContent=`Consolidando análise final (${lotes.length} lotes)...`;
-      const msgSintese=`ATENÇÃO: Esta análise foi realizada em ${lotes.length} LOTES (total de ~${pdfPagesTotal} páginas estimadas de PDF). Os dados brutos extraídos de cada lote são:\n\n${extrTxt.join('\n\n')}\n\n${ctxCliente.text}\n\n===INSTRUÇÕES CRÍTICAS — LEIA ANTES DE GERAR O JSON===\n\nCAMPO "fontes" — OBRIGATÓRIO PREENCHER:\nSe há QUALQUER entrada no array "entradas" dos dados extraídos acima, você DEVE criar entradas no array "fontes". O array "fontes" NUNCA pode ser retornado vazio quando existem créditos nos extratos.\nPara CADA remetente com entradas >= R$200 em qualquer mês: crie um objeto separado em "fontes" com o nome EXATO do remetente, tipo, mediaMensal e porMes.\nProibido agrupar remetentes diferentes. Proibido retornar "fontes":[].\n\nCAMPO "apostas" — OBRIGATÓRIO se entradasBet > 0:\nPreencha o array "apostas" com um objeto por mês: {mes, entradas, saidas, saldo}. Inclua todos os meses do período, mesmo os sem apostas (zeros).\n\nBENEFÍCIOS SOCIAIS — REGRA CRÍTICA:\nSe nos dados extraídos houver qualquer entrada em "entradas_beneficio_social" (Bolsa Família, Bolsa Gás, Auxílio Brasil, BPC/LOAS, etc.):\n- NÃO inclua esses valores na rendaComprovavel nem em nenhuma fonte\n- Adicione ao array "excluidos" com relacao="beneficio_social"\n- Defina "temBeneficioSocial": true no JSON de saída\n- No "parecer" e na "conclusao" escreva OBRIGATORIAMENTE: "ATENÇÃO: Cliente é beneficiário de [nome do benefício]. A CEF NÃO APROVA crédito para beneficiários de programas sociais, independentemente da renda de outras fontes."\n- Classifique o risco como CRÍTICO\n\nCAMPO "conclusao" — OBRIGATÓRIO PREENCHER:\nEscreva SEMPRE 2 parágrafos: 1) renda total apurada, capacidade real de pagamento, composição das fontes; 2) veredito de risco e recomendação final para aprovação. Proibido retornar "conclusao":"" ou "conclusao":null.\n\nRetorne apenas o JSON completo.`;
+
+      // Pré-extrai remetentes únicos do texto bruto dos lotes para listar explicitamente na síntese
+      const extrTxtAll=extrTxt.join('\n');
+      const remSet=new Map();
+      const remRegex=/"remetente"\s*:\s*"([^"]+)"/g;
+      let remMatch;
+      while((remMatch=remRegex.exec(extrTxtAll))!==null){const r=remMatch[1].trim();if(r)remSet.set(r,(remSet.get(r)||0)+1);}
+      const remListados=[...remSet.entries()].filter(([,n])=>n>=1).map(([r,n])=>`- ${r} (${n} ocorrência${n>1?'s':''})`).join('\n');
+
+      const msgSintese=`ATENÇÃO: Esta análise foi realizada em ${lotes.length} LOTES (total de ~${pdfPagesTotal} páginas estimadas de PDF). Os dados brutos extraídos de cada lote são:\n\n${extrTxt.join('\n\n')}\n\n${ctxCliente.text}\n\n===INSTRUÇÕES CRÍTICAS — LEIA ANTES DE GERAR O JSON===\n\nCAMPO "fontes" — OBRIGATÓRIO PREENCHER:\nOs seguintes remetentes foram identificados nos extratos (TODOS devem aparecer em "fontes" se tiverem entradas >= R$200 em algum mês):\n${remListados||'(ver dados brutos acima)'}\n\nSe há QUALQUER entrada no array "entradas" dos dados extraídos acima, você DEVE criar entradas no array "fontes". O array "fontes" NUNCA pode ser retornado vazio quando existem créditos nos extratos.\nPara CADA remetente com entradas >= R$200 em qualquer mês: crie um objeto separado em "fontes" com o nome EXATO do remetente, tipo, mediaMensal e porMes.\nProibido agrupar remetentes diferentes. Proibido retornar "fontes":[].\n\nCAMPO "apostas" — OBRIGATÓRIO se entradasBet > 0:\nPreencha o array "apostas" com um objeto por mês: {mes, entradas, saidas, saldo}. Inclua todos os meses do período, mesmo os sem apostas (zeros).\n\nBENEFÍCIOS SOCIAIS — REGRA CRÍTICA:\nSe nos dados extraídos houver qualquer entrada em "entradas_beneficio_social" (Bolsa Família, Bolsa Gás, Auxílio Brasil, BPC/LOAS, etc.):\n- NÃO inclua esses valores na rendaComprovavel nem em nenhuma fonte\n- Adicione ao array "excluidos" com relacao="beneficio_social"\n- Defina "temBeneficioSocial": true no JSON de saída\n- No "parecer" e na "conclusao" escreva OBRIGATORIAMENTE: "ATENÇÃO: Cliente é beneficiário de [nome do benefício]. A CEF NÃO APROVA crédito para beneficiários de programas sociais, independentemente da renda de outras fontes."\n- Classifique o risco como CRÍTICO\n\nCAMPO "conclusao" — OBRIGATÓRIO PREENCHER:\nEscreva SEMPRE 2 parágrafos: 1) renda total apurada, capacidade real de pagamento, composição das fontes; 2) veredito de risco e recomendação final para aprovação. Proibido retornar "conclusao":"" ou "conclusao":null.\n\nRetorne apenas o JSON completo.`;
       raw=await streamCall(msgSintese,systemPrompt,32000,420000);
     }
     // Extrai JSON contando chaves — mais robusto que regex greedy
@@ -1639,6 +1648,12 @@ Retorne JSON sem markdown:
           throw new Error('JSON inválido: '+je2.message+' | Trecho: '+jsonStr.substring(Math.max(0,pos-50),pos+50));
         }
       }
+    }
+    // Validação: fontes vazias com renda > 0 indica falha de extração
+    if((!parsed.fontes||parsed.fontes.length===0)&&parsed.rendaComprovavel>0){
+      console.warn('⚠️ Fontes vazias com renda > 0 — possível truncamento do haiku. Adicionando aviso.');
+      parsed.ressalvas=parsed.ressalvas||[];
+      parsed.ressalvas.unshift('⚠️ ATENÇÃO: O sistema identificou renda (R$ '+parsed.rendaComprovavel.toLocaleString('pt-BR',{minimumFractionDigits:2})+') mas não conseguiu listar as fontes individualmente. Isso ocorre quando há muitos documentos. Recomenda-se refazer a análise reduzindo o número de extratos, ou analisar os extratos em grupos separados.');
     }
     renderResults(parsed);
   }catch(e){
