@@ -1577,7 +1577,7 @@ Retorne SOMENTE este JSON sem markdown. REGRAS DE CONCISÃO OBRIGATÓRIAS:
 - porMes: inclua apenas os meses com valor > 0, máximo 6 meses
 - fatoresRisco: máximo 6 itens
 - indicadoresPositivos e indicadoresNegativos: máximo 3 itens cada:
-{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"documentosEncontrados":["Arquivo RG: contém RG + certidão de casamento","Kit: contém extrato Jan-Mar/2025 + holerite"],"documentosCadastroAusentes":["Simulação de financiamento","Certidão de estado civil"],"rendaDeclarada":0.00,"rendaRealDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaLiquida":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"saidasBet":0.00,"apostas":[{"mes":"Jan/2025","entradas":0.00,"saidas":0.00,"saldo":0.00}],"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00,"temporario":false}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"motivo":"1 frase"}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
+{"periodo":"Mes/Ano - Mes/Ano","meses":3,"nomeComprador":"Nome","compradores":[{"nome":"Nome comprador 1","relacao":"titular","rendaIndividual":0.00},{"nome":"Nome comprador 2","relacao":"co-comprador","rendaIndividual":0.00}],"documentosEncontrados":["Arquivo RG: contém RG + certidão de casamento","Kit: contém extrato Jan-Mar/2025 + holerite"],"documentosCadastroAusentes":["Simulação de financiamento","Certidão de estado civil"],"rendaDeclarada":0.00,"rendaRealDeclarada":0.00,"parcelaFinanciamento":0.00,"parcelaProSoluto":0.00,"valorImovel":0.00,"valorFinanciado":0.00,"subsidio":0.00,"entrada":0.00,"rendaComprovavel":0.00,"rendaLiquida":0.00,"rendaRealTotal":0.00,"entradasBet":0.00,"saidasBet":0.00,"apostas":[{"mes":"Jan/2025","entradas":0.00,"saidas":0.00,"saldo":0.00}],"totalComprometido":0.00,"custoVidaEstimado":0.00,"rendaDisponivelReal":0.00,"margemProSoluto":0.00,"percentualComprometido":0.0,"saldoAposProSoluto":0.00,"veredito":"viavel","divergenciaRenda":false,"risco":{"score":85,"nivel":"baixo","fatoresRisco":[{"fator":"Descrição breve","impacto":-10}]},"comportamento":{"probabilidadeInadimplencia":"baixa","perfilConsumo":"2-3 frases sobre padrão de gastos","categorias":{"essencial":60,"lazer":20,"impulsivo":5,"dividas":15},"indicadoresPositivos":["item 1","item 2"],"indicadoresNegativos":["item 1"],"motivacaoNegativacao":{"nivel":"alta","justificativaMotivacao":"2-3 frases objetivas."},"orientacaoComercial":"2 parágrafos diretos para a equipe de vendas."},"fontes":[{"remetente":"Nome","tipo":"emprego_formal","frequencia":"mensal","regularidade":"regular","comprovavel":true,"mediaMensal":0.00,"porMes":[{"mes":"Jan/2025","valor":0.00}]}],"comprometimentos":[{"credor":"Nome","categoria":"financiamento_imobiliario","valorMedioMensal":0.00,"temporario":false}],"transferenciasAtencao":[{"beneficiario":"Nome","valorMedioMensal":0.00,"frequencia":"mensal","observacao":"1 frase"}],"extratosFaltantes":[{"banco":"Nome","motivo":"1 frase","valorMedioMensal":0.00}],"excluidos":[{"nome":"Nome","relacao":"cônjuge","valorTotal":0.00,"valorMedioMensal":0.00,"motivo":"1 frase","porMes":[{"mes":"Jan/2025","valor":0.00}]}],"documentos":{"rg":false,"certidao":false,"extratoConjuge":false,"comprovanteCLT":false,"simulacaoFinanciamento":false},"ressalvas":["ressalva 1","ressalva 2"],"parecer":"1 frase objetiva.","conclusao":"2 parágrafos: 1) renda e capacidade; 2) risco e recomendação."}
 
 Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, aluguel, aposentadoria, pensao, outros | probabilidadeInadimplencia: baixa, media, alta, muito_alta | nivel risco: baixo, medio, alto, muito_alto`;
     // === ANÁLISE COM ANTHROPIC — suporte automático a múltiplos lotes ===
@@ -2624,6 +2624,73 @@ function renderResults(r){
           </div>
         </div>`;
       }).join('');
+    })()}
+
+    ${(()=>{
+      // ── RENDAS EXCLUÍDAS / NÃO VALIDADAS ─────────────────────────────────────
+      // Mostra o que ficou de fora (exceto familiares e BETs — causas óbvias)
+      const RELACOES_OBVIAS = ['familiar','familiares','cônjuge','conjuge','co-comprador','cocomprador','titular','beneficio_social','benefício_social','aposta','bet','casa_apostas'];
+      const isObvio = rel => RELACOES_OBVIAS.some(r2 => (rel||'').toLowerCase().includes(r2));
+
+      // 1) Fontes identificadas mas marcadas como não comprovável
+      const fontesNaoComp = (r.fontes||[]).filter(f => f.comprovavel === false);
+
+      // 2) Itens excluídos de origem a esclarecer (não família, não BETs, não benefício)
+      const exclEsclarecer = (r.excluidos||[]).filter(e => !isObvio(e.relacao));
+
+      if(!fontesNaoComp.length && !exclEsclarecer.length) return '';
+
+      const monthOrder={jan:0,fev:1,mar:2,abr:3,mai:4,jun:5,jul:6,ago:7,set:8,out:9,nov:10,dez:11};
+      const allMonthsExcl = [...new Set([
+        ...fontesNaoComp.flatMap(f=>(f.porMes||[]).map(m=>m.mes)),
+        ...exclEsclarecer.flatMap(e=>(e.porMes||[]).map(m=>m.mes))
+      ])].sort((a,b)=>{
+        const[ma,ya]=a.toLowerCase().split('/');const[mb,yb]=b.toLowerCase().split('/');
+        return(parseInt(ya)-parseInt(yb))||((monthOrder[ma]||0)-(monthOrder[mb]||0));
+      });
+      const hasMeses = allMonthsExcl.length > 0;
+
+      const rowExcl = (nome, motivo, mediaMensal, porMes, tagCor) => `
+        <tr>
+          <td style="padding:5px 8px;border-bottom:1px solid #eee">
+            <strong style="color:#333">${nome}</strong>
+            <span style="display:inline-block;margin-left:6px;background:${tagCor||'#f0e0d0'};color:#7a3a00;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">${motivo}</span>
+          </td>
+          ${hasMeses ? allMonthsExcl.map(mes=>{
+            const e=(porMes||[]).find(m=>m.mes===mes);const v=e?e.valor:0;
+            return `<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;color:${v>0?'#8b3a00':'#ccc'};font-family:'DM Mono',monospace;font-size:11px">${v>0?fmt(v):'—'}</td>`;
+          }).join('') : ''}
+          <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:700;color:#8b3a00;font-family:'DM Mono',monospace">${mediaMensal>0?fmt(mediaMensal)+'/mês':'—'}</td>
+        </tr>`;
+
+      const totalExcl = [
+        ...fontesNaoComp.map(f=>f.mediaMensal||0),
+        ...exclEsclarecer.map(e=>e.valorMedioMensal||e.valorTotal||0)
+      ].reduce((s,v)=>s+v,0);
+
+      return `<div style="grid-column:1/-1;background:#fffaf5;border:1px solid #f7d8b0;border-radius:10px;padding:14px 16px;margin-top:0">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#b45309">❓ Rendas Não Validadas / Excluídas da Análise</div>
+          <div style="font-size:11px;color:#7a5a00">Total excluído: <strong>${fmt(totalExcl)}/mês</strong> <span style="font-size:10px;color:#aaa">(não entra na renda validada)</span></div>
+        </div>
+        <div style="font-size:11px;color:#7a5a00;margin-bottom:10px">Entradas identificadas nos documentos que <strong>não foram consideradas como renda válida</strong>. Recomenda-se questionar o cliente sobre a origem, especialmente as marcadas como "origem a esclarecer".</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:300px">
+            <thead><tr>
+              <th style="background:#f5ede0;padding:6px 8px;text-align:left;font-weight:700;color:#7a3a00;border-bottom:2px solid #f7d8b0">Fonte / Remetente</th>
+              ${hasMeses ? allMonthsExcl.map(m=>`<th style="background:#f5ede0;padding:6px 8px;text-align:right;font-weight:700;color:#7a3a00;border-bottom:2px solid #f7d8b0;white-space:nowrap">${m}</th>`).join('') : ''}
+              <th style="background:#f5ede0;padding:6px 8px;text-align:right;font-weight:700;color:#7a3a00;border-bottom:2px solid #f7d8b0">Média/Mês</th>
+            </tr></thead>
+            <tbody>
+              ${fontesNaoComp.map(f=>rowExcl(f.remetente,'não comprovável',f.mediaMensal||0,f.porMes||[],'#fde8d8')).join('')}
+              ${exclEsclarecer.map(e=>{
+                const motivo = e.relacao&&e.relacao!=='outros' ? e.relacao : (e.motivo||'origem a esclarecer');
+                return rowExcl(e.nome, motivo, e.valorMedioMensal||e.valorTotal||0, e.porMes||[], '#ffe8c8');
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
     })()}
 
     ${(r.parcelaFinanciamento>0)?(()=>{
