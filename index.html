@@ -1268,6 +1268,13 @@ MENOS: transferências entre contas do próprio titular
 
 CENÁRIO A — EMPREGADO CLT (há contracheque / holerite):
 
+⚠️ REGRA CRÍTICA — SALÁRIO BRUTO, NÃO LÍQUIDO:
+O banco (CEF e demais) usa o SALÁRIO BRUTO do contracheque para calcular capacidade de pagamento.
+O valor depositado no extrato é o salário LÍQUIDO — MENOR que o bruto (já descontado INSS, IRRF, etc.).
+NUNCA use o depósito do extrato como valor da renda CLT se houver contracheque disponível.
+Exemplo: contracheque mostra Total Proventos R$2.800 → rendaComprovavel = R$2.800 (não R$2.350 que aparece depositado).
+Se houver APENAS extrato (sem contracheque): use o valor depositado, mas adicione em ressalvas: "Solicitar contracheque ao cliente — valor de renda CLT comprovado via extrato pode estar subestimado (está sendo usada a renda líquida, não a bruta)."
+
 LEITURA OBRIGATÓRIA DO CONTRACHEQUE — PROVENTOS (lado esquerdo / créditos):
 Leia TODAS as linhas de provento e some-as. Não leia apenas o salário base.
 
@@ -1364,9 +1371,11 @@ Se houver DIRPF/IRPF nos documentos, use-a como documento COMPLEMENTAR e de REFE
 - Mencione o ano-base da declaração e adicione em ressalvas a recomendação de solicitar o recibo de entrega
 
 CENÁRIO MISTO: se o comprador tem MAIS DE UM perfil (ex: CLT + renda extra informal):
-- rendaComprovavel = renda formal (valor do contracheque/pró-labore) + renda informal COMPLEMENTAR identificada no extrato
-- Renda informal complementar = TODAS as entradas regulares no extrato que NÃO sejam o salário já contabilizado no contracheque, excluindo familiares e apostas (ex: freelas, aluguéis, bicos, depósitos de outras origens)
+- rendaComprovavel = BRUTO do contracheque (total de proventos) + renda informal COMPLEMENTAR identificada no extrato
+- Renda informal complementar = entradas regulares no extrato de TERCEIROS (pessoas físicas ou jurídicas DIFERENTES do empregador) que NÃO sejam: o salário já contabilizado, transferências de familiares, apostas
+- Exemplos de renda complementar válida: depósitos de clientes de freela, aluguel recebido de inquilino, cachê de show, trabalho autônomo, renda de segunda atividade
 - NUNCA some o salário duas vezes (extrato + contracheque)
+- NUNCA use o depósito do empregador no extrato como renda — ele é o salário LÍQUIDO. Use apenas o contracheque BRUTO para a renda CLT.
 - Classifique cada fonte com seu tipo correto e deixe claro no parecer que parte da renda é informal e não comprovável formalmente
 
 Aposentadoria/pensão = integral. Aluguel com contrato = integral.
@@ -1636,7 +1645,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
    - "entradas_aposta": entradas de casas de apostas/jogos (Bet, Blaze, Betano, Bet365, Sportingbet, pixbet, vaidebet, estrela bet, BJB, BJB ENTRETENIMENTO, MAX Gaming, NEXABET, GANHA SORTE, Brazino, Realsbet, Fluxpay, FLUXPAY LTDA, Pagsmile, Pay4Fun, Astropay, ecoPayz, Jeton, D TUDO, JOQUEI CLUBE, D TUDO JOQUEI CLUBE LTDA e similares). Estas NUNCA entram como renda. ATENÇÃO: Fluxpay e Pagsmile são intermediadoras de pagamento usadas EXCLUSIVAMENTE por casas de apostas — qualquer entrada vinda dessas empresas é aposta, não renda legítima.
 2. Saídas fixas/recorrentes: destinatário, valor, frequência, tipo (empréstimo/cartão/aluguel/etc). SEPARE também:
    - "saidas_aposta": saídas/transferências para casas de apostas (mesmas plataformas acima) — quanto o cliente ENVIOU para apostas por mês
-3. Contracheques/holerites: competência, salário bruto, salário líquido, consignados (credor e valor de cada parcela)
+3. Contracheques/holerites: competência, total de proventos (salário bruto — soma de todos os proventos do lado esquerdo/créditos), salário líquido (valor a receber após descontos), nome do empregador, consignados (credor e valor de cada parcela). O "total de proventos" é a renda comprovável CLT — NÃO o salário líquido.
 4. Simulação de financiamento / Proposta de Fluxo de Pagamento: extraia TODOS os campos abaixo se presentes:
    - "Parcela banco" ou "Parcela financiamento" → parcelaFinanciamento
    - "Parcela construtora" ou "Parcela pró-soluto" → parcelaProSoluto
