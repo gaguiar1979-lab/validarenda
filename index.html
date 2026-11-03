@@ -1689,7 +1689,8 @@ Retorne JSON sem markdown:
       let remMatch;
       while((remMatch=remRegex.exec(extrTxtAll))!==null){const r=remMatch[1].trim();if(r)remSet.set(r,(remSet.get(r)||0)+1);}
       // Extrai holerites para contexto separado — parse direto do JSON de cada lote
-      const empSet=[];
+      // empMap: agrupa por empregador → acumula todos os meses
+      const empMap=new Map(); // key=empregador normalizado, value={emp, meses:[{competencia,bruto,liq,liqFinal,consignados}]}
       extrTxt.forEach(loteText=>{
         const jStart=loteText.indexOf('{');
         if(jStart===-1) return;
@@ -1697,29 +1698,54 @@ Retorne JSON sem markdown:
         try{loteJson=JSON.parse(loteText.slice(jStart));}catch(e){}
         if(loteJson&&Array.isArray(loteJson.holerites)){
           loteJson.holerites.forEach(h=>{
-            if((h.salario_bruto||0)>0&&!empSet.find(x=>x.bruto===h.salario_bruto)){
-              // salario_liquido_base = bruto sem consignados (apenas deduções legais descontadas)
-              const totalConsig=(h.consignados||[]).reduce((s,c)=>s+(c.valor||0),0);
-              const liqBase=h.salario_liquido_base||(h.salario_liquido||0)+totalConsig;
-              empSet.push({emp:h.empregador||'Empregador',bruto:h.salario_bruto,liq:liqBase,liqFinal:h.salario_liquido||0});
+            if((h.salario_bruto||0)<=0) return;
+            const totalConsig=(h.consignados||[]).reduce((s,c)=>s+(c.valor||0),0);
+            const liqBase=h.salario_liquido_base||(h.salario_liquido||0)+totalConsig;
+            const empKey=(h.empregador||'Empregador').trim().toUpperCase();
+            if(!empMap.has(empKey)) empMap.set(empKey,{emp:h.empregador||'Empregador',meses:[]});
+            const entry=empMap.get(empKey);
+            // evita duplicar exata mesma competência
+            const comp=h.competencia||'';
+            if(!entry.meses.find(m=>m.competencia===comp&&m.bruto===h.salario_bruto)){
+              entry.meses.push({competencia:comp,bruto:h.salario_bruto,liq:liqBase,liqFinal:h.salario_liquido||0,consignados:h.consignados||[]});
             }
           });
         } else {
-          // fallback regex simples para bruto/liquido/empregador (sem depender de aninhamento)
+          // fallback regex
           const brutRx=[...loteText.matchAll(/"salario_bruto"\s*:\s*([\d.]+)/g)];
           const liqRx=[...loteText.matchAll(/"salario_liquido"\s*:\s*([\d.]+)/g)];
           const empRx=[...loteText.matchAll(/"empregador"\s*:\s*"([^"]+)"/g)];
+          const compRx=[...loteText.matchAll(/"competencia"\s*:\s*"([^"]+)"/g)];
           brutRx.forEach((bm,i)=>{
             const bruto=parseFloat(bm[1]);
-            if(bruto>0&&!empSet.find(x=>x.bruto===bruto))
-              empSet.push({emp:empRx[i]?empRx[i][1]:'Empregador',bruto,liq:liqRx[i]?parseFloat(liqRx[i][1]):0});
+            if(bruto<=0) return;
+            const empNome=empRx[i]?empRx[i][1]:'Empregador';
+            const empKey=empNome.trim().toUpperCase();
+            const comp=compRx[i]?compRx[i][1]:'';
+            if(!empMap.has(empKey)) empMap.set(empKey,{emp:empNome,meses:[]});
+            const entry=empMap.get(empKey);
+            if(!entry.meses.find(m=>m.competencia===comp&&m.bruto===bruto))
+              entry.meses.push({competencia:comp,bruto,liq:liqRx[i]?parseFloat(liqRx[i][1]):0,liqFinal:0,consignados:[]});
           });
         }
       });
+      // empSet: um item por empregador com média dos meses
+      const empSet=[...empMap.values()].map(e=>{
+        const n=e.meses.length||1;
+        const mediaBruto=e.meses.reduce((s,m)=>s+m.bruto,0)/n;
+        const mediaLiq=e.meses.reduce((s,m)=>s+m.liq,0)/n;
+        const mediaLiqFinal=e.meses.reduce((s,m)=>s+m.liqFinal,0)/n;
+        // consignados: usa os do último mês como referência
+        const consig=e.meses[e.meses.length-1]?.consignados||[];
+        return {emp:e.emp,bruto:mediaBruto,liq:mediaLiq,liqFinal:mediaLiqFinal,meses:e.meses,consignados:consig};
+      });
       const holeritesTxt=empSet.length
-        ?'CONTRACHEQUES ENCONTRADOS:\n'+empSet.map(h=>`- ${h.emp||'Empregador'}: salario_bruto=${h.bruto}, salario_liquido_base=${h.liq} (sem consignados — use para rendaLiquida), salario_liquido_final=${h.liqFinal||h.liq} (após consignados — NÃO usar como rendaLiquida)`).join('\n')
+        ?'CONTRACHEQUES ENCONTRADOS (média por empregador):\n'+empSet.map(h=>{
+            const mesesDesc=h.meses.map(m=>`${m.competencia||'?'}: bruto=${m.bruto}`).join(', ');
+            return `- ${h.emp}: media_salario_bruto=${h.bruto.toFixed(2)} (${mesesDesc}), media_salario_liquido_base=${h.liq.toFixed(2)} (sem consignados — use para rendaLiquida)`;
+          }).join('\n')
         :'(nenhum contracheque identificado — use extratos para toda a renda)';
-      console.log('🔍 [DEBUG HOLERITES] empSet extraído pelo haiku:', JSON.stringify(empSet, null, 2));
+      console.log('🔍 [DEBUG HOLERITES] empSet agrupado:', JSON.stringify(empSet, null, 2));
       console.log('🔍 [DEBUG HOLERITES] holeritesTxt que vai para o opus:', holeritesTxt);
       window._lastEmpSet = empSet; // para debug visível na interface
       const empregadoresComHolerite=new Set(empSet.map(h=>(h.emp||'').toLowerCase()));
@@ -2073,8 +2099,17 @@ ${(()=>{
   const empSetDebug = window._lastEmpSet || [];
   const debugBanner = empSetDebug.length
     ? `<div style="background:#eef6ff;border:1px solid #b3d1f7;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#1a3a6b">
-        <strong>📋 Contracheques detectados:</strong>
-        ${empSetDebug.map(h=>`<div style="margin-top:4px">↳ <strong>${h.emp||'Empregador'}</strong> — Bruto: <strong style="color:#0d5c1a">R$ ${(h.bruto||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong> | Líquido base (sem consignados): R$ ${(h.liq||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>`).join('')}
+        <strong>📋 Contracheques detectados (valores BRUTOS — base para aprovação bancária):</strong>
+        ${empSetDebug.map(h=>{
+          const mesesHtml=(h.meses||[]).map(m=>`<span style="background:#dce8fa;border-radius:3px;padding:1px 5px;margin-right:4px;font-family:'DM Mono',monospace">${m.competencia||'?'}: R$ ${(m.bruto||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>`).join('');
+          const mediaBruto=(h.bruto||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+          const mediaLiq=(h.liq||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+          return `<div style="margin-top:6px;border-top:1px solid #c8dff7;padding-top:5px">
+            <strong>${h.emp||'Empregador'}</strong>
+            <div style="margin-top:3px">${mesesHtml}</div>
+            <div style="margin-top:3px;color:#0d5c1a">Média bruto: <strong>R$ ${mediaBruto}</strong> &nbsp;|&nbsp; Média líquido base (s/consignados): R$ ${mediaLiq}</div>
+          </div>`;
+        }).join('')}
       </div>`
     : `<div style="background:#fff8e1;border:1px solid #f0c040;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#7a5a00">
         ⚠️ <strong>Nenhum contracheque detectado.</strong> Os valores de renda vieram dos depósitos no extrato (valores líquidos). Se havia contracheques nos documentos, verifique se foram enviados corretamente.
