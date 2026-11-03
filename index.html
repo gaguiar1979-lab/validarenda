@@ -2024,13 +2024,33 @@ ${(()=>{
       <td style="padding:8px 10px;font-size:${bold?'15px':'13px'};font-weight:${bold?'800':'600'};color:${bold||'#333'};text-align:right;font-family:'DM Mono',monospace;white-space:nowrap;border-bottom:1px solid #eee">${val}</td>
       ${sub?`<td style="padding:8px 10px;font-size:10px;color:#888;border-bottom:1px solid #eee">${sub}</td>`:'<td style="border-bottom:1px solid #eee"></td>'}
     </tr>`;
+  const compList=r.comprometimentos||[];
+  const subRow=(label,val,cat)=>`
+    <tr style="background:#fdf5f5">
+      <td style="padding:4px 10px 4px 22px;font-size:10px;color:#999;border-bottom:1px solid #f5e8e8">↳</td>
+      <td style="padding:4px 10px;font-size:11px;color:#666;border-bottom:1px solid #f5e8e8">${label}</td>
+      <td style="padding:4px 10px;font-size:11px;color:#8b1a1a;text-align:right;font-family:'DM Mono',monospace;border-bottom:1px solid #f5e8e8">${fmtR(val)}/mês</td>
+      <td style="padding:4px 10px;font-size:10px;color:#aaa;border-bottom:1px solid #f5e8e8">${cat}</td>
+    </tr>`;
+  const compRows=compList.map(c=>subRow(c.credor,c.valorMedioMensal,c.categoria==='consignado'?'consignado em folha':c.categoria==='saude'?'plano de saúde':c.categoria==='educacao'?'educação':c.categoria||'')).join('');
+  // Receitas não consideradas: fontes com comprovavel=false + excluidos
+  const naoConsid=[
+    ...(r.fontes||[]).filter(f=>f.comprovavel===false).map(f=>({nome:f.remetente,motivo:'renda não comprovável formalmente',valor:f.mediaMensal})),
+    ...(r.excluidos||[]).map(e=>({nome:e.nome,motivo:e.motivo,valor:e.valorTotal}))
+  ];
+  const naoConsidHTML=naoConsid.length?`
+  <div style="border-top:1px solid #eee;padding:10px 14px">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:6px">Receitas não consideradas / excluídas</div>
+    ${naoConsid.map(n=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:#888;padding:2px 0;border-bottom:1px dashed #f0f0f0"><span>✗ ${n.nome} <span style="font-size:10px;font-style:italic">(${n.motivo})</span></span><span style="font-family:'DM Mono',monospace">${n.valor>0?fmtR(n.valor):''}</span></div>`).join('')}
+  </div>`:''
   return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px">
   <div style="background:var(--navy);color:#fff;padding:10px 14px;font-size:12px;font-weight:700;letter-spacing:.05em">CASCATA DE RENDA — CAPACIDADE DE PAGAMENTO</div>
   <table style="width:100%;border-collapse:collapse">
     <colgroup><col style="width:32px"><col><col style="width:130px"><col style="width:120px"></colgroup>
     ${row('1','Rendimento Bruto (contracheque)',fmtR(bruto),'#f8f9fa',false,'base para aprovação bancária')}
     ${row('2','Rendimento Líquido (após INSS/IRRF)',fmtR(liq),'#fff',false,'renda que o cliente recebe')}
-    ${row('3','(−) Comprometimentos mensais',fmtR(comp),'#fff5f5',false,'plano saúde, colégio, consignados...')}
+    ${row('3','(−) Comprometimentos mensais',fmtR(comp),'#fff5f5',false,compList.length?compList.map(c=>c.credor).join(', '):'plano saúde, colégio, consignados...')}
+    ${compRows}
     ${row('4 = 2−3','Renda livre p/ novos compromissos',fmtR(livre),'#fffbe6','#333','')}
     ${row('5','(−) Parcela banco',parcBanco>0?fmtR(parcBanco)+'/mês':'—','#fff',false,'da simulação de financiamento')}
     ${row('6','(−) Parcela pró-soluto construtora',parcConst>0?fmtR(parcConst)+'/mês':'—','#fff',false,'da simulação de financiamento')}
@@ -2049,6 +2069,7 @@ ${(()=>{
       <td style="padding:8px 10px;font-size:10px;color:#888">limite: 50% da renda liq.</td>
     </tr>
   </table>
+  ${naoConsidHTML}
 </div>`;
 })()}
 
