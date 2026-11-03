@@ -1765,7 +1765,40 @@ Retorne JSON sem markdown:
       parsed.ressalvas.unshift('⚠️ ATENÇÃO: O sistema identificou renda (R$ '+parsed.rendaComprovavel.toLocaleString('pt-BR',{minimumFractionDigits:2})+') mas não conseguiu listar as fontes individualmente. Isso ocorre quando há muitos documentos. Recomenda-se refazer a análise reduzindo o número de extratos, ou analisar os extratos em grupos separados.');
     }
     renderResults(parsed);
-    renderEsclarecimentos(parsed);
+    // Verifica esclarecimentos salvos desta reserva e aplica automaticamente
+    (async()=>{
+      try{
+        const reservaKey='escl_'+(document.getElementById('reservaId').value||('m_'+(parsed.nomeComprador||'').replace(/\s+/g,'').slice(0,20)));
+        const savedRaw=localStorage.getItem(reservaKey);
+        if(!savedRaw) { renderEsclarecimentos(parsed); return; }
+        const {escl: savedEscl, nomeComprador: savedNome, ts}=JSON.parse(savedRaw);
+        if(!savedEscl||!savedEscl.length) { renderEsclarecimentos(parsed); return; }
+        // Mostra banner informativo no topo do relatório
+        const diasAtras=Math.round((Date.now()-ts)/(1000*60*60*24));
+        const banner=document.createElement('div');
+        banner.id='esclBanner';
+        banner.style.cssText='background:#fff8e6;border:1px solid #C9A84C;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#7a5a00;display:flex;justify-content:space-between;align-items:center';
+        banner.innerHTML=`<span>🔁 <strong>${savedEscl.length} esclarecimento${savedEscl.length>1?'s':''} anteriores</strong> aplicados automaticamente (salvos há ${diasAtras===0?'hoje':diasAtras+' dia'+( diasAtras>1?'s':'')})</span><button onclick="limparEsclarecimentos('${reservaKey}')" style="font-size:11px;color:#7a5a00;background:none;border:1px solid #C9A84C;border-radius:4px;padding:2px 8px;cursor:pointer">Limpar</button>`;
+        const resultEl=document.getElementById('results');
+        if(resultEl) resultEl.insertBefore(banner, resultEl.firstChild);
+        // Aplica esclarecimentos silenciosamente
+        document.getElementById('progressLabel').textContent='Aplicando esclarecimentos anteriores...';
+        const esclTexto=savedEscl.map(e=>`- [${e.nome}]: ${e.valor}`).join('\n');
+        const sys2=`Você é um analista de crédito imobiliário da Casas Manager Construções. Revise o laudo JSON abaixo incorporando os esclarecimentos da equipe comercial. Retorne apenas o JSON completo atualizado, sem markdown.`;
+        const msg2=`A equipe comercial já forneceu esclarecimentos anteriores sobre esta reserva. Aplique-os automaticamente.\n\nESCLARECIMENTOS SALVOS:\n${esclTexto}\n\nLAUDO (JSON):\n${JSON.stringify(parsed)}\n\nINSTRUÇÕES:\n1. Para cada esclarecimento de ENTRADA (💰): se renda legítima e recorrente, marque comprovavel:true e inclua na rendaComprovavel.\n2. Para cada esclarecimento de SAÍDA (📤): se comprometimento temporário, remova ou ajuste.\n3. Recalcule: rendaComprovavel, rendaLiquida, rendaRealTotal, totalComprometido, percentualComprometido, margemProSoluto, veredito.\n4. Adicione em ressalvas: "✅ Esclarecimentos anteriores aplicados automaticamente."\nRetorne apenas o JSON.`;
+        const raw2=await _callAPI(msg2,sys2,32000,420000);
+        let js2=raw2.replace(/```json\s*/gi,'').replace(/```\s*/g,'');
+        const s2=js2.indexOf('{');
+        if(s2!==-1){let d=0,iS=false,es=false;for(let i=s2;i<js2.length;i++){const c=js2[i];if(es){es=false;continue;}if(c==='\\'&&iS){es=true;continue;}if(c==='"'){iS=!iS;continue;}if(iS)continue;if(c==='{')d++;else if(c==='}'){d--;if(d===0){js2=js2.slice(s2,i+1);break;}}}}
+        let parsed2;
+        try{parsed2=JSON.parse(js2);}catch(e){parsed2=JSON.parse(js2.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\r\n]/g,' '));}
+        renderResults(parsed2);
+        document.getElementById('progressLabel').textContent='';
+      }catch(eAuto){
+        console.warn('Auto-esclarecimento falhou:',eAuto);
+        renderEsclarecimentos(parsed);
+      }
+    })();
   }catch(e){
     console.error('ERRO ANÁLISE:',e);
     clearInterval(interval);
@@ -2653,6 +2686,13 @@ function renderEsclarecimentos(r) {
   setTimeout(() => card.scrollIntoView({behavior: 'smooth', block: 'nearest'}), 400);
 }
 
+function limparEsclarecimentos(key) {
+  try { localStorage.removeItem(key); } catch(e) {}
+  const b = document.getElementById('esclBanner');
+  if (b) b.remove();
+  showToast('🗑️ Esclarecimentos removidos. Na próxima análise, o sistema vai pedir novamente.');
+}
+
 async function refinarAnalise() {
   const r = lastResult;
   if (!r) return;
@@ -2714,6 +2754,12 @@ Mantenha exatamente a mesma estrutura JSON. Retorne apenas o JSON.`;
     renderResults(parsed2);
     card.style.display = 'none';
     showToast('✅ Análise refinada com sucesso!');
+    // Persiste esclarecimentos para reutilizar na próxima análise desta reserva
+    try {
+      const reservaKey = 'escl_' + (document.getElementById('reservaId').value || ('m_' + (parsed2.nomeComprador||'').replace(/\s+/g,'').slice(0,20)));
+      const payload = { escl, nomeComprador: parsed2.nomeComprador, ts: Date.now() };
+      localStorage.setItem(reservaKey, JSON.stringify(payload));
+    } catch(e2) { console.warn('Erro ao salvar esclarecimentos:', e2); }
   } catch (e) {
     console.error('Erro ao refinar:', e);
     showToast('❌ Erro ao refinar: ' + e.message);
