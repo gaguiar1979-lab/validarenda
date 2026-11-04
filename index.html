@@ -1527,26 +1527,35 @@ VEREDITO FINAL (considere AMBOS os critérios — margem disponível E regra dos
 - Se parcelaProSoluto = 0: calcule e informe a margemProSoluto disponível e o percentualComprometido com apenas a parcela do financiamento
 - Seja honesto: se o cliente está no limite mesmo que os números "fechem", declare como "apertado" e explique os riscos
 
-PASSO 6 — SCORE DE RISCO DO PRÓ-SOLUTO (0 a 100, quanto maior menor o risco):
+PASSO 6 — SCORE DE QUALIFICAÇÃO DE RENDA — PRÓ-SOLUTO (0 a 100, quanto maior menor o risco):
+
+REFERÊNCIA DE MERCADO: A CEF/FGTS limita o comprometimento de renda a 30% da renda bruta familiar para financiamento habitacional (Circular CEF e Resolução CMN). Bancos privados usam 30-35% como teto padrão. Para o pró-soluto (financiamento direto do incorporador), adotamos esses mesmos parâmetros: comprometimento total acima de 30% já representa desvio do padrão CEF.
+
+IMPORTANTE: este score avalia RENDA (comprovabilidade, estabilidade, comprometimento) — não substitui o Serasa Score, que avalia histórico de pagamento e negativações (informações que não estão nos documentos de renda).
+
 Parta de 100 e desconte conforme os fatores abaixo. Seja criterioso e justo.
 
 FATORES QUE REDUZEM O SCORE:
-Renda:
-- Renda 100% informal (sem comprovação formal): -20
-- Renda irregular (variação > 30% entre meses): -15
-- Divergência > 20% entre renda declarada e apurada: -10
-- Renda comprovável < 3x a parcela do financiamento: -10
 
-Comprometimento:
-- (financiamento + pró-soluto) > 50% da renda comprovável: -25
-- (financiamento + pró-soluto) entre 40% e 50% da renda comprovável: -15
-- Comprometimentos existentes (dívidas atuais) > 40% da renda real: -15
+Comprometimento de renda (padrão CEF: máximo 30% da renda bruta):
+- Comprometimento total (financiamento + pró-soluto) > 50% da renda comprovável: -25
+- Comprometimento total entre 40% e 50%: -20
+- Comprometimento total entre 35% e 40%: -12
+- Comprometimento total entre 30% e 35% (já acima do limite CEF): -5
+- Comprometimentos existentes com outras dívidas > 20% da renda antes do imóvel: -10
 - Tem financiamento imobiliário ativo além do atual: -10
+
+Formalidade e estabilidade da renda:
+- Renda 100% informal (sem holerite, pró-labore formalizado ou declaração de IR): -20
+- Renda mista com mais de 50% informal: -10
+- Renda irregular (variação > 30% entre meses consecutivos): -15
+- Divergência > 20% entre renda declarada pelo cliente e renda apurada nos documentos: -10
+- Renda comprovável < 3,3x a parcela do financiamento (equivalente ao teto de 30% da CEF): -10
 
 Comportamento financeiro:
 - Apostas identificadas nos extratos: -15
 - Transferências recorrentes não justificadas > R$500/mês: -10
-- Extratos de contas suspeitas não apresentados: -15
+- Saldo negativo frequente (extrato no negativo em mais de 2 meses do período analisado): -10
 
 Resultado CEF / SIRIC:
 - NÃO penalize o score por resultado "Condicionada" do SIRIC quando há parcela liberada. "Condicionada" significa aprovação parcial — o banco avaliou o cliente e aprovou crédito até aquele valor de parcela. Isso é sinal POSITIVO de que o cliente tem capacidade de pagamento reconhecida pela CEF.
@@ -1556,14 +1565,14 @@ Resultado CEF / SIRIC:
 - Reprovação efetiva no SIRIC (sem parcela liberada, ou mensagem de não aprovado): aí sim registre como risco relevante.
 
 Documentação:
-- Análise com documentação incompleta (falta extrato, comprovante): -10
+- Análise com documentação incompleta (falta extrato ou comprovante de renda): -10
 - Menos de 3 meses de extrato analisado: -5
 
-NÍVEIS DE RISCO:
-- 80-100: BAIXO — operação segura, aprovar com tranquilidade
-- 60-79: MÉDIO — aprovar com atenção, monitorar comprometimento
-- 40-59: ALTO — aprovar com cautela, exigir garantias adicionais
-- 0-39: MUITO ALTO — não recomendado sem análise presencial
+NÍVEIS DE RISCO (alinhados ao padrão CEF/mercado imobiliário):
+- 80-100: BAIXO — comprometimento dentro do padrão CEF (≤30%), renda estável e comprovada
+- 60-79: MÉDIO — acima do limite CEF mas dentro do aceitável para pró-soluto; aprovar com cláusulas de garantia
+- 40-59: ALTO — comprometimento ou perfil fora dos parâmetros de mercado; exigir garantias adicionais ou fiador
+- 0-39: MUITO ALTO — não recomendado sem análise presencial e documentação complementar
 
 Para cada fator de redução aplicado, liste em "fatoresRisco" com descrição clara e pontos descontados.
 
