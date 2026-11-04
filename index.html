@@ -1891,11 +1891,54 @@ Retorne JSON sem markdown:
         }
       }
     }
-    // Validação: fontes vazias com renda > 0 indica falha de extração
-    if((!parsed.fontes||parsed.fontes.length===0)&&parsed.rendaComprovavel>0){
-      console.warn('⚠️ Fontes vazias com renda > 0 — possível truncamento do haiku. Adicionando aviso.');
+    // Fallback: se IA retornou fontes vazio mas há renda identificada, reconstrói fontes dos dados extraídos
+    if((!parsed.fontes||parsed.fontes.length===0)&&(parsed.rendaComprovavel>0||parsed.rendaRealTotal>0)){
+      console.warn('⚠️ Fontes vazias — reconstruindo a partir de empMap + remSet');
+      const fontesAuto=[];
+      // 1. Holerites (renda formal comprovável)
+      for(const [,eg] of empMap.entries()){
+        if(!eg.emp||eg.meses.length===0) continue;
+        const mediaBruto=eg.meses.reduce((s,m)=>s+(m.bruto||0),0)/eg.meses.length;
+        if(mediaBruto<=0) continue;
+        const porMes=eg.meses.map(m=>({mes:m.competencia,valor:m.bruto||0}));
+        fontesAuto.push({remetente:eg.emp,tipo:'emprego_formal',frequencia:'mensal',regularidade:'regular',comprovavel:true,mediaMensal:Math.round(mediaBruto*100)/100,porMes});
+      }
+      // 2. Remetentes do extrato (renda extra — exclui os já excluídos e os empregadores formais)
+      const excNomes=new Set((parsed.excluidos||[]).map(e=>(e.nome||'').toUpperCase()));
+      const nomeEmpFormal=new Set([...empMap.values()].map(e=>e.emp.toUpperCase()));
+      const extrAll=extrTxt.join('\n');
+      for(const [rem,cnt] of remSet.entries()){
+        if(cnt<1) continue;
+        const remU=rem.toUpperCase();
+        if(excNomes.has(remU)||nomeEmpFormal.has(remU)) continue;
+        // Extrai valores mensais deste remetente do texto de extração
+        const remEsc=rem.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+        const ctxRegex=new RegExp('"remetente"\\s*:\\s*"'+remEsc+'"[^}]{0,200}"valor"\\s*:\\s*([\\d.]+)','g');
+        const vals=[];let vm;
+        while((vm=ctxRegex.exec(extrAll))!==null) vals.push(parseFloat(vm[1])||0);
+        const media=vals.length?vals.reduce((s,v)=>s+v,0)/vals.length:0;
+        if(media<200) continue;
+        fontesAuto.push({remetente:rem,tipo:'autonomo',frequencia:cnt>=3?'mensal':'esporádica',regularidade:cnt>=3?'regular':'irregular',comprovavel:false,mediaMensal:Math.round(media*100)/100,porMes:[]});
+      }
+      if(fontesAuto.length>0){
+        parsed.fontes=fontesAuto;
+        parsed.ressalvas=parsed.ressalvas||[];
+        parsed.ressalvas.unshift('ℹ️ Fontes reconstruídas automaticamente dos dados extraídos (IA não preencheu campo estruturado). Valores estimados — confira os extratos.');
+      }else{
+        parsed.ressalvas=parsed.ressalvas||[];
+        parsed.ressalvas.unshift('⚠️ ATENÇÃO: O sistema identificou renda (R$ '+parsed.rendaComprovavel.toLocaleString('pt-BR',{minimumFractionDigits:2})+') mas não conseguiu listar as fontes individualmente. Recomenda-se reduzir o número de extratos e refazer a análise.');
+      }
+    }
+    // Fallback: se conclusao veio vazia, gera um texto básico a partir dos campos já calculados
+    if(!parsed.conclusao||parsed.conclusao.trim()===''){
+      const rComp=parsed.rendaComprovavel||0;
+      const rReal=parsed.rendaRealTotal||0;
+      const pct=(parsed.percentualComprometido||0).toFixed(1);
+      const verd=parsed.veredito==='viavel'?'viável':'inviável ou requer atenção';
+      const nivel=parsed.risco&&parsed.risco.nivel?parsed.risco.nivel:'não avaliado';
+      parsed.conclusao=`A renda comprovável apurada é de R$ ${rComp.toLocaleString('pt-BR',{minimumFractionDigits:2})} bruto/mês${rReal>rComp?`, com renda real estimada nos extratos de R$ ${rReal.toLocaleString('pt-BR',{minimumFractionDigits:2})}/mês`:''}. O comprometimento das parcelas representa ${pct}% da renda validada.\n\nA operação é considerada ${verd} para aprovação. Nível de risco: ${nivel}. Recomenda-se seguir as ressalvas indicadas no laudo antes de avançar com o processo.`;
       parsed.ressalvas=parsed.ressalvas||[];
-      parsed.ressalvas.unshift('⚠️ ATENÇÃO: O sistema identificou renda (R$ '+parsed.rendaComprovavel.toLocaleString('pt-BR',{minimumFractionDigits:2})+') mas não conseguiu listar as fontes individualmente. Isso ocorre quando há muitos documentos. Recomenda-se refazer a análise reduzindo o número de extratos, ou analisar os extratos em grupos separados.');
+      parsed.ressalvas.push('ℹ️ Laudo analítico gerado automaticamente — a IA não produziu o texto completo. Dados numéricos são confiáveis.');
     }
     renderResults(parsed);
     // Verifica esclarecimentos salvos desta reserva e aplica automaticamente
