@@ -1381,13 +1381,15 @@ Se houver DIRPF/IRPF nos documentos, use-a como documento COMPLEMENTAR e de REFE
 - Mencione o ano-base da declaração e adicione em ressalvas a recomendação de solicitar o recibo de entrega
 
 CENÁRIO MISTO: se o comprador tem MAIS DE UM perfil (ex: CLT + renda extra informal):
-- rendaComprovavel = BRUTO do contracheque (total de proventos) + renda informal COMPLEMENTAR identificada no extrato
-- rendaLiquida = LÍQUIDO do contracheque (salário líquido após INSS e IRRF) + renda informal COMPLEMENTAR (mesmos valores extras de terceiros)
-- Renda informal complementar = entradas regulares no extrato de TERCEIROS (pessoas físicas ou jurídicas DIFERENTES do empregador) que NÃO sejam: o salário já contabilizado, transferências de familiares, apostas
-- Exemplos de renda complementar válida: depósitos de clientes de freela, aluguel recebido de inquilino, cachê de show, trabalho autônomo, renda de segunda atividade
+USE ESTE CENÁRIO sempre que houver entradas de terceiros (pessoas físicas ou PJ) que NÃO sejam o empregador principal, NÃO sejam familiares confirmados e NÃO sejam apostas.
+- rendaComprovavel = BRUTO do contracheque (total de proventos) + média das entradas complementares do extrato
+- rendaLiquida = LÍQUIDO do contracheque (salário líquido após INSS e IRRF) + média das entradas complementares
+- Renda complementar = entradas regulares de TERCEIROS (pessoas físicas ou PJ diferentes do empregador) que NÃO sejam: o salário já contabilizado, familiares confirmados, apostas, resgates
+- Exemplos: clientes de serviço autônomo, pirotecnia, freela, aluguel, cachê, segunda atividade
 - NUNCA some o salário duas vezes (extrato + contracheque)
-- NUNCA use o depósito do empregador no extrato como renda — ele é o salário LÍQUIDO. Use apenas o contracheque BRUTO para rendaComprovavel e o salário líquido do contracheque para rendaLiquida.
-- Classifique cada fonte com seu tipo correto e deixe claro no parecer que parte da renda é informal e não comprovável formalmente
+- NUNCA use o depósito do empregador no extrato — use apenas o contracheque BRUTO
+- Cada remetente complementar vai em "fontes" com comprovavel:false e tipo "autonomo" — NUNCA em "excluidos"
+- O fato de uma renda ser informal NÃO é motivo para colocar em "excluidos". Informal → fontes com comprovavel:false
 
 Aposentadoria/pensão = integral. Aluguel com contrato = integral.
 
@@ -1398,19 +1400,26 @@ ENTRADAS QUE NUNCA SÃO RENDA — EXCLUIR OBRIGATORIAMENTE DA COMPOSIÇÃO:
 - Descrições como: "Resgate", "Aplicação", "Poupança", "CDB", "RDB", "LCI", "LCA", "Tesouro", "Fundo", "Rendimento de aplicação"
 Esses valores representam PATRIMÔNIO do cliente sendo movimentado, não renda gerada. Incluí-los inflaria artificialmente a capacidade de pagamento. Registre em "excluidos" com motivo "resgate de aplicação/poupança — patrimônio, não renda".
 
-REGRA FUNDAMENTAL SOBRE O ARRAY "excluidos":
-O campo "excluidos" destina-se EXCLUSIVAMENTE a:
-  1. Familiares CONFIRMADOS por certidão (cônjuge com certidão de casamento; filho com certidão de nascimento) ou explicitamente declarados pelo operador no contexto
-  2. Benefícios sociais do governo (Bolsa Família, BPC, etc.)
-  3. Resgates de aplicações/poupança (patrimônio)
-  4. Apostas e jogos
+⛔ REGRA ABSOLUTA — ARRAY "excluidos" TEM APENAS 4 USOS:
+  1. Familiares CONFIRMADOS por certidão ou declarados pelo operador (cônjuge, filho, pai, mãe, irmão)
+  2. Benefícios sociais do governo (Bolsa Família, BPC, Auxílio Brasil, etc.)
+  3. Resgates de aplicações/poupança/CDB/RDB (patrimônio, não renda)
+  4. Apostas e jogos (plataformas listadas acima)
 
-NUNCA coloque em "excluidos" uma pessoa apenas porque a renda é informal ou "não comprovável formalmente".
-Renda de pessoa física ou jurídica NÃO identificada como familiar deve ir em "fontes" com comprovavel:false e tipo "autonomo" ou "informal_extrato".
-Exemplo ERRADO: excluir JOSE ERIVANDO porque "renda não comprovável formalmente"
-Exemplo CERTO: criar fonte {remetente:"JOSE ERIVANDO...", tipo:"autonomo", comprovavel:false, mediaMensal:...}
+QUALQUER OUTRA ENTRADA vai em "fontes" — mesmo que seja informal, irregular ou não tenha comprovante.
+"Renda não comprovável formalmente" NÃO é motivo de exclusão. Informal = fontes com comprovavel:false.
+"Sem contrato" NÃO é motivo de exclusão. "Pessoa desconhecida" NÃO é motivo de exclusão.
 
-No campo "relacao" de excluidos, use APENAS: "cônjuge" (somente com certidão de casamento), "filho", "pai_mae", "irmao", "familiar", "beneficio_social", "resgate", "aposta". Nunca use relação de parentesco para uma empresa (LTDA, ME, EIRELI, S.A. etc.).
+Exemplos ERRADOS (nunca fazer):
+❌ excluir JOSE ERIVANDO com motivo "renda não comprovável formalmente"
+❌ excluir EMPRESA X com motivo "origem não identificada"
+❌ excluir PESSOA Y com motivo "transferência esporádica"
+
+Exemplos CORRETOS:
+✅ fontes: [{remetente:"JOSE ERIVANDO...", tipo:"autonomo", comprovavel:false, mediaMensal:2180}]
+✅ fontes: [{remetente:"EMPRESA X", tipo:"outros", comprovavel:false, mediaMensal:...}]
+
+No campo "relacao" de excluidos, use APENAS: "cônjuge" (somente com certidão), "filho", "pai_mae", "irmao", "familiar", "beneficio_social", "resgate", "aposta".
 
 BENEFÍCIOS SOCIAIS DO GOVERNO — REGRA ABSOLUTA (CEF NÃO APROVA):
 Entradas provenientes de programas de benefícios sociais pagos pela Caixa Econômica Federal ou pelo Governo Federal são COMPLETAMENTE EXCLUÍDAS da renda comprovável. Receber qualquer benefício social IMPEDE a aprovação de crédito pela CEF, pois o governo interpreta que a pessoa é vulnerável financeiramente e incapaz de arcar com parcelas de financiamento.
