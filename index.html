@@ -1658,6 +1658,8 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
     // Assume controle do label de progresso (cancela o intervalo automático)
     clearInterval(interval);
     let raw='';
+    let empMap=new Map();
+    let remSet=new Map();
 
     if(pdfPagesTotal<=MAX_PAGES_PER_BATCH){
       // LOTE ÚNICO — chamada direta (comportamento padrão)
@@ -1767,13 +1769,13 @@ Retorne JSON sem markdown:
 
       // Pré-extrai remetentes únicos do texto bruto dos lotes para listar explicitamente na síntese
       const extrTxtAll=extrTxt.join('\n');
-      const remSet=new Map();
+      remSet=new Map();
       const remRegex=/"remetente"\s*:\s*"([^"]+)"/g;
       let remMatch;
       while((remMatch=remRegex.exec(extrTxtAll))!==null){const r=remMatch[1].trim();if(r)remSet.set(r,(remSet.get(r)||0)+1);}
       // Extrai holerites para contexto separado — parse direto do JSON de cada lote
       // empMap: agrupa por empregador → acumula todos os meses
-      const empMap=new Map(); // key=empregador normalizado, value={emp, meses:[{competencia,bruto,liq,liqFinal,consignados}]}
+      empMap=new Map(); // key=empregador normalizado, value={emp, meses:[{competencia,bruto,liq,liqFinal,consignados}]}
       extrTxt.forEach(loteText=>{
         const jStart=loteText.indexOf('{');
         if(jStart===-1) return;
