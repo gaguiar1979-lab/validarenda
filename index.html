@@ -1629,7 +1629,7 @@ Tipos válidos: fontes: emprego_formal, prolabore, informal_extrato, autonomo, a
       const ac=new AbortController();
       const at=setTimeout(()=>ac.abort(),timeoutMs||360000);
       let r2;
-      const mdl=model||'claude-opus-4-5';
+      const mdl=model||'claude-sonnet-5-5';
       try{r2=await fetch('/api/analyze-stream',{signal:ac.signal,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:mdl,max_tokens:maxTok||8000,system:sysP,messages:[{role:'user',content:Array.isArray(cont)?cont:[{type:'text',text:cont}]}]}})});}
       catch(fe){clearTimeout(at);throw new Error(fe.name==='AbortError'?'Tempo limite atingido (análise demorou muito). Tente novamente ou reduza o número de documentos.':fe.message);}
       if(!r2.ok){clearTimeout(at);const er=await r2.json().catch(()=>({}));throw new Error(er.error?.message||`Erro HTTP ${r2.status}`);}
@@ -1754,7 +1754,7 @@ Retorne JSON sem markdown:
             const sufixo=fLotes.length>1?` (parte ${li+1}/${fLotes.length})`:` (~${pgsNeste} págs)`;
             document.getElementById('progressLabel').textContent=`Lendo ${fg.fileName}${sufixo} [${arqIdx}/${totalArqs}]`;
             const loteConteudo=[...fLotes[li],{type:'text',text:instrExt}];
-            const extRaw=await streamCall(loteConteudo,sysExt,8000,240000,'claude-haiku-4-5-20251001');
+            const extRaw=await streamCall(loteConteudo,sysExt,8000,240000,'claude-haiku-5-5');
             fPartes.push(extRaw);
             console.log(`✅ ${fg.fileName} parte ${li+1}/${fLotes.length} extraída`);
           }

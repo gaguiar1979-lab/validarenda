@@ -235,12 +235,31 @@ app.post('/api/analyze-stream', (req, res) => {
       }
     }, (apiRes) => {
       clearInterval(keepAlive);
-      apiRes.pipe(res);
+      if (apiRes.statusCode !== 200) {
+        // Coleta o corpo de erro e converte para evento SSE legível pelo cliente
+        let errBody = '';
+        apiRes.on('data', d => errBody += d);
+        apiRes.on('end', () => {
+          try {
+            const ej = JSON.parse(errBody);
+            const msg = ej.error?.message || errBody;
+            res.write(`data: ${JSON.stringify({ type: 'error', error: { message: `Anthropic ${apiRes.statusCode}: ${msg}` } })}\n\n`);
+          } catch {
+            res.write(`data: ${JSON.stringify({ type: 'error', error: { message: `Anthropic HTTP ${apiRes.statusCode}: ${errBody.substring(0, 300)}` } })}\n\n`);
+          }
+          res.end();
+        });
+      } else {
+        apiRes.pipe(res);
+      }
     });
 
     apiReq.on('error', (e) => {
       clearInterval(keepAlive);
-      if (!res.writableEnded) res.end();
+      if (!res.writableEnded) {
+        res.write(`data: ${JSON.stringify({ type: 'error', error: { message: 'Erro de rede: ' + e.message } })}\n\n`);
+        res.end();
+      }
     });
 
     apiReq.write(payloadStr);
