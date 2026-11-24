@@ -1740,14 +1740,7 @@ Retorne JSON sem markdown:
           document.getElementById('progressLabel').textContent=`Cache: ${fg.fileName} (${arqIdx}/${totalArqs})`;
           extrTxt.push(`=== ARQUIVO: ${fg.fileName} (cache) ===\n${cachedResult}`);
         }else{
-          // Detecta PDFs de alta resolução por bytes base64 / página
-          // (scans >15KB/pág base64 geram ~19k tokens/pág e estouram contexto com lotes grandes)
-          const _docItems=fg.parts.filter(x=>x.type==='document');
-          const _totPgs=_docItems.reduce((s,x)=>s+Math.max(1,contarPaginasPDF(x.source?.data||'')),0);
-          const _totB64=_docItems.reduce((s,x)=>s+Math.round((x.source?.data?.length||0)*0.75),0);
-          const _bytesPerPage=_totPgs>0?_totB64/_totPgs:_totB64;
-          const maxPagsExt=_bytesPerPage>15*1024?3:MAX_PAGES_PER_BATCH;
-          if(maxPagsExt<MAX_PAGES_PER_BATCH) console.warn(`⚠️ ${fg.fileName}: scan de alta res (${Math.round(_bytesPerPage/1024)}KB/pág) → lotes de ${maxPagsExt} págs`);
+          const maxPagsExt=MAX_PAGES_PER_BATCH;
 
           // Divide as partes deste arquivo em lotes
           const fLotes=[];let fLote=[];let fPgs=0;
@@ -1774,15 +1767,10 @@ Retorne JSON sem markdown:
             }
             const totalB64Bytes=docsNeste.reduce((s,c)=>s+Math.round((c.source?.data?.length||0)*0.75),0);
             const bppNeste=pgsNeste>0?totalB64Bytes/pgsNeste:totalB64Bytes;
-            if(totalB64Bytes>4*1024*1024){
-              // Excede 4MB em bytes brutos
+            if(totalB64Bytes>8*1024*1024){
+              // Excede 8MB em bytes brutos — provavelmente estoura contexto
               console.warn(`⚠️ Lote ${li+1} de ${fg.fileName} ignorado: ${Math.round(totalB64Bytes/1024/1024)}MB excede limite para extração`);
               fPartes.push(`[ARQUIVO ${fg.fileName} PARTE ${li+1}: IGNORADO — PDF muito grande (${Math.round(totalB64Bytes/1024/1024)}MB). Reexporte em resolução menor.]`);
-              continue;
-            } else if(pgsNeste>5 && bppNeste>15*1024){
-              // Scan de alta resolução com muitas páginas → >200k tokens, estoura contexto
-              console.warn(`⚠️ Lote ${li+1} de ${fg.fileName} ignorado: ${pgsNeste} págs a ${Math.round(bppNeste/1024)}KB/pág (alta res, tokens demais)`);
-              fPartes.push(`[ARQUIVO ${fg.fileName} PARTE ${li+1}: SCAN DE ALTA RESOLUÇÃO (${pgsNeste} págs × ${Math.round(bppNeste/1024)}KB/pág) — muitos tokens para processar. Reexporte em resolução menor ou divida em arquivos menores.]`);
               continue;
             }
             const extRaw=await streamCall(loteConteudo,sysExt,8000,240000,'claude-haiku-5-5');
