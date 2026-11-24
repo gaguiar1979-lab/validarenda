@@ -500,7 +500,7 @@ async function handleCertidao(input){
     const msgContent=isImage
       ?[{type:'image',source:{type:'base64',media_type:f.type,data:b64}},{type:'text',text:'Leia esta certidão de estado civil e retorne SOMENTE um JSON: {"estadoCivil":"casado|solteiro|divorciado|viuvo|outro","nomeConjuge":"Nome completo ou null","nomeTitular":"Nome completo"}'}]
       :[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:'Leia esta certidão de estado civil e retorne SOMENTE um JSON: {"estadoCivil":"casado|solteiro|divorciado|viuvo|outro","nomeConjuge":"Nome completo ou null","nomeTitular":"Nome completo"}'}];
-    const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:200,messages:[{role:'user',content:msgContent}]}})
+    const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-haiku-5-5',max_tokens:200,messages:[{role:'user',content:msgContent}]}})
     });
     const data=await resp.json();
     const raw=data.content?.map(b=>b.text||'').join('');
@@ -629,7 +629,7 @@ async function handleFilhoCertidao(input,id,num){
     const msgContent=isImage
       ?[{type:'image',source:{type:'base64',media_type:f.type,data:b64}},{type:'text',text:'Leia esta certidão de nascimento e retorne SOMENTE um JSON: {"nomeCompleto":"Nome completo da criança"}'}]
       :[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:'Leia esta certidão de nascimento e retorne SOMENTE um JSON: {"nomeCompleto":"Nome completo da criança"}'}];
-    const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-opus-4-5',max_tokens:100,messages:[{role:'user',content:msgContent}]}})
+    const resp=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:{model:'claude-haiku-5-5',max_tokens:100,messages:[{role:'user',content:msgContent}]}})
     });
     const data=await resp.json();
     const raw=data.content?.map(b=>b.text||'').join('');
@@ -902,7 +902,7 @@ async function _callAPI(content, systemPrompt, maxTokens, timeoutMs, model) {
   const ac = new AbortController();
   const at = setTimeout(() => ac.abort(), timeoutMs || 360000);
   let r2;
-  const mdl = model || 'claude-opus-4-5';
+  const mdl = model || 'claude-sonnet-5-5';
   try {
     r2 = await fetch('/api/analyze-stream', {
       signal: ac.signal, method: 'POST',
