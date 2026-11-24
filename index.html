@@ -1767,10 +1767,12 @@ Retorne JSON sem markdown:
             }
             const totalB64Bytes=docsNeste.reduce((s,c)=>s+Math.round((c.source?.data?.length||0)*0.75),0);
             const bppNeste=pgsNeste>0?totalB64Bytes/pgsNeste:totalB64Bytes;
-            if(totalB64Bytes>8*1024*1024){
-              // Excede 8MB em bytes brutos — provavelmente estoura contexto
-              console.warn(`⚠️ Lote ${li+1} de ${fg.fileName} ignorado: ${Math.round(totalB64Bytes/1024/1024)}MB excede limite para extração`);
-              fPartes.push(`[ARQUIVO ${fg.fileName} PARTE ${li+1}: IGNORADO — PDF muito grande (${Math.round(totalB64Bytes/1024/1024)}MB). Reexporte em resolução menor.]`);
+            // Estima tokens: bytes_raw × 0.514 (calibrado empiricamente: 37KB/pág → 19k tokens/pág)
+            const tokensEstimados=Math.round(totalB64Bytes*0.514);
+            if(tokensEstimados>150000){
+              // Ultrapassa ~150k tokens → estoura o contexto de 200k do modelo
+              console.warn(`⚠️ Lote ${li+1} de ${fg.fileName} ignorado: ~${Math.round(tokensEstimados/1000)}k tokens estimados (limite ~150k). Reexporte em resolução menor.`);
+              fPartes.push(`[ARQUIVO ${fg.fileName} PARTE ${li+1}: SCAN DE ALTA RESOLUÇÃO — ~${Math.round(tokensEstimados/1000)}k tokens estimados, ultrapassa o limite do modelo. Reexporte o extrato em resolução menor (ex: PDF digital do app do banco, não foto/scan) ou divida em arquivos de até 5 páginas.]`);
               continue;
             }
             const extRaw=await streamCall(loteConteudo,sysExt,8000,240000,'claude-haiku-5-5');
