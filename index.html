@@ -1766,7 +1766,13 @@ Retorne JSON sem markdown:
             document.getElementById('progressLabel').textContent=`Lendo ${fg.fileName}${sufixo} [${arqIdx}/${totalArqs}]`;
             const loteConteudo=[...fLotes[li],{type:'text',text:instrExt}];
             // Guarda de segurança: rejeita lote que excederia o contexto do modelo
-            const totalB64Bytes=loteConteudo.filter(c=>c.type==='document').reduce((s,c)=>s+Math.round((c.source?.data?.length||0)*0.75),0);
+            const docsNeste=loteConteudo.filter(c=>c.type==='document');
+            // Pula lote sem PDF (apenas separador de texto — o PDF ficou em outro lote)
+            if(docsNeste.length===0){
+              console.warn(`⚠️ Lote ${li+1} de ${fg.fileName} sem PDF — pulando (separador isolado)`);
+              continue;
+            }
+            const totalB64Bytes=docsNeste.reduce((s,c)=>s+Math.round((c.source?.data?.length||0)*0.75),0);
             const bppNeste=pgsNeste>0?totalB64Bytes/pgsNeste:totalB64Bytes;
             if(totalB64Bytes>4*1024*1024){
               // Excede 4MB em bytes brutos
