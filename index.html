@@ -1775,7 +1775,7 @@ Retorne JSON sem markdown:
               fPartes.push(`[ARQUIVO ${fg.fileName} PARTE ${li+1}: SCAN DE ALTA RESOLUÇÃO — ~${Math.round(tokensEstimados/1000)}k tokens estimados, ultrapassa o limite do modelo. Reexporte o extrato em resolução menor (ex: PDF digital do app do banco, não foto/scan) ou divida em arquivos de até 5 páginas.]`);
               continue;
             }
-            const extRaw=await streamCall(loteConteudo,sysExt,8000,240000,'claude-haiku-5-5');
+            const extRaw=await streamCall(loteConteudo,sysExt,16000,240000,'claude-sonnet-5-5');
             fPartes.push(extRaw);
             console.log(`✅ ${fg.fileName} parte ${li+1}/${fLotes.length} extraída`);
           }
