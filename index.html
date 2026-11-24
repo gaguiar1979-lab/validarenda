@@ -1765,11 +1765,18 @@ Retorne JSON sem markdown:
             const sufixo=fLotes.length>1?` (parte ${li+1}/${fLotes.length})`:` (~${pgsNeste} págs)`;
             document.getElementById('progressLabel').textContent=`Lendo ${fg.fileName}${sufixo} [${arqIdx}/${totalArqs}]`;
             const loteConteudo=[...fLotes[li],{type:'text',text:instrExt}];
-            // Guarda de segurança: rejeita lote com PDF muito grande (escaneamentos de alta resolução)
+            // Guarda de segurança: rejeita lote que excederia o contexto do modelo
             const totalB64Bytes=loteConteudo.filter(c=>c.type==='document').reduce((s,c)=>s+Math.round((c.source?.data?.length||0)*0.75),0);
+            const bppNeste=pgsNeste>0?totalB64Bytes/pgsNeste:totalB64Bytes;
             if(totalB64Bytes>4*1024*1024){
+              // Excede 4MB em bytes brutos
               console.warn(`⚠️ Lote ${li+1} de ${fg.fileName} ignorado: ${Math.round(totalB64Bytes/1024/1024)}MB excede limite para extração`);
               fPartes.push(`[ARQUIVO ${fg.fileName} PARTE ${li+1}: IGNORADO — PDF muito grande (${Math.round(totalB64Bytes/1024/1024)}MB). Reexporte em resolução menor.]`);
+              continue;
+            } else if(pgsNeste>5 && bppNeste>15*1024){
+              // Scan de alta resolução com muitas páginas → >200k tokens, estoura contexto
+              console.warn(`⚠️ Lote ${li+1} de ${fg.fileName} ignorado: ${pgsNeste} págs a ${Math.round(bppNeste/1024)}KB/pág (alta res, tokens demais)`);
+              fPartes.push(`[ARQUIVO ${fg.fileName} PARTE ${li+1}: SCAN DE ALTA RESOLUÇÃO (${pgsNeste} págs × ${Math.round(bppNeste/1024)}KB/pág) — muitos tokens para processar. Reexporte em resolução menor ou divida em arquivos menores.]`);
               continue;
             }
             const extRaw=await streamCall(loteConteudo,sysExt,8000,240000,'claude-haiku-5-5');
