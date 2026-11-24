@@ -1740,12 +1740,21 @@ Retorne JSON sem markdown:
           document.getElementById('progressLabel').textContent=`Cache: ${fg.fileName} (${arqIdx}/${totalArqs})`;
           extrTxt.push(`=== ARQUIVO: ${fg.fileName} (cache) ===\n${cachedResult}`);
         }else{
-          // Divide as partes deste arquivo em lotes de MAX_PAGES_PER_BATCH páginas
+          // Detecta PDFs de alta resolução por bytes base64 / página
+          // (scans >15KB/pág base64 geram ~19k tokens/pág e estouram contexto com lotes grandes)
+          const _docItems=fg.parts.filter(x=>x.type==='document');
+          const _totPgs=_docItems.reduce((s,x)=>s+Math.max(1,contarPaginasPDF(x.source?.data||'')),0);
+          const _totB64=_docItems.reduce((s,x)=>s+Math.round((x.source?.data?.length||0)*0.75),0);
+          const _bytesPerPage=_totPgs>0?_totB64/_totPgs:_totB64;
+          const maxPagsExt=_bytesPerPage>15*1024?3:MAX_PAGES_PER_BATCH;
+          if(maxPagsExt<MAX_PAGES_PER_BATCH) console.warn(`⚠️ ${fg.fileName}: scan de alta res (${Math.round(_bytesPerPage/1024)}KB/pág) → lotes de ${maxPagsExt} págs`);
+
+          // Divide as partes deste arquivo em lotes
           const fLotes=[];let fLote=[];let fPgs=0;
           for(const it of fg.parts){
             if(it.type==='document'){
               const pgs=contarPaginasPDF(it.source.data||'');
-              if(fPgs+pgs>MAX_PAGES_PER_BATCH&&fLote.length>0){fLotes.push(fLote);fLote=[];fPgs=0;}
+              if(fPgs+pgs>maxPagsExt&&fLote.length>0){fLotes.push(fLote);fLote=[];fPgs=0;}
               fLote.push(it);fPgs+=pgs;
             }else{fLote.push(it);}
           }
